@@ -6,10 +6,9 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import { readFileSync } from 'fs';
-import { basename, dirname, join } from 'path';
+import { dirname, join } from 'path';
 import { RawSourceMap } from 'source-map';
 import * as ts from 'typescript';
-const MagicString = require('magic-string');
 
 
 export interface TransformJavascriptOptions {
@@ -21,10 +20,33 @@ export interface TransformJavascriptOptions {
   getTransforms: Array<(program: ts.Program) => ts.TransformerFactory<ts.SourceFile>>;
 }
 
-export const transformJavascript = (options: TransformJavascriptOptions) => {
-  options.emitSourceMap = !!options.emitSourceMap;
-  options.strict = !!options.strict;
-  const { content, getTransforms, emitSourceMap, inputFilePath, outputFilePath, strict } = options;
+export interface TransformJavascriptOutput {
+  content: string;
+  sourceMap: RawSourceMap | null;
+  emitSkipped: boolean;
+}
+
+export function transformJavascript(
+  options: TransformJavascriptOptions,
+): TransformJavascriptOutput {
+
+  const {
+    content,
+    getTransforms,
+    emitSourceMap,
+    inputFilePath,
+    outputFilePath,
+    strict,
+  } = options;
+
+  // Bail if there's no transform to do.
+  if (getTransforms.length === 0) {
+    return {
+      content,
+      sourceMap: null,
+      emitSkipped: true,
+    };
+  }
 
   // Print error diagnostics.
   const checkDiagnostics = (diagnostics: ts.Diagnostic[]) => {
@@ -109,11 +131,8 @@ export const transformJavascript = (options: TransformJavascriptOptions) => {
     } else {
       return {
         content,
-        sourceMap: !emitSourceMap ? null : new MagicString(content).generateMap({
-          source: inputFilePath,
-          file: outputFilePath ? `${outputFilePath}.map` : null,
-          includeContent: true,
-        }),
+        sourceMap: null,
+        emitSkipped: true,
       };
     }
   }
@@ -126,7 +145,7 @@ export const transformJavascript = (options: TransformJavascriptOptions) => {
     sourceMap = JSON.parse(tsSourceMap as string) as RawSourceMap;
     // Fix sourcemaps file references.
     if (outputFilePath) {
-      sourceMap.file = basename(outputFilePath);
+      sourceMap.file = outputFilePath;
       transformedContent = transformedContent.replace(urlRegExp,
         `//# sourceMappingURL=${sourceMap.file}.map\n`);
       if (inputFilePath) {
@@ -145,5 +164,6 @@ export const transformJavascript = (options: TransformJavascriptOptions) => {
   return {
     content: transformedContent,
     sourceMap,
+    emitSkipped: false,
   };
-};
+}
