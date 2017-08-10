@@ -45,6 +45,11 @@ export function relativePath(from: SchematicPath, to: SchematicPath): SchematicP
 
 export function normalizePath(path: string): SchematicPath {
   let p = path;
+
+  if (p === undefined || p === null) {
+    return (p as SchematicPath);
+  }
+
   if (p[0] != '/') {
     p = '/' + p;
   }
