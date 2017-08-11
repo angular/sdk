@@ -37,6 +37,9 @@ describe('normalizePath', () => {
     expect(() => normalizePath('../a/b/c')).toThrow(new InvalidPathException('../a/b/c'));
     expect(() => normalizePath('/c/..')).toThrow(new InvalidPathException('/c/..'));
     expect(() => normalizePath('/c/../../')).toThrow(new InvalidPathException('/c/../../'));
+
+    // No value use case.
+    expect(normalizePath(<string> undefined)).toBe(<string> undefined);
   });
 });
 
