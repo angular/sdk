@@ -51,6 +51,9 @@
     }
   },
   "defaults": {
+    "build": {
+      "ignored": ["**/*~", "**/.#*", "**/.*.sw[pon]"]
+    },
     "styleExt": "<%= style %>",<% if (!minimal) { %>
     "component": {}<% } else { %>
     "component": {
