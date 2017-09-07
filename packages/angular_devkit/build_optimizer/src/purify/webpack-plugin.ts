@@ -25,10 +25,9 @@ export class PurifyPlugin {
             .filter((fileName: string) => fileName.endsWith('.js'))
             .forEach((fileName: string) => {
               const purifiedSource = purify(compilation.assets[fileName].source());
-              if(compilation.assets[fileName] instanceof ConcatSource) {
-                compilation.assets[fileName] = new ConcatSource(purifiedSource)
-              }
-              else {
+              if (compilation.assets[fileName] instanceof ConcatSource) {
+                compilation.assets[fileName] = new ConcatSource(purifiedSource);
+              } else {
                 compilation.assets[fileName]._cachedSource = purifiedSource;
                 compilation.assets[fileName]._source.source = () => purifiedSource;
               }
