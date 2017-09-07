@@ -23,9 +23,15 @@ export class PurifyPlugin {
           chunk.files
             .filter((fileName: string) => fileName.endsWith('.js'))
             .forEach((fileName: string) => {
-              const purifiedSource = purify(compilation.assets[fileName].source());
-              compilation.assets[fileName]._cachedSource = purifiedSource;
-              compilation.assets[fileName]._source.source = () => purifiedSource;
+              const originalAsset = compilation.assets[fileName];
+              const purifiedSource = purify(originalAsset.source());
+              const serialized = new Buffer(purifiedSource);
+              // Overwrite asset with purified version.
+              compilation.assets[fileName] = {
+                source: () => serialized,
+                size: () => serialized.length,
+                map: () => originalAsset.map(),
+              };
             });
         });
         callback();
