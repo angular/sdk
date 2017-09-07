@@ -24,8 +24,7 @@ export class PurifyPlugin {
           chunk.files
             .filter((fileName: string) => fileName.endsWith('.js'))
             .forEach((fileName: string) => {
-              const purifiedSource = purify(compilation.assets[fileName].source());
-              compilation.assets[fileName] = new ConcatSource(new RawSource(purifiedSource));
+              compilation.assets[fileName] = new ConcatSource(new RawSource(purify(compilation.assets[fileName].source())));
             });
         });
         callback();
