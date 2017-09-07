@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import * as webpack from 'webpack';
-import { ConcatSource } from 'webpack-sources';
+import { CachedSource, ConcatSource, RawSource } from 'webpack-sources';
 import { purify } from './purify';
 
 
@@ -28,8 +28,7 @@ export class PurifyPlugin {
               if (compilation.assets[fileName] instanceof ConcatSource) {
                 compilation.assets[fileName] = new ConcatSource(purifiedSource);
               } else {
-                compilation.assets[fileName]._cachedSource = purifiedSource;
-                compilation.assets[fileName]._source.source = () => purifiedSource;
+                compilation.assets[fileName] = new CachedSource(new RawSource(purifiedSource));
               }
             });
         });
