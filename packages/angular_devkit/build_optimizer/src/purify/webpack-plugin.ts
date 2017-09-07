@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import * as webpack from 'webpack';
-import { RawSource } from 'webpack-sources';
+import { ConcatSource, RawSource } from 'webpack-sources';
 import { purify } from './purify';
 
 
@@ -25,7 +25,7 @@ export class PurifyPlugin {
             .filter((fileName: string) => fileName.endsWith('.js'))
             .forEach((fileName: string) => {
               const purifiedSource = purify(compilation.assets[fileName].source());
-              compilation.assets[fileName] = new RawSource(purifiedSource);
+              compilation.assets[fileName] = new ConcatSource(new RawSource(purifiedSource));
             });
         });
         callback();
