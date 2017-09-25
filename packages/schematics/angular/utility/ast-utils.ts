@@ -10,6 +10,12 @@ import { Change, InsertChange } from './change';
 import { insertImport } from './route-utils';
 
 
+export interface SymbolOptions {
+  injectionToken: string;
+  multi: boolean;
+}
+
+
 /**
  * Find all nodes from the AST in the subtree of node of SyntaxKind kind.
  * @param node
@@ -80,17 +86,17 @@ function nodesByPosition(first: ts.Node, second: ts.Node): number {
 
 
 /**
- * Insert `toInsert` after the last occurence of `ts.SyntaxKind[nodes[i].kind]`
- * or after the last of occurence of `syntaxKind` if the last occurence is a sub child
+ * Insert `toInsert` after the last occurrence of `ts.SyntaxKind[nodes[i].kind]`
+ * or after the last of occurrence of `syntaxKind` if the last occurrence is a sub child
  * of ts.SyntaxKind[nodes[i].kind] and save the changes in file.
  *
- * @param nodes insert after the last occurence of nodes
+ * @param nodes insert after the last occurrence of nodes
  * @param toInsert string to insert
  * @param file file to insert changes into
- * @param fallbackPos position to insert if toInsert happens to be the first occurence
+ * @param fallbackPos position to insert if toInsert happens to be the first occurrence
  * @param syntaxKind the ts.SyntaxKind of the subchildren to insert after
  * @return Change instance
- * @throw Error if toInsert is first occurence but fall back is not set
+ * @throw Error if toInsert is first occurrence but fall back is not set
  */
 export function insertAfterLastOccurrence(nodes: ts.Node[],
                                           toInsert: string,
@@ -105,7 +111,7 @@ export function insertAfterLastOccurrence(nodes: ts.Node[],
     lastItem = findNodes(lastItem, syntaxKind).sort(nodesByPosition).pop();
   }
   if (!lastItem && fallbackPos == undefined) {
-    throw new Error(`tried to insert ${toInsert} as first occurence with no fallback position`);
+    throw new Error(`tried to insert ${toInsert} as first occurrence with no fallback position`);
   }
   const lastItemPosition: number = lastItem ? lastItem.end : fallbackPos;
 
@@ -222,13 +228,21 @@ export function getDecoratorMetadata(source: ts.SourceFile, identifier: string,
 
 function _addSymbolToNgModuleMetadata(source: ts.SourceFile,
                                       ngModulePath: string, metadataField: string,
-                                      symbolName: string, importPath: string): Change[] {
+                                      symbolName: string, importPath: string,
+                                      extraOptions?: SymbolOptions): Change[] {
   const nodes = getDecoratorMetadata(source, 'NgModule', '@angular/core');
   let node: any = nodes[0];  // tslint:disable-line:no-any
 
   // Find the decorator declaration.
   if (!node) {
     return [];
+  }
+
+  let enhancedSymbol = `${symbolName}`;
+  if (!!extraOptions) {
+    enhancedSymbol = extraOptions.multi
+      ? `{ provide: ${extraOptions.injectionToken}, useClass: ${symbolName}, multi: true }`
+      : `{ provide: ${extraOptions.injectionToken}, useClass: ${symbolName} }`;
   }
 
   // Get all the children property assignment of object literals.
@@ -260,7 +274,7 @@ function _addSymbolToNgModuleMetadata(source: ts.SourceFile,
     let toInsert: string;
     if (expr.properties.length == 0) {
       position = expr.getEnd() - 1;
-      toInsert = `  ${metadataField}: [${symbolName}]\n`;
+      toInsert = `  ${metadataField}: [${enhancedSymbol}]\n`;
     } else {
       node = expr.properties[expr.properties.length - 1];
       position = node.getEnd();
@@ -268,9 +282,9 @@ function _addSymbolToNgModuleMetadata(source: ts.SourceFile,
       const text = node.getFullText(source);
       const matches = text.match(/^\r?\n\s*/);
       if (matches.length > 0) {
-        toInsert = `,${matches[0]}${metadataField}: [${symbolName}]`;
+        toInsert = `,${matches[0]}${metadataField}: [${enhancedSymbol}]`;
       } else {
-        toInsert = `, ${metadataField}: [${symbolName}]`;
+        toInsert = `, ${metadataField}: [${enhancedSymbol}]`;
       }
     }
     const newMetadataProperty = new InsertChange(ngModulePath, position, toInsert);
@@ -319,29 +333,29 @@ function _addSymbolToNgModuleMetadata(source: ts.SourceFile,
     const expr = node as ts.ObjectLiteralExpression;
     if (expr.properties.length == 0) {
       position = expr.getEnd() - 1;
-      toInsert = `  ${metadataField}: [${symbolName}]\n`;
+      toInsert = `  ${metadataField}: [${enhancedSymbol}]\n`;
     } else {
       node = expr.properties[expr.properties.length - 1];
       position = node.getEnd();
       // Get the indentation of the last element, if any.
       const text = node.getFullText(source);
       if (text.match('^\r?\r?\n')) {
-        toInsert = `,${text.match(/^\r?\n\s+/)[0]}${metadataField}: [${symbolName}]`;
+        toInsert = `,${text.match(/^\r?\n\s+/)[0]}${metadataField}: [${enhancedSymbol}]`;
       } else {
-        toInsert = `, ${metadataField}: [${symbolName}]`;
+        toInsert = `, ${metadataField}: [${enhancedSymbol}]`;
       }
     }
   } else if (node.kind == ts.SyntaxKind.ArrayLiteralExpression) {
     // We found the field but it's empty. Insert it just before the `]`.
     position--;
-    toInsert = `${symbolName}`;
+    toInsert = `${enhancedSymbol}`;
   } else {
     // Get the indentation of the last element, if any.
     const text = node.getFullText(source);
     if (text.match(/^\r?\n/)) {
-      toInsert = `,${text.match(/^\r?\n(\r?)\s+/)[0]}${symbolName}`;
+      toInsert = `,${text.match(/^\r?\n(\r?)\s+/)[0]}${enhancedSymbol}`;
     } else {
-      toInsert = `, ${symbolName}`;
+      toInsert = `, ${enhancedSymbol}`;
     }
   }
   const insert = new InsertChange(ngModulePath, position, toInsert);
@@ -380,6 +394,17 @@ export function addProviderToModule(source: ts.SourceFile,
                                     modulePath: string, classifiedName: string,
                                     importPath: string): Change[] {
   return _addSymbolToNgModuleMetadata(source, modulePath, 'providers', classifiedName, importPath);
+}
+
+/**
+ * Custom function to insert a provider using an injection token into NgModule. It also imports it.
+ */
+export function addProviderWithInjectionTokenToModule(source: ts.SourceFile,
+                                                      modulePath: string, classifiedName: string,
+                                                      importPath: string, options: SymbolOptions)
+                                                      : Change[] {
+  return _addSymbolToNgModuleMetadata(source, modulePath, 'providers',
+                                      classifiedName, importPath, options);
 }
 
 /**
