@@ -32,15 +32,6 @@ const whitelistedAngularModules = [
   /[\\/]node_modules[\\/]@angular[\\/]cdk[\\/]/,
 ];
 
-const es5AngularModules = [
-  // Angular 4 packaging format has .es5.js as the extension.
-  /\.es5\.js$/, // Angular 4
-  // Angular 5 has esm5 folders.
-  /[\\/]node_modules[\\/]@angular[\\/][^\\/]+[\\/]esm5[\\/]/,
-  // All Angular versions have UMD with es5.
-  /\.umd\.js$/,
-];
-
 export interface BuildOptimizerOptions {
   content?: string;
   inputFilePath?: string;
@@ -77,9 +68,7 @@ export function buildOptimizer(options: BuildOptimizerOptions): TransformJavascr
     getTransforms.push(getPrefixClassesTransformer);
   }
 
-  if (inputFilePath
-    && whitelistedAngularModules.some((re) => re.test(inputFilePath))
-    && es5AngularModules.some((re) => re.test(inputFilePath))
+  if (inputFilePath && whitelistedAngularModules.some((re) => re.test(inputFilePath))
   ) {
     getTransforms.push(
       // getPrefixFunctionsTransformer is rather dangerous, apply only to known pure es5 modules.
