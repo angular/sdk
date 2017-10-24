@@ -22,6 +22,7 @@ export function testScrubFile(content: string) {
 
 // Don't remove `ctorParameters` from these.
 const platformWhitelist = [
+  'PlatformRef',
   'PlatformRef_',
   'TestabilityRegistry',
   'Console',
