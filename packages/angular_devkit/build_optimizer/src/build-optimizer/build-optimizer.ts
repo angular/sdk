@@ -67,12 +67,14 @@ export interface BuildOptimizerOptions {
   emitSourceMap?: boolean;
   strict?: boolean;
   isSideEffectFree?: boolean;
+  removeDecorators?: boolean;
 }
 
 export function buildOptimizer(options: BuildOptimizerOptions): TransformJavascriptOutput {
 
   const { inputFilePath } = options;
   let { content } = options;
+  const removeDecorators = options.removeDecorators == undefined ? true : options.removeDecorators;
 
   if (!inputFilePath && content === undefined) {
     throw new Error('Either filePath or content must be specified in options.');
@@ -98,20 +100,20 @@ export function buildOptimizer(options: BuildOptimizerOptions): TransformJavascr
   }
 
   if (options.isSideEffectFree || inputFilePath && isKnownSideEffectFree(inputFilePath)) {
-    getTransforms.push(
-      // getPrefixFunctionsTransformer is rather dangerous, apply only to known pure es5 modules.
-      // It will mark both `require()` calls and `console.log(stuff)` as pure.
-      // We only apply it to whitelisted modules, since we know they are safe.
-      // getPrefixFunctionsTransformer needs to be before getFoldFileTransformer.
-      getPrefixFunctionsTransformer,
-      getScrubFileTransformer,
-      getFoldFileTransformer,
-    );
+    // getPrefixFunctionsTransformer is rather dangerous, apply only to known pure es5 modules.
+    // It will mark both `require()` calls and `console.log(stuff)` as pure.
+    // We only apply it to whitelisted modules, since we know they are safe.
+    // getPrefixFunctionsTransformer needs to be before getFoldFileTransformer.
+    getTransforms.push(getPrefixFunctionsTransformer);
+    if (removeDecorators) {
+      getTransforms.push(getScrubFileTransformer);
+    }
+    getTransforms.push(getFoldFileTransformer);
   } else if (testScrubFile(content)) {
-    getTransforms.push(
-      getScrubFileTransformer,
-      getFoldFileTransformer,
-    );
+    if (removeDecorators) {
+      getTransforms.push(getScrubFileTransformer);
+    }
+    getTransforms.push(getFoldFileTransformer);
   }
 
   const transformJavascriptOpts: TransformJavascriptOptions = {
