@@ -20,7 +20,9 @@
     "updateMode": "prefetch",
     "resources": {
       "files": [
-        "/assets/**"
+        "/assets/**",
+        "!/assets/**/.DS_Store",
+        "!/assets/**/Thumbs.db"
       ]
     }
   }]
