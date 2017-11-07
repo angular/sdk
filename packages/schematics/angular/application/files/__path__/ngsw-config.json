@@ -11,7 +11,8 @@
       "versionedFiles": [
         "/*.bundle.css",
         "/*.bundle.js",
-        "/*.chunk.js"
+        "/*.chunk.js",
+        "/*.woff2"
       ]
     }
   }, {
