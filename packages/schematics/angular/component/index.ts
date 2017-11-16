@@ -44,12 +44,16 @@ function addDeclarationToNgModule(options: ComponentOptions): Rule {
     const sourceText = text.toString('utf-8');
     const source = ts.createSourceFile(modulePath, sourceText, ts.ScriptTarget.Latest, true);
 
+    const suffix = options.suffix || 'component';
+
     const componentPath = `/${options.sourceDir}/${options.path}/`
                           + (options.flat ? '' : stringUtils.dasherize(options.name) + '/')
                           + stringUtils.dasherize(options.name)
-                          + '.component';
+                          + '.'
+                          + stringUtils.dasherize(suffix);
     const relativePath = buildRelativePath(modulePath, componentPath);
-    const classifiedName = stringUtils.classify(`${options.name}Component`);
+    const classifiedName = stringUtils.classify(options.name)
+                            + stringUtils.classify(suffix);
     const declarationChanges = addDeclarationToModule(source,
                                                       modulePath,
                                                       classifiedName,
@@ -73,9 +77,7 @@ function addDeclarationToNgModule(options: ComponentOptions): Rule {
       const source = ts.createSourceFile(modulePath, sourceText, ts.ScriptTarget.Latest, true);
 
       const exportRecorder = host.beginUpdate(modulePath);
-      const exportChanges = addExportToModule(source, modulePath,
-                                              stringUtils.classify(`${options.name}Component`),
-                                              relativePath);
+      const exportChanges = addExportToModule(source, modulePath, classifiedName, relativePath);
 
       for (const change of exportChanges) {
         if (change instanceof InsertChange) {

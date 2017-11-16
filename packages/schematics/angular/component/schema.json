@@ -54,6 +54,11 @@
       "default": "app",
       "alias": "p"
     },
+    "suffix": {
+      "type": "string",
+      "description": "The suffix to apply to generated component.",
+      "default": "component"
+    },
     "styleext": {
       "description": "The file extension to be used for style files.",
       "type": "string",

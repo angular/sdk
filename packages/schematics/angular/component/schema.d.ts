@@ -33,6 +33,10 @@ export interface Schema {
      */
     prefix?: string;
     /**
+     * The suffix to apply to generated components.
+     */
+    suffix?: string;
+    /**
      * The file extension to be used for style files.
      */
     styleext?: string;

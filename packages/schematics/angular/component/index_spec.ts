@@ -30,6 +30,7 @@ describe('Component Schematic', () => {
     module: undefined,
     export: false,
     prefix: undefined,
+    suffix: undefined,
   };
 
   let appTree: Tree;
@@ -202,6 +203,34 @@ describe('Component Schematic', () => {
     const tree = schematicRunner.runSchematic('component', options, appTree);
     const content = getFileContent(tree, '/src/app/foo/foo.component.ts');
     expect(content).toMatch(/selector: 'foo'/);
+  });
+
+  it('should use the suffix', () => {
+    const options = { ...defaultOptions, suffix: 'Route' };
+
+    const tree = schematicRunner.runSchematic('component', options, appTree);
+    const files = tree.files;
+    expect(files.indexOf('/src/app/foo/foo.route.css')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/src/app/foo/foo.route.html')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/src/app/foo/foo.route.spec.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/src/app/foo/foo.route.ts')).toBeGreaterThanOrEqual(0);
+    const moduleContent = getFileContent(tree, '/src/app/app.module.ts');
+    expect(moduleContent).toMatch(/import.*Foo.*from '.\/foo\/foo.route'/);
+    expect(moduleContent).toMatch(/declarations:\s*\[[^\]]+?,\r?\n\s+FooRoute\r?\n/m);
+  });
+
+  it('should handle complex suffix', () => {
+    const options = { ...defaultOptions, suffix: 'DialogThing' };
+
+    const tree = schematicRunner.runSchematic('component', options, appTree);
+    const files = tree.files;
+    expect(files.indexOf('/src/app/foo/foo.dialog-thing.css')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/src/app/foo/foo.dialog-thing.html')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/src/app/foo/foo.dialog-thing.spec.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/src/app/foo/foo.dialog-thing.ts')).toBeGreaterThanOrEqual(0);
+    const moduleContent = getFileContent(tree, '/src/app/app.module.ts');
+    expect(moduleContent).toMatch(/import.*Foo.*from '.\/foo\/foo.dialog-thing'/);
+    expect(moduleContent).toMatch(/declarations:\s*\[[^\]]+?,\r?\n\s+FooDialogThing\r?\n/m);
   });
 
   it('should respect the inlineTemplate option', () => {
