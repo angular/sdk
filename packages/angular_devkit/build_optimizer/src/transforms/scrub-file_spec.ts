@@ -31,6 +31,57 @@ describe('scrub-file', () => {
       expect(tags.oneLine`${transform(input)}`).toEqual(tags.oneLine`${output}`);
     });
 
+
+    it('removes Angular decorators calls in __decorate with top-level IIFE', () => {
+      const output = tags.stripIndent`
+        import { Component } from '@angular/core';
+        (function () {
+          var Clazz = (function () {
+            function Clazz() { }
+            return Clazz;
+          })();
+        })();
+        (function () {
+          var Clazz = (function () {
+            function Clazz() { }
+            return Clazz;
+          })();
+        }());
+      `;
+      const input = tags.stripIndent`
+        import { Component } from '@angular/core';
+        (function () {
+          var Clazz = (function () {
+            function Clazz() { }
+            Clazz = __decorate([
+              Component({
+                selector: 'app-root',
+                templateUrl: './app.component.html',
+                styleUrls: ['./app.component.css']
+              })
+            ], Clazz);
+            return Clazz;
+          })();
+        })();
+        (function () {
+          var Clazz = (function () {
+            function Clazz() { }
+            Clazz = __decorate([
+              Component({
+                selector: 'app-root',
+                templateUrl: './app.component.html',
+                styleUrls: ['./app.component.css']
+              })
+            ], Clazz);
+            return Clazz;
+          })();
+        }());
+      `;
+
+      expect(testScrubFile(input)).toBeTruthy();
+      expect(tags.oneLine`${transform(input)}`).toEqual(tags.oneLine`${output}`);
+    });
+
     it('removes nested Angular decorators', () => {
       const output = tags.stripIndent`
         import { Injectable } from '@angular/core';
