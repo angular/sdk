@@ -1,2 +1,1 @@
-export interface <%= prefix %><%= classify(name) %> {
-}
+export interface <%= prefix %><%= classify(name) %> { }
