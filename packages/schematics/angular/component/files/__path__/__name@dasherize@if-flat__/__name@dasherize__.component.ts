@@ -15,6 +15,5 @@ import { Component, OnInit<% if(!!viewEncapsulation) { %>, ViewEncapsulation<% }
 })
 export class <%= classify(name) %>Component implements OnInit {
   constructor() { }
-
   ngOnInit() { }
 }
