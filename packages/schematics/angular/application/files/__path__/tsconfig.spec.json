@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "<%= path.split('/').map(x => '..').join('/') %>/out-tsc/spec",
     "baseUrl": "./",
-    "module": "commonjs",
+    "module": "es2015",
     "target": "es5",
     "types": [
       "jasmine",
