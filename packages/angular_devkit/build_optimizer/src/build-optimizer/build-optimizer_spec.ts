@@ -14,7 +14,7 @@ describe('build-optimizer', () => {
   const imports = 'import { Injectable, Input, Component } from \'@angular/core\';';
   const clazz = 'var Clazz = (function () { function Clazz() { } return Clazz; }());';
   const staticProperty = 'Clazz.prop = 1;';
-  const decorators = 'Clazz.decorators = [ { type: Injectable } ];';
+  const decorators = 'Clazz.decorators = [{ type: Injectable }];';
 
   describe('basic functionality', () => {
     it('applies class-fold, scrub-file and prefix-functions to side-effect free modules', () => {
@@ -98,6 +98,22 @@ describe('build-optimizer', () => {
       const boOutput = buildOptimizer({ content: input });
       expect(boOutput.content).toBeFalsy();
       expect(boOutput.emitSkipped).toEqual(true);
+    });
+
+    it('doesn\'t remove decorators if option is disabled', () => {
+      const input = tags.oneLine`
+        import { Injectable } from '@angular/core';
+        ${clazz}
+        ${decorators}
+      `;
+      const output = tags.oneLine`
+        import { Injectable } from '@angular/core';
+        var Clazz = (function () { function Clazz() { } ${decorators} return Clazz; }());
+      `;
+
+      const boOutput = buildOptimizer({ content: input, removeDecorators: false });
+      expect(tags.oneLine`${boOutput.content}`).toEqual(output);
+      expect(boOutput.emitSkipped).toEqual(false);
     });
 
     it('supports es2015 modules', () => {

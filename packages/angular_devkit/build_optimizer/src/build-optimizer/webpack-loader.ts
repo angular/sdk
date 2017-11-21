@@ -14,6 +14,7 @@ import { buildOptimizer } from './build-optimizer';
 
 interface BuildOptimizerLoaderOptions {
   sourceMap: boolean;
+  removeDecorators?: boolean;
 }
 
 export default function buildOptimizerLoader
@@ -28,6 +29,7 @@ export default function buildOptimizerLoader
     // Without a name the sourcemaps cannot be properly chained.
     outputFilePath: this.resourcePath + '.build-optimizer.js',
     emitSourceMap: options.sourceMap,
+    removeDecorators: options.removeDecorators,
   });
 
   if (boOutput.emitSkipped || boOutput.content === null) {
