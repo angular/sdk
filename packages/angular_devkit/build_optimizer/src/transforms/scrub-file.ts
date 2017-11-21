@@ -61,7 +61,9 @@ export function getScrubFileTransformer(program: ts.Program): ts.TransformerFact
       ts.forEachChild(sf, checkNodeForDecorators);
 
       function checkNodeForDecorators(node: ts.Node): void {
-        if (node.kind !== ts.SyntaxKind.ExpressionStatement) {
+        if (node.kind !== ts.SyntaxKind.ExpressionStatement ||
+          (node.kind === ts.SyntaxKind.ExpressionStatement &&
+            isTopLevelIIFE(<ts.ExpressionStatement> node))) {
           // TS 2.4 nests decorators inside downleveled class IIFEs, so we
           // must recurse into them to find the relevant expression statements.
           return ts.forEachChild(node, checkNodeForDecorators);
@@ -618,4 +620,29 @@ function isTslibHelper(
   }
 
   return true;
+
+}
+
+function isTopLevelIIFE(node: ts.ExpressionStatement) {
+  return node.parent && node.parent.kind === ts.SyntaxKind.SourceFile && isIIFE(node.expression);
+}
+
+function isIIFE(node: ts.Node) {
+  const unwrap = (node: ts.Node) => {
+    while (node && node.kind === ts.SyntaxKind.ParenthesizedExpression) {
+      node = (<ts.ParenthesizedExpression> node).expression;
+    }
+
+    return node;
+  };
+  if (node.kind === ts.SyntaxKind.ParenthesizedExpression) {
+    node = unwrap(node);
+  }
+  if (node.kind !== ts.SyntaxKind.CallExpression) {
+    return false;
+  }
+  const expr = <ts.CallExpression> node;
+  const nestedExpr: ts.Node = unwrap(expr.expression);
+
+  return nestedExpr && nestedExpr.kind === ts.SyntaxKind.FunctionExpression;
 }
