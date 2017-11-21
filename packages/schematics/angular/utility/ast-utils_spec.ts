@@ -11,7 +11,7 @@ import { VirtualTree } from '@angular-devkit/schematics';
 import * as ts from 'typescript';
 import { Change, InsertChange } from '../utility/change';
 import { getFileContent } from '../utility/test';
-import { addExportToModule } from './ast-utils';
+import { addExportToModule, addProviderToModule } from './ast-utils';
 
 
 function getTsSource(path: string, content: string): ts.SourceFile {
@@ -71,5 +71,36 @@ describe('ast utils', () => {
     const output = applyChanges(modulePath, moduleContent, changes);
     expect(output).toMatch(/import { FooComponent } from '.\/foo.component';/);
     expect(output).toMatch(/exports: \[FooComponent\]/);
+  });
+
+  it('should add provider to module', () => {
+    moduleContent = stripIndent`${moduleContent}`;
+    const source = getTsSource(modulePath, moduleContent);
+    const changes = addProviderToModule(source, modulePath, 'FooService', './foo.service');
+    const output = applyChanges(modulePath, moduleContent, changes);
+    expect(output).toMatch(/import { FooService } from '.\/foo.service';/);
+    expect(output).toMatch(/providers: \[FooService\]/);
+  });
+
+  it('should add provider to module even if it is non-empty', () => {
+    moduleContent = moduleContent.replace('providers: []', 'providers: [BarService]');
+    moduleContent = stripIndent`${moduleContent}`;
+    const source = getTsSource(modulePath, moduleContent);
+    const changes = addProviderToModule(source, modulePath, 'FooService', './foo.service');
+    const output = applyChanges(modulePath, moduleContent, changes);
+    expect(output).toMatch(/import { FooService } from '.\/foo.service';/);
+    expect(output).toMatch(/providers: \[BarService, FooService\]/);
+  });
+
+  it('should add provider to module even if providers list contains { provide }', () => {
+    moduleContent = moduleContent
+      .replace('providers: []', 'providers: [{provide: IBarService, useClass: BarService}]');
+    moduleContent = stripIndent`${moduleContent}`;
+    const source = getTsSource(modulePath, moduleContent);
+    const changes = addProviderToModule(source, modulePath, 'FooService', './foo.service');
+    const output = applyChanges(modulePath, moduleContent, changes);
+    expect(output).toMatch(/import { FooService } from '.\/foo.service';/);
+    expect(output)
+      .toMatch(/providers: \[{provide: IBarService, useClass: BarService}, FooService\]/);
   });
 });

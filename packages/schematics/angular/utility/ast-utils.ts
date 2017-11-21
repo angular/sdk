@@ -327,25 +327,7 @@ function _addSymbolToNgModuleMetadata(source: ts.SourceFile,
 
   let toInsert: string;
   let position = node.getEnd();
-  if (node.kind == ts.SyntaxKind.ObjectLiteralExpression) {
-    // We haven't found the field in the metadata declaration. Insert a new
-    // field.
-    const expr = node as ts.ObjectLiteralExpression;
-    if (expr.properties.length == 0) {
-      position = expr.getEnd() - 1;
-      toInsert = `  ${metadataField}: [${symbolName}]\n`;
-    } else {
-      node = expr.properties[expr.properties.length - 1];
-      position = node.getEnd();
-      // Get the indentation of the last element, if any.
-      const text = node.getFullText(source);
-      if (text.match('^\r?\r?\n')) {
-        toInsert = `,${text.match(/^\r?\n\s+/)[0]}${metadataField}: [${symbolName}]`;
-      } else {
-        toInsert = `, ${metadataField}: [${symbolName}]`;
-      }
-    }
-  } else if (node.kind == ts.SyntaxKind.ArrayLiteralExpression) {
+  if (node.kind == ts.SyntaxKind.ArrayLiteralExpression) {
     // We found the field but it's empty. Insert it just before the `]`.
     position--;
     toInsert = `${symbolName}`;
