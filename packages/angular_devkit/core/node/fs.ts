@@ -7,13 +7,17 @@
  */
 import * as fs from 'fs';
 
+enum FileErrors {
+  NO_FILE_OR_DIR = 'ENOENT',
+  NOT_A_DIR = 'ENOTDIR',
+}
 
 export function isFile(filePath: string): boolean {
   let stat;
   try {
     stat = fs.statSync(filePath);
   } catch (e) {
-    if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
+    if (e && (e.code === FileErrors.NO_FILE_OR_DIR || e.code === FileErrors.NOT_A_DIR)) {
       return false;
     }
     throw e;
@@ -28,7 +32,7 @@ export function isDirectory(filePath: string): boolean {
   try {
     stat = fs.statSync(filePath);
   } catch (e) {
-    if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
+    if (e && (e.code === FileErrors.NO_FILE_OR_DIR || e.code === FileErrors.NOT_A_DIR)) {
       return false;
     }
     throw e;
