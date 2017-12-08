@@ -20,10 +20,6 @@
 
 
 
-    "name": {
-      "type": "string",
-      "description": "Name of the universal app"
-    },
     "appId": {
       "type": "string",
       "description": "The appId to use withServerTransition.",
