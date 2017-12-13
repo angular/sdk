@@ -7,6 +7,7 @@
  */
 import { BaseException } from '@angular-devkit/core';
 import { Observable } from 'rxjs/Observable';
+import { mergeMap } from 'rxjs/operators/mergeMap';
 import { Rule, SchematicContext, Source } from '../engine/interface';
 import { Tree, TreeSymbol } from '../tree/interface';
 
@@ -72,17 +73,19 @@ export function callSource(source: Source, context: SchematicContext): Observabl
 export function callRule(rule: Rule,
                          input: Observable<Tree>,
                          context: SchematicContext): Observable<Tree> {
-  return input.mergeMap(inputTree => {
-    const result = rule(inputTree, context) as object;
+  return input.pipe(
+    mergeMap(inputTree => {
+      const result = rule(inputTree, context) as object;
 
-    if (result === undefined) {
-      return Observable.of(inputTree);
-    } else if (TreeSymbol in result) {
-      return Observable.of(result as Tree);
-    } else if (Symbol.observable in result) {
-      return result as Observable<Tree>;
-    } else {
-      throw new InvalidRuleResultException(result);
-    }
-  });
+      if (result === undefined) {
+        return Observable.of(inputTree);
+      } else if (TreeSymbol in result) {
+        return Observable.of(result as Tree);
+      } else if (Symbol.observable in result) {
+        return result as Observable<Tree>;
+      } else {
+        throw new InvalidRuleResultException(result);
+      }
+    }),
+  );
 }

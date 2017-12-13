@@ -53,8 +53,7 @@ export interface EngineHost<CollectionMetadataT extends object, SchematicMetadat
   transformOptions<OptionT extends object, ResultT extends object>(
     schematic: SchematicDescription<CollectionMetadataT, SchematicMetadataT>,
     options: OptionT,
-  ): ResultT;
-
+  ): Observable<ResultT>;
 
   readonly defaultMergeStrategy?: MergeStrategy;
 }
@@ -87,7 +86,7 @@ export interface Engine<CollectionMetadataT extends object, SchematicMetadataT e
   transformOptions<OptionT extends object, ResultT extends object>(
       schematic: Schematic<CollectionMetadataT, SchematicMetadataT>,
       options: OptionT,
-  ): ResultT;
+  ): Observable<ResultT>;
 
   readonly defaultMergeStrategy: MergeStrategy;
 }
