@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { Path, join, normalize, relative, dasherize } from '@angular-devkit/core';
+import { Path, dasherize, join, normalize, relative } from '@angular-devkit/core';
 import { DirEntry, Tree } from '@angular-devkit/schematics';
 
 
