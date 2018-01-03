@@ -55,6 +55,22 @@ describe('Module Schematic', () => {
     expect(files.indexOf('/projects/bar/src/app/foo/foo.module.ts')).toBeGreaterThanOrEqual(0);
   });
 
+  it('should import a generated flat module with a correct relative path', () => {
+    const options = {
+      ...defaultOptions,
+      appRoot: 'app',
+      module: 'app',
+      flat: true,
+    };
+
+    const tree = schematicRunner.runSchematic('module', options, appTree);
+    const files = tree.files;
+    expect(files.indexOf('/projects/bar/src/app/app.module.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/bar/src/app/foo.module.ts')).toBeGreaterThanOrEqual(0);
+    const moduleContent = tree.readContent('/projects/bar/src/app/app.module.ts');
+    expect(moduleContent).toMatch(/import { FooModule } from '\.\/foo.module'/);
+  });
+
   it('should import into another module', () => {
     const options = { ...defaultOptions, module: 'app.module.ts' };
 
