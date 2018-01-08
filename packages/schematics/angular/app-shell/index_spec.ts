@@ -18,7 +18,6 @@ describe('App Shell Schematic', () => {
     path.join(__dirname, '../collection.json'),
   );
   const defaultOptions: AppShellOptions = {
-    name: 'foo',
     universalApp: 'universal',
   };
 

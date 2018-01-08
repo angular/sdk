@@ -20,10 +20,6 @@ export interface Schema {
      */
     route?: string;
     /**
-     * Name of the universal app
-     */
-    name?: string;
-    /**
      * The appId to use withServerTransition.
      */
     appId?: string;
@@ -67,5 +63,8 @@ export interface Schema {
      * The name of the root module class.
      */
     rootModuleClassName?: string;
+    /**
+     * The path of the source directory.
+     */
     sourceDir?: string;
 }
