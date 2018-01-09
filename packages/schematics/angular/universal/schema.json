@@ -23,11 +23,6 @@
       "description": "The output directory for build results.",
       "default": "dist-server/"
     },
-    "root": {
-      "type": "string",
-      "description": "The root directory of the app.",
-      "default": "src"
-    },
     "index": {
       "type": "string",
       "description": "Name of the index file",

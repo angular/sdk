@@ -44,7 +44,7 @@ function updateConfigFile(options: UniversalOptions): Rule {
     const serverApp: AppConfig = {
       ...clientApp,
       platform: 'server',
-      root: options.root,
+      root: options.sourceDir,
       outDir: options.outDir,
       index: options.index,
       main: options.main,

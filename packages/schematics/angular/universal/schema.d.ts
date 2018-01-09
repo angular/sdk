@@ -8,7 +8,7 @@
 
 export interface Schema {
     /**
-     * Name of the universal app
+     * Name of the universal app.
      */
     name?: string;
     /**
@@ -23,10 +23,6 @@ export interface Schema {
      * The output directory for build results.
      */
     outDir?: string;
-    /**
-     * The root directory of the app.
-     */
-    root?: string;
     /**
      * Name of the index file
      */
@@ -59,5 +55,8 @@ export interface Schema {
      * The name of the root module class.
      */
     rootModuleClassName?: string;
+    /**
+     * The path of the source directory.
+     */
     sourceDir?: string;
 }
