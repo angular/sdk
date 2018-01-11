@@ -1,0 +1,70 @@
+{
+  "workspaceName": "<%= utils.dasherize(name) %>",
+  "projects": {
+    "<%= utils.dasherize(name) %>": {
+      "_projectType": "application",
+      "default": true,
+      "root": "src",
+      "prefix": "app",
+      "targets": {
+        "<%= utils.dasherize(name) %>": {
+          "_targetType": "browser",
+          "default": true,
+          "assets": [
+            "assets",
+            "favicon.ico"
+          ],
+          "outDir": "dist",
+          "styles": [
+            "styles.css"
+          ],
+          "scripts": [],
+          "index": "index.html",
+          "polyfills": "polyfills.ts",
+          "tsConfigPath": "./tsconfig.app.json",
+          "entryPoints": {
+            "main": "main.ts",
+            "polyfills": "polyfills.ts"
+          }
+        },
+        "lint-app": {
+          "_targetType": "lint",
+          "tsConfigPath": "tsconfig.app.json"
+        },
+        "tests": {
+          "_targetType": "unittests",
+          "tsConfigPath": "./tsconfig.spec.json",
+          "karmaConfig": "karma.conf.js"
+        }
+      },
+      "configurations": {
+        "debug": {
+          "default": true,
+          "optimizations": []
+        },
+        "production": {
+          "optimizations": [
+            "uglify",
+            "build-optimizer"
+          ]
+        }
+      }
+    },
+    "main-app-e2e": {
+      "projectType": "e2e",
+      "root": "./e2e",
+      "targetApplication": "main-app#default",
+      "targets": {
+        "default": {
+          "_targetType": "e2e",
+          "tsConfigPath": "tsconfig.e2e.json",
+          "protractorConfigPath": "protractor.conf.js"
+        },
+        "lint": {
+          "_targetType": "lint",
+          "tsConfigPath": "tsconfig.e2e.json"
+        }
+      }
+    }
+  }
+}
