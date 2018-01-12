@@ -7,7 +7,7 @@
  */
 import * as tags from './literals';
 import * as strings from './strings';
+
 export * from './object';
 export * from './template';
-
 export { tags, strings };
