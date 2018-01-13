@@ -6,8 +6,8 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import * as tags from './literals';
-export * from './object';
-export * from './strings';
-export * from './template';
+import * as strings from './strings';
 
-export { tags };
+export * from './object';
+export * from './template';
+export { tags, strings };
