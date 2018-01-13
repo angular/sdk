@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { normalize } from '@angular-devkit/core';
+import { normalize, strings } from '@angular-devkit/core';
 import {
   Rule,
   SchematicContext,
@@ -23,7 +23,6 @@ import {
 } from '@angular-devkit/schematics';
 import 'rxjs/add/operator/merge';
 import * as ts from 'typescript';
-import * as stringUtils from '../strings';
 import { addDeclarationToModule, addExportToModule } from '../utility/ast-utils';
 import { InsertChange } from '../utility/change';
 import { buildRelativePath, findModuleFromOptions } from '../utility/find-module';
@@ -45,11 +44,11 @@ function addDeclarationToNgModule(options: ComponentOptions): Rule {
     const source = ts.createSourceFile(modulePath, sourceText, ts.ScriptTarget.Latest, true);
 
     const componentPath = `/${options.sourceDir}/${options.path}/`
-                          + (options.flat ? '' : stringUtils.dasherize(options.name) + '/')
-                          + stringUtils.dasherize(options.name)
+                          + (options.flat ? '' : strings.dasherize(options.name) + '/')
+                          + strings.dasherize(options.name)
                           + '.component';
     const relativePath = buildRelativePath(modulePath, componentPath);
-    const classifiedName = stringUtils.classify(`${options.name}Component`);
+    const classifiedName = strings.classify(`${options.name}Component`);
     const declarationChanges = addDeclarationToModule(source,
                                                       modulePath,
                                                       classifiedName,
@@ -74,7 +73,7 @@ function addDeclarationToNgModule(options: ComponentOptions): Rule {
 
       const exportRecorder = host.beginUpdate(modulePath);
       const exportChanges = addExportToModule(source, modulePath,
-                                              stringUtils.classify(`${options.name}Component`),
+                                              strings.classify(`${options.name}Component`),
                                               relativePath);
 
       for (const change of exportChanges) {
@@ -92,7 +91,7 @@ function addDeclarationToNgModule(options: ComponentOptions): Rule {
 
 
 function buildSelector(options: ComponentOptions) {
-  let selector = stringUtils.dasherize(options.name);
+  let selector = strings.dasherize(options.name);
   if (options.prefix) {
     selector = `${options.prefix}-${selector}`;
   }
@@ -117,7 +116,7 @@ export default function(options: ComponentOptions): Rule {
       options.inlineStyle ? filter(path => !path.endsWith('.__styleext__')) : noop(),
       options.inlineTemplate ? filter(path => !path.endsWith('.html')) : noop(),
       template({
-        ...stringUtils,
+        ...strings,
         'if-flat': (s: string) => options.flat ? '' : s,
         ...options,
       }),

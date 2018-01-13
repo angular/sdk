@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { normalize } from '@angular-devkit/core';
+import { normalize, strings } from '@angular-devkit/core';
 import {
   Rule,
   SchematicContext,
@@ -19,7 +19,6 @@ import {
 } from '@angular-devkit/schematics';
 import 'rxjs/add/operator/merge';
 import * as ts from 'typescript';
-import * as stringUtils from '../strings';
 import { findNode, getDecoratorMetadata } from '../utility/ast-utils';
 import { InsertChange } from '../utility/change';
 import { AppConfig, getAppFromConfig, getConfig } from '../utility/config';
@@ -165,7 +164,7 @@ export default function (options: UniversalOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
     const templateSource = apply(url('./files'), [
       template({
-        ...stringUtils,
+        ...strings,
         ...options as object,
         stripTsExtension: (s: string) => { return s.replace(/\.ts$/, ''); },
       }),

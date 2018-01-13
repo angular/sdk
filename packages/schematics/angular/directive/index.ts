@@ -5,7 +5,7 @@
 * Use of this source code is governed by an MIT-style license that can be
 * found in the LICENSE file at https://angular.io/license
 */
-import { normalize } from '@angular-devkit/core';
+import { normalize, strings } from '@angular-devkit/core';
 import {
   Rule,
   SchematicContext,
@@ -23,7 +23,6 @@ import {
 } from '@angular-devkit/schematics';
 import 'rxjs/add/operator/merge';
 import * as ts from 'typescript';
-import * as stringUtils from '../strings';
 import { addDeclarationToModule, addExportToModule } from '../utility/ast-utils';
 import { InsertChange } from '../utility/change';
 import { buildRelativePath, findModuleFromOptions } from '../utility/find-module';
@@ -45,11 +44,11 @@ function addDeclarationToNgModule(options: DirectiveOptions): Rule {
     const source = ts.createSourceFile(modulePath, sourceText, ts.ScriptTarget.Latest, true);
 
     const directivePath = `/${options.sourceDir}/${options.path}/`
-                          + (options.flat ? '' : stringUtils.dasherize(options.name) + '/')
-                          + stringUtils.dasherize(options.name)
+                          + (options.flat ? '' : strings.dasherize(options.name) + '/')
+                          + strings.dasherize(options.name)
                           + '.directive';
     const relativePath = buildRelativePath(modulePath, directivePath);
-    const classifiedName = stringUtils.classify(`${options.name}Directive`);
+    const classifiedName = strings.classify(`${options.name}Directive`);
     const declarationChanges = addDeclarationToModule(source,
                                                       modulePath,
                                                       classifiedName,
@@ -73,7 +72,7 @@ function addDeclarationToNgModule(options: DirectiveOptions): Rule {
 
       const exportRecorder = host.beginUpdate(modulePath);
       const exportChanges = addExportToModule(source, modulePath,
-                                              stringUtils.classify(`${options.name}Directive`),
+                                              strings.classify(`${options.name}Directive`),
                                               relativePath);
 
       for (const change of exportChanges) {
@@ -95,7 +94,7 @@ function buildSelector(options: DirectiveOptions) {
     selector = `${options.prefix}-${selector}`;
   }
 
-  return stringUtils.camelize(selector);
+  return strings.camelize(selector);
 }
 
 export default function (options: DirectiveOptions): Rule {
@@ -111,7 +110,7 @@ export default function (options: DirectiveOptions): Rule {
     const templateSource = apply(url('./files'), [
       options.spec ? noop() : filter(path => !path.endsWith('.spec.ts')),
       template({
-        ...stringUtils,
+        ...strings,
         'if-flat': (s: string) => options.flat ? '' : s,
         ...options,
       }),
