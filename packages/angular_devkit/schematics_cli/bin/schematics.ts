@@ -7,6 +7,8 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import {
+  JsonArray,
+  JsonObject,
   schema,
   tags,
   terminal,
@@ -52,6 +54,7 @@ function usage(exitCode = 0): never {
                             performed. Default to true if debug is also true.
         --force             Force overwriting files that would otherwise be an error.
         --list-schematics   List all schematics from the collection, by name.
+        --schema            List all the properties from the schematic
         --verbose           Show more information.
 
         --help              Show this message.
@@ -97,9 +100,57 @@ function parseSchematicName(str: string | null): { collection: string, schematic
   return { collection, schematic };
 }
 
+/**
+ * Displays descriptions for each one of the properties inside a Schematic's Schema.
+ * 
+ * The print format is a follows:
+ *   --<%= propName %> (<%= type %>): (Default: <%= default %>) (<%= required %>) <%= description %>
+ *     alias: -<%= alias =>
+ * 
+ * A property is not printed if "visible":"false"
+ * 
+ * All keys different than "type", "default", "required", "description" or "alias" won't be printed.
+ * 
+ * @param schematicSchema The schematic's schema as a json object
+ */
+function printSchematicSchema(schematicSchema: JsonObject) {
+  let props = schematicSchema.properties as JsonObject;
+  let msg = '';
+  for (const key in props) {
+    let prop = props[key] as JsonObject;
+    if (typeof prop.visible === 'undefined' || prop.visible) {
+      let mainInfo = `  --${key}`;
+      if (prop.type) {
+        mainInfo += ` (${prop.type})`;
+      }
+      if (prop.default){
+        mainInfo += ` (Default: ${prop.default})`;
+      }
+      msg += terminal.cyan(mainInfo);
+      if ((schematicSchema.required as JsonArray).indexOf(key) !== -1) {
+        msg += terminal.magenta(' (Required)');
+      }
+      if (prop.description) {
+        msg += ` ${terminal.white(prop.description as string)}`;
+      }
+      msg += '\n';
+      if (prop.alias) {
+        let alias = '';
+        alias += `    alias: -${prop.alias}`;
+        if ((prop.type as string).toLowerCase() !== 'boolean') {
+          alias += ' <value>';
+        }
+        msg += terminal.dim(alias);
+        msg += '\n';
+      }
+    }
+  }
+  process.stdout.write(msg);
+}
+
 
 /** Parse the command line. */
-const booleanArgs = [ 'debug', 'dry-run', 'force', 'help', 'list-schematics', 'verbose' ];
+const booleanArgs = [ 'debug', 'dry-run', 'force', 'help', 'list-schematics', 'verbose', 'schema' ];
 const argv = minimist(process.argv.slice(2), {
   boolean: booleanArgs,
   default: {
@@ -159,6 +210,18 @@ if (argv['list-schematics']) {
 
 /** Create the schematic from the collection. */
 const schematic = collection.createSchematic(schematicName);
+const schemaJson = schematic.description.schemaJson;
+
+/** Print the schematics's properties if the user wants to */
+if (argv['schema']) {
+  if (schemaJson) {
+    printSchematicSchema(schemaJson);
+  } else {
+    logger.info('No schema definition found in the schematic.');
+  }
+  process.exit(0);
+  throw 0;  // TypeScript doesn't know that process.exit() never returns.
+}
 
 /** Gather the arguments for later use. */
 const debug: boolean = argv.debug === null ? isLocalCollection : argv.debug;
