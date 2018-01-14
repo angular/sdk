@@ -102,28 +102,28 @@ function parseSchematicName(str: string | null): { collection: string, schematic
 
 /**
  * Displays descriptions for each one of the properties inside a Schematic's Schema.
- * 
+ *
  * The print format is a follows:
  *   --<%= propName %> (<%= type %>): (Default: <%= default %>) (<%= required %>) <%= description %>
  *     alias: -<%= alias =>
- * 
+ *
  * A property is not printed if "visible":"false"
- * 
+ *
  * All keys different than "type", "default", "required", "description" or "alias" won't be printed.
- * 
+ *
  * @param schematicSchema The schematic's schema as a json object
  */
 function printSchematicSchema(schematicSchema: JsonObject) {
-  let props = schematicSchema.properties as JsonObject;
+  const props = schematicSchema.properties as JsonObject;
   let msg = '';
   for (const key in props) {
-    let prop = props[key] as JsonObject;
+    const prop = props[key] as JsonObject;
     if (typeof prop.visible === 'undefined' || prop.visible) {
       let mainInfo = `  --${key}`;
       if (prop.type) {
         mainInfo += ` (${prop.type})`;
       }
-      if (prop.default){
+      if (prop.default) {
         mainInfo += ` (Default: ${prop.default})`;
       }
       msg += terminal.cyan(mainInfo);
