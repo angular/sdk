@@ -7,6 +7,7 @@
     "import-groups": true,
     "non-null-operator": true,
     "no-global-tslint-disable": true,
+    "package-json": true,
     "single-eof-line": true,
 
 
