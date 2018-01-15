@@ -13,6 +13,6 @@
   "dependencies": {
     "ajv": "~5.5.1",
     "chokidar": "^1.7.0",
-    "source-map": "^0.5.6"
+    "source-map": "^0.6.1"
   }
 }

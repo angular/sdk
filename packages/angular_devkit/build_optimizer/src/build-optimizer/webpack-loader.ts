@@ -65,7 +65,7 @@ export default function buildOptimizerLoader
       const consumer = new SourceMapConsumer(intermediateSourceMap);
       const generator = SourceMapGenerator.fromSourceMap(consumer);
       generator.applySourceMap(new SourceMapConsumer(previousSourceMap));
-      newSourceMap = generator.toJSON();
+      newSourceMap = JSON.parse(generator.toString());
     } else {
       // Otherwise just return our generated sourcemap.
       newSourceMap = intermediateSourceMap;

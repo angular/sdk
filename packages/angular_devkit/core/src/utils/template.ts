@@ -235,26 +235,26 @@ function templateWithSourceMap(ast: TemplateAst, options?: TemplateOptions): str
   const module = options && options.module ? 'module.exports.default =' : '';
   const reHtmlEscape = reUnescapedHtml.source.replace(/[']/g, '\\\\\\\'');
 
-  const preamble = (new SourceNode(1, 0, sourceUrl, ''))
-    .add(new SourceNode(1, 0, sourceUrl, [
-      `return ${module} function(obj) {\n`,
-      '  obj || (obj = {});\n',
-      '  let __t;\n',
-      '  let __p = "";\n',
-      `  const __escapes = ${JSON.stringify(kHtmlEscapes)};\n`,
-      `  const __escapesre = new RegExp('${reHtmlEscape}', 'g');\n`,
-      `\n`,
-      `  const __e = function(s) { `,
-      `    return s ? s.replace(__escapesre, function(key) { return __escapes[key]; }) : '';`,
-      `  };\n`,
-      `  with (obj) {\n`,
-    ]));
+  const preamble = (new SourceNode(1, 0, sourceUrl, ''));
+  preamble.add(new SourceNode(1, 0, sourceUrl, [
+    `return ${module} function(obj) {\n`,
+    '  obj || (obj = {});\n',
+    '  let __t;\n',
+    '  let __p = "";\n',
+    `  const __escapes = ${JSON.stringify(kHtmlEscapes)};\n`,
+    `  const __escapesre = new RegExp('${reHtmlEscape}', 'g');\n`,
+    `\n`,
+    `  const __e = function(s) { `,
+    `    return s ? s.replace(__escapesre, function(key) { return __escapes[key]; }) : '';`,
+    `  };\n`,
+    `  with (obj) {\n`,
+  ].join('')).toString());
 
   const end = ast.children.length
     ? ast.children[ast.children.length - 1].end
     : { line: 0, column: 0 };
   const nodes = ast.children.reduce((chunk, node) => {
-    let code: string | SourceNode | (SourceNode | string)[] = '';
+    let code: SourceNode[] = [];
     switch (node.kind) {
       case 'content':
         code = [
@@ -314,14 +314,19 @@ function templateWithSourceMap(ast: TemplateAst, options?: TemplateOptions): str
         break;
     }
 
-    return chunk.add(new SourceNode(node.start.line, node.start.column, sourceUrl, code));
-  }, preamble)
-  .add(new SourceNode(end.line, end.column, sourceUrl, [
+    const codeAsString = code.map((sourceNode) => sourceNode.toString()).join('');
+    const newNode = new SourceNode(node.start.line, node.start.column, sourceUrl, codeAsString);
+    chunk.add(newNode.toString());
+
+    return preamble;
+  }, preamble);
+
+  preamble.add(new SourceNode(end.line, end.column, sourceUrl, [
     '  };\n',
     '\n',
     '  return __p;\n',
     '}\n',
-  ]));
+  ].join('')).toString());
 
   const code = nodes.toStringWithSourceMap({
     file: sourceUrl,
