@@ -13,7 +13,11 @@ import {
   terminal,
   virtualFs,
 } from '@angular-devkit/core';
-import { NodeJsSyncHost, createConsoleLogger } from '@angular-devkit/core/node';
+import {
+  ModuleNotFoundException,
+  NodeJsSyncHost,
+  createConsoleLogger,
+} from '@angular-devkit/core/node';
 import {
   DryRunEvent,
   DryRunSink,
@@ -21,6 +25,7 @@ import {
   HostSink,
   SchematicEngine,
   Tree,
+  UnknownSchematicException,
   formats,
 } from '@angular-devkit/schematics';
 import { BuiltinTaskExecutor } from '@angular-devkit/schematics/tasks/node';
@@ -36,6 +41,17 @@ import {
   ignoreElements,
   map,
 } from 'rxjs/operators';
+
+// Exceptions
+export class CollectionNotFoundException {
+  constructor(collection: string) { logger.fatal(`Could not find collection "${collection}".`); }
+}
+
+export class SchematicNotFoundException {
+  constructor(schematic: string, collection: string) {
+    logger.fatal(`Schematic "${schematic}" not found in collection "${collection}".`);
+  }
+}
 
 /**
  * Show usage of the CLI tool, and exit the process.
@@ -145,7 +161,20 @@ engineHost.registerTaskExecutor(BuiltinTaskExecutor.RepositoryInitializer);
  * The collection to be used.
  * @type {Collection|any}
  */
-const collection = engine.createCollection(collectionName);
+// tslint:disable-next-line:no-any
+let collection: any;
+
+try {
+  collection = engine.createCollection(collectionName);
+} catch (e) {
+  if (e instanceof ModuleNotFoundException) {
+    // tslint:disable-next-line:no-unused-expression
+    new CollectionNotFoundException(collectionName);
+    process.exit(3);
+  }
+  throw new Error(e.message);
+}
+
 if (collection === null) {
   logger.fatal(`Invalid collection name: "${collectionName}".`);
   process.exit(3);
@@ -162,7 +191,19 @@ if (argv['list-schematics']) {
 
 
 /** Create the schematic from the collection. */
-const schematic = collection.createSchematic(schematicName);
+// tslint:disable-next-line:no-any
+let schematic: any;
+
+try {
+  schematic = collection.createSchematic(schematicName);
+} catch (e) {
+  if (e instanceof UnknownSchematicException) {
+    // tslint:disable-next-line:no-unused-expression
+    new SchematicNotFoundException(schematicName, collectionName);
+    process.exit(3);
+  }
+  throw new Error(e.message);
+}
 
 /** Gather the arguments for later use. */
 const debug: boolean = argv.debug === null ? isLocalCollection : argv.debug;
