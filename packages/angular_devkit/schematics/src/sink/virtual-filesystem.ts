@@ -47,12 +47,12 @@ export abstract class VirtualFileSystemSink extends SimpleSinkBase {
   }
 
   protected _overwriteFile(path: string, content: Buffer): Observable<void> {
-    this._filesToUpdate.set(path, new UpdateBuffer(content));
+    this._filesToUpdate.set(path, new UpdateBuffer(content || ''));
 
     return empty<void>();
   }
   protected _createFile(path: string, content: Buffer): Observable<void> {
-    this._filesToCreate.set(path, new UpdateBuffer(content));
+    this._filesToCreate.set(path, new UpdateBuffer(content || ''));
 
     return empty<void>();
   }
