@@ -1,0 +1,33 @@
+{
+  "title": "Webpack binary schema for Nodejs apps",
+  "description": "Nodejs binary options",
+  "type": "object",
+  "properties": {
+    "buildTarget": {
+      "type": "string",
+      "description": "The target to run to build you the app"
+    },
+    "inspect": {
+      "type": "boolean",
+      "description": "Ensures the app is starting with debugging",
+      "default": true
+    },
+    "verbose": {
+      "type": "boolean",
+      "description": "Adds more details to output logging.",
+      "default": false
+    },
+    "args": {
+      "type": "array",
+      "description": "Extra args when starting the app",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "buildTarget"
+  ]
+}

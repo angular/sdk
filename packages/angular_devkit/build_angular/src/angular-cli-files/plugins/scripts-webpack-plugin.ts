@@ -172,7 +172,7 @@ export class ScriptsWebpackPlugin {
 
           const combinedSource = new CachedSource(concatSource);
           const filename = interpolateName(
-            { resourcePath: 'scripts.js' } as loader.LoaderContext,
+            { resourcePath: 'scripts.js' } as loader.LoaderContext as any,
             this.options.filename as string,
             { content: combinedSource.source() },
           );

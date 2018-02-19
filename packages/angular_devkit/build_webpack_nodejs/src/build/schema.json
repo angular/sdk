@@ -1,0 +1,68 @@
+{
+  "title": "Webpack build schema for Nodejs apps",
+  "description": "Nodejs build options",
+  "type": "object",
+  "properties": {
+    "main": {
+      "type": "string",
+      "description": "The name of the main entry-point file."
+    },
+    "outputPath": {
+      "type": "string",
+      "description": "Path where output will be placed."
+    },
+    "tsConfig": {
+      "type": "string",
+      "description": "Build tsConfig",
+      "default": "tsconfig.json"
+    },
+    "watch": {
+      "type": "boolean",
+      "description": "Watch mode",
+      "default": false
+    },
+    "optimization": {
+      "type": "boolean",
+      "description": "Defines the optimization level of the build.",
+      "default": false
+    },
+    "verbose": {
+      "type": "boolean",
+      "description": "Adds more details to output logging.",
+      "default": false
+    },
+    "progress": {
+      "type": "boolean",
+      "description": "Log progress to the console while building.",
+      "default": true
+    },
+    "statsJson": {
+      "type": "boolean",
+      "description": "Generates a 'stats.json' file which can be analyzed using tools such as: #webpack-bundle-analyzer' or https: //webpack.github.io/analyse.",
+      "default": false
+    },
+    "extractLicenses": {
+      "type": "boolean",
+      "description": "Extract all licenses in a separate file, in the case of production builds only.",
+      "default": true
+    },
+    "showCircularDependencies": {
+      "type": "boolean",
+      "description": "Show circular dependency warnings on builds.",
+      "default": true
+    },
+    "externals": {
+      "type": "array",
+      "description": "Modules to be excluded from the bundle",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "main",
+    "outputPath"
+  ]
+}

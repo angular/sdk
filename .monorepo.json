@@ -56,6 +56,17 @@
       "hash": "c203b0bc5127d90dea4d4a972c207cee",
       "snapshotRepo": "angular/angular-pwa-builds"
     },
+    "@angular-devkit/build-webpack-nodejs": {
+        "name": "Build Webpack Nodejs",
+        "links": [
+          {
+            "label": "README",
+            "url": "https://github.com/angular/devkit/blob/master/packages/angular_devkit/build_webpack_nodejs/README.md"
+          }
+        ],
+        "version": "0.0.1",
+        "hash": ""
+      },
     "@angular-devkit/architect": {
       "name": "Architect",
       "links": [

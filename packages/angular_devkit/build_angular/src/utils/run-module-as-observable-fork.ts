@@ -11,7 +11,7 @@ import { resolve } from 'path';
 import { Observable } from 'rxjs';
 const treeKill = require('tree-kill');
 
-
+// TODO: refactor out the fork seprate from the require module part
 export function runModuleAsObservableFork(
   cwd: string,
   modulePath: string,
