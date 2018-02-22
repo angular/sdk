@@ -12,6 +12,7 @@ import {
   transformJavascript,
 } from '../helpers/transform-javascript';
 import { getFoldFileTransformer } from '../transforms/class-fold';
+import { getForcePureCallTransformer, testForcePureCall } from '../transforms/force-pure-call';
 import { getImportTslibTransformer, testImportTslib } from '../transforms/import-tslib';
 import { getPrefixClassesTransformer, testPrefixClasses } from '../transforms/prefix-classes';
 import { getPrefixFunctionsTransformer } from '../transforms/prefix-functions';
@@ -139,6 +140,10 @@ export function buildOptimizer(options: BuildOptimizerOptions): TransformJavascr
 
   if (testWrapEnums(content)) {
     getTransforms.unshift(getWrapEnumsTransformer);
+  }
+
+  if (testForcePureCall(content)) {
+    getTransforms.unshift(getForcePureCallTransformer);
   }
 
   const transformJavascriptOpts: TransformJavascriptOptions = {
