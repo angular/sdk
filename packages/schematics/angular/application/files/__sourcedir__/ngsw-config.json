@@ -6,7 +6,8 @@
     "resources": {
       "files": [
         "/favicon.ico",
-        "/index.html"
+        "/index.html",
+        "/manifest.json"
       ],
       "versionedFiles": [
         "/*.bundle.css",

@@ -1,0 +1,9 @@
+{
+  "short_name": "<%= prefix %>",
+  "name": "<%= prefix %>",
+  "icons": [],
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "",
+  "theme_color": ""
+}

@@ -79,7 +79,8 @@ export default function (options: ApplicationOptions): Rule {
         apply(url('./files'), [
           options.minimal ? filter(minimalPathFilter) : noop(),
           options.skipGit ? filter(path => !path.endsWith('/__dot__gitignore')) : noop(),
-          options.serviceWorker ? noop() : filter(path => !path.endsWith('/ngsw-config.json')),
+          options.serviceWorker ? noop() : filter(path => !path.endsWith('/ngsw-config.json')
+                                                          && !path.endsWith('/manifest.json')),
           template({
             utils: strings,
             ...options,
