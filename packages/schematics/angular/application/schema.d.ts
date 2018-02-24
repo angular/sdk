@@ -79,4 +79,8 @@ export interface Schema {
      * Installs the @angular/service-worker.
      */
     serviceWorker?: boolean;
+    /**
+     * Specifies the editor used, for specific configuration.
+     */
+    editor?: ('vscode');
 }

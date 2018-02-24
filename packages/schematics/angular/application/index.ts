@@ -80,6 +80,7 @@ export default function (options: ApplicationOptions): Rule {
           options.minimal ? filter(minimalPathFilter) : noop(),
           options.skipGit ? filter(path => !path.endsWith('/__dot__gitignore')) : noop(),
           options.serviceWorker ? noop() : filter(path => !path.endsWith('/ngsw-config.json')),
+          options.editor === 'vscode' ? noop() : filter(path => path.indexOf('vscode') === -1),
           template({
             utils: strings,
             ...options,
