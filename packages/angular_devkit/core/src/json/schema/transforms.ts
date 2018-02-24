@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import { JsonArray, JsonObject, JsonValue } from '..';
-import { JsonPointer } from './visitor';
+import { JsonPointer } from './interface';
 
 
 export function addUndefinedDefaults(
@@ -14,7 +14,7 @@ export function addUndefinedDefaults(
   _pointer: JsonPointer,
   schema?: JsonObject,
   _root?: JsonObject | JsonArray,
-): JsonValue | undefined {
+): JsonValue {
   if (value === undefined && schema) {
     if (schema.items || schema.type == 'array') {
       return [];
@@ -38,5 +38,5 @@ export function addUndefinedDefaults(
     }
   }
 
-  return value;
+  return value as JsonValue;
 }

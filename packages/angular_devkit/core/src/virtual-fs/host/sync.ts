@@ -5,11 +5,12 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { Observable } from 'rxjs/Observable';
+import { Observable } from 'rxjs';
 import { BaseException } from '../../exception/exception';
 import { Path, PathFragment } from '../path';
 import {
   FileBuffer,
+  FileBufferLike,
   Host,
   HostCapabilities,
   HostWatchEvent,
@@ -25,7 +26,7 @@ export class SynchronousDelegateExpectedException extends BaseException {
 /**
  * Implement a synchronous-only host interface (remove the Observable parts).
  */
-export class SyncDelegateHost<T extends object> {
+export class SyncDelegateHost<T extends object = {}> {
   constructor(protected _delegate: Host<T>) {
     if (!_delegate.capabilities.synchronous) {
       throw new SynchronousDelegateExpectedException();
@@ -63,7 +64,7 @@ export class SyncDelegateHost<T extends object> {
     return this._delegate;
   }
 
-  write(path: Path, content: FileBuffer): void {
+  write(path: Path, content: FileBufferLike): void {
     return this._doSyncCall(this._delegate.write(path, content));
   }
   read(path: Path): FileBuffer {
@@ -90,9 +91,9 @@ export class SyncDelegateHost<T extends object> {
     return this._doSyncCall(this._delegate.isFile(path));
   }
 
-  // Some hosts may not support stats.
-  stats(path: Path): Stats<T> | null {
-    const result: Observable<Stats<T>> | null = this._delegate.stats(path);
+  // Some hosts may not support stat.
+  stat(path: Path): Stats<T> | null {
+    const result: Observable<Stats<T>> | null = this._delegate.stat(path);
 
     if (result) {
       return this._doSyncCall(result);

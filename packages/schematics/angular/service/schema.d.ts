@@ -16,13 +16,9 @@ export interface Schema {
      */
     path?: string;
     /**
-     * The path of the source directory.
+     * The name of the project.
      */
-    sourceDir?: string;
-    /**
-     * The root of the application.
-     */
-    appRoot?: string;
+    project?: string;
     /**
      * Flag to indicate if a dir is created.
      */
@@ -31,8 +27,4 @@ export interface Schema {
      * Specifies if a spec file is generated.
      */
     spec?: boolean;
-    /**
-     * Allows specification of the providing module.
-     */
-    module?: string;
 }

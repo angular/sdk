@@ -142,6 +142,18 @@ if (process.argv.indexOf('--spec-reporter') != -1) {
 // Manually set exit code (needed with custom reporters)
 runner.onComplete((success: boolean) => {
   process.exitCode = success ? 0 : 1;
+  if (process.platform.startsWith('win')) {
+    // TODO(filipesilva): finish figuring out why this happens.
+    // We should not need to force exit here, but when:
+    // - on windows
+    // - running webpack-dev-server
+    // - with ngtools/webpack on the compilation
+    // Something seems to hang and the process never exists.
+    // This does not happen on linux, nor with webpack on watch mode.
+    // Until this is figured out, we need to exit the process manually after tests finish
+    // otherwise appveyor will hang until it timeouts.
+    process.exit();
+  }
 });
 
 
@@ -152,10 +164,8 @@ glob.sync('packages/**/*.spec.ts')
   });
 
 export default function (args: ParsedArgs, logger: logging.Logger) {
-  let regex = 'packages/**/*_spec.ts';
-  if (args.glob) {
-    regex = `packages/**/${args.glob}/**/*_spec.ts`;
-  }
+  const specGlob = args.large ? '*_spec_large.ts' : '*_spec.ts';
+  const regex = args.glob ? args.glob : `packages/**/${specGlob}`;
 
   if (args['code-coverage']) {
     runner.env.addReporter(new IstanbulReporter());

@@ -7,13 +7,16 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import { Architect, Workspace } from '@angular-devkit/architect';
-import { dirname, normalize, tags } from '@angular-devkit/core';
+import 'symbol-observable';
+// symbol polyfill must go first
+// tslint:disable-next-line:ordered-imports import-groups
+import { Architect } from '@angular-devkit/architect';
+import { dirname, experimental, normalize, tags } from '@angular-devkit/core';
 import { NodeJsSyncHost, createConsoleLogger } from '@angular-devkit/core/node';
 import { existsSync, readFileSync } from 'fs';
 import * as minimist from 'minimist';
 import * as path from 'path';
-import { _throw } from 'rxjs/observable/throw';
+import { throwError } from 'rxjs';
 import { concatMap } from 'rxjs/operators';
 
 
@@ -81,48 +84,60 @@ if (targetStr) {
 
 // Load workspace configuration file.
 const currentPath = process.cwd();
-const configFileName = '.architect.json';
-const configFilePath = findUp([configFileName], currentPath);
+const configFileNames = [
+  'angular.json',
+  '.angular.json',
+  'workspace.json',
+  '.workspace.json',
+];
+
+const configFilePath = findUp(configFileNames, currentPath);
 
 if (!configFilePath) {
-  logger.fatal(`Workspace configuration file (${configFileName}) cannot be found in `
+  logger.fatal(`Workspace configuration file (${configFileNames.join(', ')}) cannot be found in `
     + `'${currentPath}' or in parent directories.`);
   process.exit(3);
   throw 3;  // TypeScript doesn't know that process.exit() never returns.
 }
 
-const workspacePath = dirname(normalize(configFilePath));
+const root = dirname(normalize(configFilePath));
 const configContent = readFileSync(configFilePath, 'utf-8');
-const configJson = JSON.parse(configContent) as Workspace;
+const workspaceJson = JSON.parse(configContent);
 
 const host = new NodeJsSyncHost();
-const architect = new Architect(workspacePath, host);
-architect.loadWorkspaceFromJson(configJson).pipe(
-  concatMap(() => {
+const workspace = new experimental.workspace.Workspace(root, host);
+
+let lastBuildEvent = { success: true };
+
+workspace.loadWorkspaceFromJson(workspaceJson).pipe(
+  concatMap(ws => new Architect(ws).loadArchitect()),
+  concatMap(architect => {
+
     const overrides = { ...argv };
     delete overrides['help'];
     delete overrides['_'];
 
-    const targetOptions = {
+    const targetSpec = {
       project,
       target: targetName,
       configuration,
       overrides,
     };
-    const target = architect.getTarget(targetOptions);
 
     // TODO: better logging of what's happening.
     if (argv.help) {
       // TODO: add target help
-      return _throw('Target help NYI.');
+      return throwError('Target help NYI.');
       // architect.help(targetOptions, logger);
     } else {
-      return architect.run(target, { logger });
+      const builderConfig = architect.getBuilderConfiguration(targetSpec);
+
+      return architect.run(builderConfig, { logger });
     }
   }),
 ).subscribe({
-  next: (event => logger.info(JSON.stringify(event, null, 2))),
-  complete: () => process.exit(0),
+  next: (buildEvent => lastBuildEvent = buildEvent),
+  complete: () => process.exit(lastBuildEvent.success ? 0 : 1),
   error: (err: Error) => {
     logger.fatal(err.message);
     if (err.stack) {

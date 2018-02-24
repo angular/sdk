@@ -6,26 +6,21 @@
   "properties": {
     "name": {
       "type": "string",
-      "description": "The name of the pipe."
+      "description": "The name of the pipe.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      }
     },
     "path": {
       "type": "string",
       "format": "path",
       "description": "The path to create the pipe.",
-      "default": "app",
       "visible": false
     },
-    "sourceDir": {
+    "project": {
       "type": "string",
-      "format": "path",
-      "description": "The path of the source directory.",
-      "default": "src",
-      "visible": false
-    },
-    "appRoot": {
-      "type": "string",
-      "format": "path",
-      "description": "The root of the application.",
+      "description": "The name of the project.",
       "visible": false
     },
     "flat": {
@@ -55,7 +50,5 @@
       "description": "Specifies if declaring module exports the pipe."
     }
   },
-  "required": [
-    "name"
-  ]
+  "required": []
 }

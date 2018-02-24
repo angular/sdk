@@ -11,10 +11,16 @@
 import { normalize, virtualFs } from '@angular-devkit/core';
 import { NodeJsAsyncHost, NodeJsSyncHost } from '@angular-devkit/core/node';
 import * as fs from 'fs';
-import { Observable } from 'rxjs/Observable';
-import { Subscription } from 'rxjs/Subscription';
+import { Observable, Subscription } from 'rxjs';
 
 const temp = require('temp');
+
+
+// TODO: replace this with an "it()" macro that's reusable globally.
+let linuxOnlyIt: typeof it = it;
+if (process.platform.startsWith('win') || process.platform.startsWith('darwin')) {
+  linuxOnlyIt = xit;
+}
 
 
 describe('NodeJsAsyncHost', () => {
@@ -30,7 +36,7 @@ describe('NodeJsAsyncHost', () => {
       .subscribe({ complete() { done(); } });
   });
 
-  it('can watch', done => {
+  linuxOnlyIt('can watch', done => {
     let obs: Observable<virtualFs.HostWatchEvent>;
     let subscription: Subscription;
     const content = virtualFs.stringToFileBuffer('hello world');
@@ -57,7 +63,7 @@ describe('NodeJsAsyncHost', () => {
         subscription.unsubscribe();
       })
       .then(done, done.fail);
-  }, 10000000);
+  }, 30000);
 });
 
 
@@ -74,7 +80,7 @@ describe('NodeJsSyncHost', () => {
     host.delete(normalize('/'));
   });
 
-  it('can watch', done => {
+  linuxOnlyIt('can watch', done => {
     let obs: Observable<virtualFs.HostWatchEvent>;
     let subscription: Subscription;
     const content = virtualFs.stringToFileBuffer('hello world');
@@ -103,6 +109,6 @@ describe('NodeJsSyncHost', () => {
         subscription.unsubscribe();
       })
       .then(done, done.fail);
-  }, 10000000);
+  }, 30000);
 
 });

@@ -8,17 +8,9 @@
 
 export interface Schema {
     /**
-     * The directory name to create the app in.
+     * The root directory of the new application.
      */
-    directory: string;
-    /**
-     * The path of the application.
-     */
-    path?: string;
-    /**
-     * The path of the source directory.
-     */
-    sourceDir?: string;
+    projectRoot?: string;
     /**
      * The name of the application.
      */
@@ -36,10 +28,6 @@ export interface Schema {
      */
     viewEncapsulation?: ('Emulated' | 'Native' | 'None');
     /**
-     * The version of the Angular CLI to use.
-     */
-    version?: string;
-    /**
      * Generates a routing module.
      */
     routing?: boolean;
@@ -56,27 +44,7 @@ export interface Schema {
      */
     skipTests?: boolean;
     /**
-     * Skip installing dependency packages.
-     */
-    skipInstall?: boolean;
-    /**
-     * Link CLI to global version (internal development only).
-     */
-    linkCli?: boolean;
-    /**
-     * Skip initializing a git repository.
-     */
-    skipGit?: boolean;
-    /**
-     * Initial repository commit information.
-     */
-    commit?: { name: string, email: string, message?: string };
-    /**
-     * Create a minimal app (no test structure, inline styles/templates).
-     */
-    minimal?: boolean;
-    /**
-     * Installs the @angular/service-worker.
-     */
-    serviceWorker?: boolean;
+    * Do not add dependencies to package.json (e.g., --skipPackageJson)
+    */
+    skipPackageJson: boolean;
 }

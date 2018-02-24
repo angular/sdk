@@ -6,8 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import { logging, schema } from '@angular-devkit/core';
-import { Observable } from 'rxjs/Observable';
-import { of as observableOf } from 'rxjs/observable/of';
+import { Observable, of as observableOf } from 'rxjs';
 import { map } from 'rxjs/operators';
 import {
   Collection,
@@ -16,6 +15,7 @@ import {
   Schematic,
   SchematicContext,
   SchematicEngine,
+  TaskConfiguration,
   Tree,
   VirtualTree,
   formats,
@@ -61,19 +61,24 @@ export class SchematicTestRunner {
     this._engineHost.registerOptionsTransform(validateOptionsWithSchema(registry));
     this._engineHost.registerTaskExecutor(BuiltinTaskExecutor.NodePackage);
     this._engineHost.registerTaskExecutor(BuiltinTaskExecutor.RepositoryInitializer);
+    this._engineHost.registerTaskExecutor(BuiltinTaskExecutor.RunSchematic);
+    this._engineHost.registerTaskExecutor(BuiltinTaskExecutor.TslintFix);
 
     this._collection = this._engine.createCollection(this._collectionName);
   }
 
+  get engine() { return this._engine; }
   get logger(): logging.Logger { return this._logger; }
+  get tasks(): TaskConfiguration[] { return [...this._engineHost.tasks]; }
 
   runSchematicAsync<SchematicSchemaT>(
     schematicName: string,
     opts?: SchematicSchemaT,
     tree?: Tree,
   ): Observable<UnitTestTree> {
-    const schematic = this._collection.createSchematic(schematicName);
+    const schematic = this._collection.createSchematic(schematicName, true);
     const host = observableOf(tree || new VirtualTree);
+    this._engineHost.clearTasks();
 
     return schematic.call(opts || {}, host, { logger: this._logger })
       .pipe(map(tree => new UnitTestTree(tree)));
@@ -84,10 +89,54 @@ export class SchematicTestRunner {
     opts?: SchematicSchemaT,
     tree?: Tree,
   ): UnitTestTree {
-    const schematic = this._collection.createSchematic(schematicName);
+    const schematic = this._collection.createSchematic(schematicName, true);
+
+    let result: UnitTestTree | null = null;
+    let error;
+    const host = observableOf(tree || new VirtualTree);
+    this._engineHost.clearTasks();
+
+    schematic.call(opts || {}, host, { logger: this._logger })
+      .subscribe(t => result = new UnitTestTree(t), e => error = e);
+
+    if (error) {
+      throw error;
+    }
+
+    if (result === null) {
+      throw new Error('Schematic is async, please use runSchematicAsync');
+    }
+
+    return result;
+  }
+
+  runExternalSchematicAsync<SchematicSchemaT>(
+    collectionName: string,
+    schematicName: string,
+    opts?: SchematicSchemaT,
+    tree?: Tree,
+  ): Observable<UnitTestTree> {
+    const externalCollection = this._engine.createCollection(collectionName);
+    const schematic = externalCollection.createSchematic(schematicName, true);
+    const host = observableOf(tree || new VirtualTree);
+    this._engineHost.clearTasks();
+
+    return schematic.call(opts || {}, host, { logger: this._logger })
+      .pipe(map(tree => new UnitTestTree(tree)));
+  }
+
+  runExternalSchematic<SchematicSchemaT>(
+    collectionName: string,
+    schematicName: string,
+    opts?: SchematicSchemaT,
+    tree?: Tree,
+  ): UnitTestTree {
+    const externalCollection = this._engine.createCollection(collectionName);
+    const schematic = externalCollection.createSchematic(schematicName, true);
 
     let result: UnitTestTree | null = null;
     const host = observableOf(tree || new VirtualTree);
+    this._engineHost.clearTasks();
 
     schematic.call(opts || {}, host, { logger: this._logger })
       .subscribe(t => result = new UnitTestTree(t));

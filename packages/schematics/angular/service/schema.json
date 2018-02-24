@@ -6,26 +6,21 @@
   "properties": {
     "name": {
       "type": "string",
-      "description": "The name of the service."
+      "description": "The name of the service.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      }
     },
     "path": {
       "type": "string",
       "format": "path",
       "description": "The path to create the service.",
-      "default": "app",
       "visible": false
     },
-    "sourceDir": {
+    "project": {
       "type": "string",
-      "format": "path",
-      "description": "The path of the source directory.",
-      "default": "src",
-      "visible": false
-    },
-    "appRoot": {
-      "type": "string",
-      "format": "path",
-      "description": "The root of the application.",
+      "description": "The name of the project.",
       "visible": false
     },
     "flat": {
@@ -37,15 +32,7 @@
       "type": "boolean",
       "default": true,
       "description": "Specifies if a spec file is generated."
-    },
-    "module": {
-      "type": "string",
-      "default": "",
-      "description": "Allows specification of the providing module.",
-      "alias": "m"
     }
   },
-  "required": [
-    "name"
-  ]
+  "required": []
 }

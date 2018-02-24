@@ -5,11 +5,12 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { Observable } from 'rxjs/Observable';
+import { Observable } from 'rxjs';
 import { Path, PathFragment } from '../path';
 
 
-export declare type FileBuffer = ArrayBuffer;
+export type FileBuffer = ArrayBuffer;
+export type FileBufferLike = ArrayBufferLike;
 
 export interface HostWatchOptions {
   readonly persistent?: boolean;
@@ -24,7 +25,7 @@ export const enum HostWatchEventType {
   Renamed = 3,  // Applied to the original file path.
 }
 
-export type Stats<T extends object> = T & {
+export type Stats<T extends object = {}> = T & {
   isFile(): boolean;
   isDirectory(): boolean;
 
@@ -49,7 +50,7 @@ export interface HostCapabilities {
 export interface Host<StatsT extends object = {}> {
   readonly capabilities: HostCapabilities;
 
-  write(path: Path, content: FileBuffer): Observable<void>;
+  write(path: Path, content: FileBufferLike): Observable<void>;
   read(path: Path): Observable<FileBuffer>;
   delete(path: Path): Observable<void>;
   rename(from: Path, to: Path): Observable<void>;
@@ -60,8 +61,8 @@ export interface Host<StatsT extends object = {}> {
   isDirectory(path: Path): Observable<boolean>;
   isFile(path: Path): Observable<boolean>;
 
-  // Some hosts may not support stats.
-  stats(path: Path): Observable<Stats<StatsT>> | null;
+  // Some hosts may not support stat.
+  stat(path: Path): Observable<Stats<StatsT>> | null;
 
   // Some hosts may not support watching.
   watch(path: Path, options?: HostWatchOptions): Observable<HostWatchEvent> | null;
