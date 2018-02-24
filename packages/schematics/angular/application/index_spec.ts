@@ -28,6 +28,7 @@ describe('Application Schematic', () => {
     style: 'css',
     skipTests: false,
     minimal: false,
+    strict: true,
   };
 
   it('should create all files of an application', () => {

@@ -127,6 +127,11 @@
       "description": "Installs the @angular/service-worker.",
       "type": "boolean",
       "default": false
+    },
+    "strict": {
+      "description": "Configure TypeScript in strict mode.",
+      "type": "boolean",
+      "default": false
     }
   },
   "required": [

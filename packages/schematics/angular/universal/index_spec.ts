@@ -36,6 +36,7 @@ describe('Universal Schematic', () => {
       style: 'css',
       skipTests: false,
       minimal: false,
+      strict: true,
     };
     appTree = schematicRunner.runSchematic('application', appOptions);
   });

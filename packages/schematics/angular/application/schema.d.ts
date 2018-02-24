@@ -79,4 +79,8 @@ export interface Schema {
      * Installs the @angular/service-worker.
      */
     serviceWorker?: boolean;
+    /**
+     * Configure TypeScript in strict mode.
+     */
+    strict?: boolean;
 }

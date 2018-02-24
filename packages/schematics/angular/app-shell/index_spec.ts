@@ -35,6 +35,7 @@ describe('App Shell Schematic', () => {
     style: 'css',
     skipTests: false,
     minimal: false,
+    strict: true,
   };
 
   beforeEach(() => {
