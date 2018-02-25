@@ -43,6 +43,11 @@
       "default": "",
       "description": "Allows specification of the providing module.",
       "alias": "m"
+    },
+    "http": {
+      "type": "boolean",
+      "default": false,
+      "description": "Specifies if HttpClient is injected."
     }
   },
   "required": [

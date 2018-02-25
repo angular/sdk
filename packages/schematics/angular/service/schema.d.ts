@@ -35,4 +35,8 @@ export interface Schema {
      * Allows specification of the providing module.
      */
     module?: string;
+    /**
+     * Specifies if HttpClient is injected.
+     */
+    http?: boolean;
 }

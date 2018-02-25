@@ -24,6 +24,7 @@ describe('Pipe Schematic', () => {
     spec: true,
     module: undefined,
     flat: false,
+    http: false,
   };
 
   let appTree: Tree;
