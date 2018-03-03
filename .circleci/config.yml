@@ -39,6 +39,13 @@ jobs:
           key: angular_devkit-{{ checksum "package-lock.json" }}
 
       - run: npm install --no-save
+      - run: which node
+      - run: 'node -pe "process.execPath"'
+      - run: which npm
+      - run: npm config get prefix
+      - run: 'node -pe "try {require.resolve(''npm'');} catch (e) {''''}"'
+      - run: 'ls /usr/local/lib/node_modules'
+      - run: 'ls /home/circleci/.npm-global/node_modules'
       - run: npm run test -- --code-coverage --full
 
   integration:

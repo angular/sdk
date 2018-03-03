@@ -5,6 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
+import * as childProcess from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { BaseException } from '../src';
@@ -50,23 +51,47 @@ function _getGlobalNodeModules() {
 
   if (process.env.PREFIX) {
     globalPrefix = process.env.PREFIX;
-  } else if (process.platform === 'win32') {
-    // c:\node\node.exe --> prefix=c:\node\
-    globalPrefix = path.dirname(process.execPath);
   } else {
-    // /usr/local/bin/node --> prefix=/usr/local
-    globalPrefix = path.dirname(path.dirname(process.execPath));
+    const npmPrefix = _getNpmPrefix();
+    if (npmPrefix != null) {
+      globalPrefix = npmPrefix;
+    } else if (process.platform === 'win32') {
+      // c:\node\node.exe --> prefix=c:\node\
+      globalPrefix = path.dirname(process.execPath);
+    } else {
+      // /usr/local/bin/node --> prefix=/usr/local
+      globalPrefix = path.dirname(path.dirname(process.execPath));
 
-    // destdir only is respected on Unix
-    const destdir = process.env.DESTDIR;
-    if (destdir) {
-      globalPrefix = path.join(destdir, globalPrefix);
+      // destdir only is respected on Unix
+      const destdir = process.env.DESTDIR;
+      if (destdir) {
+        globalPrefix = path.join(destdir, globalPrefix);
+      }
     }
   }
 
   return (process.platform !== 'win32')
     ? path.resolve(globalPrefix || '', 'lib', 'node_modules')
     : path.resolve(globalPrefix || '', 'node_modules');
+}
+
+let npmPrefix: string | null | undefined = undefined;
+
+function _getNpmPrefix(): string | null {
+  if (npmPrefix !== undefined) {
+    return npmPrefix;
+  }
+
+  try {
+    const {stdout, error} = childProcess.spawnSync('npm config get prefix', {shell: true});
+    if (error != null) { return null; }
+
+    npmPrefix = stdout.toString().trim();
+  } catch (exception) {
+    npmPrefix = null;
+  }
+
+  return npmPrefix;
 }
 
 
