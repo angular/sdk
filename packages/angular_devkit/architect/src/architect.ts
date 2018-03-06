@@ -105,8 +105,9 @@ export class Architect {
     );
   }
 
-  loadWorkspaceFromJson(json: Workspace) {
-    return this._validateAgainstSchema(json, this._workspaceSchema).pipe(
+  loadWorkspaceFromJson(contentJson: Workspace) {
+    return this.getSchema(this._workspaceSchema).pipe(
+      concatMap(schemaJson => this.validateAgainstSchema(contentJson, schemaJson)),
       concatMap((validatedWorkspace: Workspace) => {
         this._workspace = validatedWorkspace;
 
@@ -196,7 +197,8 @@ export class Architect {
       const basedir = getSystemPath(this._root);
       const [pkg, builderName] = target.builder.split(':');
       const pkgJsonPath = nodeResolve(pkg, { basedir, resolvePackageJson: true });
-      let buildersJsonPath: Path;
+      let builderMapJsonPath: Path;
+      let builderMapJson: Path;
 
       // Read the `builders` entry of package.json.
       return this._host.read(normalize(pkgJsonPath)).pipe(
@@ -208,16 +210,18 @@ export class Architect {
             throw new BuilderCannotBeResolvedException(target.builder);
           }
 
-          buildersJsonPath = join(dirname(normalize(pkgJsonPath)), pkgJsonBuildersentry);
+          builderMapJsonPath = join(dirname(normalize(pkgJsonPath)), pkgJsonBuildersentry);
 
-          return this._host.read(buildersJsonPath);
+          return this._host.read(builderMapJsonPath);
         }),
         concatMap((buffer) => of(JSON.parse(virtualFs.fileBufferToString(buffer)))),
-        // Validate builders json.
-        concatMap((builderMap) =>
-          this._validateAgainstSchema<BuilderMap>(builderMap, this._buildersSchema)),
+        // Validate builder map json.
+        concatMap((builderMap) => {
+          builderMapJson = builderMap;
 
-
+          return this.getSchema(this._buildersSchema);
+        }),
+        concatMap(schemaJson => this.validateAgainstSchema<BuilderMap>(builderMapJson, schemaJson)),
         concatMap((builderMap) => {
           const builderDescription = builderMap.builders[builderName];
 
@@ -226,9 +230,9 @@ export class Architect {
           }
 
           // Resolve paths in the builder description.
-          const builderJsonDir = dirname(buildersJsonPath);
-          builderDescription.schema = join(builderJsonDir, builderDescription.schema);
-          builderDescription.class = join(builderJsonDir, builderDescription.class);
+          const builderJsonDir = dirname(builderMapJsonPath);
+          builderDescription.schema = normalize(join(builderJsonDir, builderDescription.schema));
+          builderDescription.class = normalize(join(builderJsonDir, builderDescription.class));
 
           // Validate options again builder schema.
           return of(builderDescription);
@@ -240,8 +244,9 @@ export class Architect {
   validateBuilderOptions<OptionsT>(
     target: Target<OptionsT>, builderDescription: BuilderDescription,
   ): Observable<OptionsT> {
-    return this._validateAgainstSchema<OptionsT>(target.options,
-      normalize(builderDescription.schema));
+    return this.getSchema(builderDescription.schema).pipe(
+      concatMap(schemaJson => this.validateAgainstSchema(target.options, schemaJson)),
+    );
   }
 
   getBuilder<OptionsT>(
@@ -254,14 +259,18 @@ export class Architect {
     return new builderClass(context);
   }
 
-  // Warning: this method changes contentJson in place.
-  // TODO: add transforms to resolve paths.
-  private _validateAgainstSchema<T = {}>(contentJson: {}, schemaPath: Path): Observable<T> {
-    const registry = new schema.CoreSchemaRegistry();
-
+  getSchema(schemaPath: Path): Observable<JsonObject> {
     return this._host.read(schemaPath).pipe(
       concatMap((buffer) => of(JSON.parse(virtualFs.fileBufferToString(buffer)))),
-      concatMap((schemaContent) => registry.compile(schemaContent)),
+    );
+  }
+
+  // Warning: this method changes contentJson in place.
+  // TODO: add transforms to resolve paths.
+  validateAgainstSchema<T = {}>(contentJson: {}, schemaJson: JsonObject): Observable<T> {
+    const registry = new schema.CoreSchemaRegistry();
+
+    return registry.compile(schemaJson).pipe(
       concatMap(validator => validator(contentJson)),
       concatMap(validatorResult => {
         if (validatorResult.success) {
