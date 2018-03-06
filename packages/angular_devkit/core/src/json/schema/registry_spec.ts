@@ -128,6 +128,28 @@ describe('CoreSchemaRegistry', () => {
       .subscribe(done, done.fail);
   });
 
+  it('supports type coercion', done => {
+    const registry = new CoreSchemaRegistry([], true);
+    const data = { bool: 'true', nbr: '4.2'  };
+
+    registry
+      .compile({
+        properties: {
+          bool: { type: 'boolean' },
+          nbr: { type: 'number' },
+        },
+        additionalProperties: false,
+      }).pipe(
+        mergeMap(validator => validator(data)),
+        map(result => {
+          expect(result.success).toBe(true);
+          expect(data.bool as any as boolean).toBe(true);
+          expect(data.nbr as any as number).toBe(4.2);
+        }),
+    )
+      .subscribe(done, done.fail);
+  });
+
   // Synchronous failure is only used internally.
   // If it's meant to be used externally then this test should change to truly be synchronous
   // (i.e. not relyign on the observable).

@@ -36,7 +36,7 @@ export class CoreSchemaRegistry implements SchemaRegistry {
   private _sourceMap = new Map<string, SmartDefaultProvider<{}>>();
   private _smartDefaultRecord = new Map<string, JsonObject>();
 
-  constructor(formats: SchemaFormat[] = []) {
+  constructor(formats: SchemaFormat[] = [], coerceTypes = false) {
     /**
      * Build an AJV instance that will be used to validate schemas.
      */
@@ -48,6 +48,7 @@ export class CoreSchemaRegistry implements SchemaRegistry {
     }
 
     this._ajv = ajv({
+      coerceTypes,
       useDefaults: true,
       formats: formatsObj,
       loadSchema: (uri: string) => this._fetch(uri) as ajv.Thenable<object>,
