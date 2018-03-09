@@ -9,6 +9,7 @@
 import { logging, strings } from '@angular-devkit/core';
 import { SchemaClassFactory } from '@ngtools/json-schema';
 import * as fs from 'fs';
+import { extname } from 'path';
 
 
 export function buildSchema(inFile: string, mimetype: string): string {
@@ -37,17 +38,18 @@ export function buildSchema(inFile: string, mimetype: string): string {
 
 export default function(opts: { _: string[], mimetype?: string }, logger: logging.Logger) {
   const inFile = opts._[0] as string;
-  const outFile = opts._[1] as string;
+  let outFile = opts._[1] as string;
   const mimetype = opts.mimetype || 'text/x.dts';
+
+  if (!outFile) {
+    const inExt = extname(inFile);
+    outFile = inFile.replace(inExt, '.d.ts');
+  }
 
   if (!inFile) {
     logger.fatal('Command serialize needs an input file.');
   } else {
     const output = buildSchema(inFile, mimetype);
-    if (outFile) {
-      fs.writeFileSync(outFile, output, { encoding: 'utf-8' });
-    } else {
-      logger.info(output);
-    }
+    fs.writeFileSync(outFile, output, { encoding: 'utf-8' });
   }
 }
