@@ -97,6 +97,7 @@ const configJson = JSON.parse(configContent) as Workspace;
 
 const host = new NodeJsSyncHost();
 const architect = new Architect(workspacePath, host);
+let lastBuildEvent = { success: true };
 architect.loadWorkspaceFromJson(configJson).pipe(
   concatMap(() => {
     const overrides = { ...argv };
@@ -121,8 +122,8 @@ architect.loadWorkspaceFromJson(configJson).pipe(
     }
   }),
 ).subscribe({
-  next: (event => logger.info(JSON.stringify(event, null, 2))),
-  complete: () => process.exit(0),
+  next: (buildEvent => lastBuildEvent = buildEvent),
+  complete: () => process.exit(lastBuildEvent.success ? 0 : 1),
   error: (err: Error) => {
     logger.fatal(err.message);
     if (err.stack) {
