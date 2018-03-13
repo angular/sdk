@@ -378,12 +378,12 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
     let servePath = options.servePath;
     if (!servePath && servePath !== '') {
       const defaultServePath =
-        this._findDefaultServePath(browserOptions.baseHref, browserOptions.deployUrl);
+        this._findDefaultServePath(browserOptions.baseHref);
       const showWarning = options.servePathDefaultWarning;
       if (defaultServePath == null && showWarning) {
         this.context.logger.warn(tags.oneLine`
-            WARNING: --deploy-url and/or --base-href contain
-            unsupported values for ng serve.  Default serve path of '/' used.
+            WARNING: --base-href contains an
+            unsupported value for ng serve.  Default serve path of '/' used.
             Use --serve-path to override.
           `);
       }

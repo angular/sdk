@@ -57,9 +57,6 @@ export function getStylesConfig(wco: WebpackConfigOptions) {
   const maximumInlineSize = 10;
   // Determine hashing format.
   const hashFormat = getOutputHashFormat(buildOptions.outputHashing as string);
-  // Convert absolute resource URLs to account for base-href and deploy-url.
-  const baseHref = wco.buildOptions.baseHref || '';
-  const deployUrl = wco.buildOptions.deployUrl || '';
 
   const postcssPluginCreator = function (loader: webpack.loader.LoaderContext) {
     return [
@@ -118,24 +115,6 @@ export function getStylesConfig(wco: WebpackConfigOptions) {
       }),
       postcssUrl([
         {
-          // Only convert root relative URLs, which CSS-Loader won't process into require().
-          filter: ({ url }: PostcssUrlAsset) => url.startsWith('/') && !url.startsWith('//'),
-          url: ({ url }: PostcssUrlAsset) => {
-            if (deployUrl.match(/:\/\//) || deployUrl.startsWith('/')) {
-              // If deployUrl is absolute or root relative, ignore baseHref & use deployUrl as is.
-              return `${deployUrl.replace(/\/$/, '')}${url}`;
-            } else if (baseHref.match(/:\/\//)) {
-              // If baseHref contains a scheme, include it as is.
-              return baseHref.replace(/\/$/, '') +
-                `/${deployUrl}/${url}`.replace(/\/\/+/g, '/');
-            } else {
-              // Join together base-href, deploy-url and the original URL.
-              // Also dedupe multiple slashes into single ones.
-              return `/${baseHref}/${deployUrl}/${url}`.replace(/\/\/+/g, '/');
-            }
-          }
-        },
-        {
           // TODO: inline .cur if not supporting IE (use browserslist to check)
           filter: (asset: PostcssUrlAsset) => {
             return maximumInlineSize > 0 && !asset.hash && !asset.absolutePath.endsWith('.cur');
@@ -148,7 +127,6 @@ export function getStylesConfig(wco: WebpackConfigOptions) {
         { url: 'rebase' },
       ]),
       PostcssCliResources({
-        deployUrl: loader.loaders[loader.loaderIndex].options.ident == 'extracted' ? '' : deployUrl,
         loader,
         filename: `[name]${hashFormat.file}.[ext]`,
       }),
@@ -229,7 +207,6 @@ export function getStylesConfig(wco: WebpackConfigOptions) {
       {
         loader: 'postcss-loader',
         options: {
-          ident: 'embedded',
           plugins: postcssPluginCreator,
           sourceMap: cssSourceMap
         }
@@ -252,7 +229,6 @@ export function getStylesConfig(wco: WebpackConfigOptions) {
           {
             loader: 'postcss-loader',
             options: {
-              ident: buildOptions.extractCss ? 'extracted' : 'embedded',
               plugins: postcssPluginCreator,
               sourceMap: cssSourceMap
             }
