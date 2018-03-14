@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import { BuildEvent, Builder, BuilderContext, Target } from '@angular-devkit/architect';
+import { BuildEvent, Runner, RunnerContext, Target } from '@angular-devkit/architect';
 import { getSystemPath, tags } from '@angular-devkit/core';
 import { existsSync, readFileSync } from 'fs';
 import * as path from 'path';
@@ -22,14 +22,14 @@ import {
   statsWarningsToString,
 } from '../angular-cli-files/utilities/stats';
 import {
-  BrowserBuilder,
-  BrowserBuilderOptions,
+  BrowserRunner,
+  BrowserRunnerOptions,
 } from '../browser/';
 const opn = require('opn');
 const WebpackDevServer = require('webpack-dev-server');
 
 
-export interface DevServerBuilderOptions {
+export interface DevServerRunnerOptions {
   browserTarget: string;
   port: number;
   host: string;
@@ -74,11 +74,11 @@ interface WebpackDevServerConfigurationOptions {
   disableHostCheck?: boolean;
 }
 
-export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
+export class DevServerRunner implements Runner<DevServerRunnerOptions> {
 
-  constructor(public context: BuilderContext) { }
+  constructor(public context: RunnerContext) { }
 
-  run(target: Target<DevServerBuilderOptions>): Observable<BuildEvent> {
+  run(target: Target<DevServerRunnerOptions>): Observable<BuildEvent> {
     const root = getSystemPath(target.root);
     const options = target.options;
 
@@ -89,8 +89,8 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
         return this._getBrowserOptions(options);
       }),
       concatMap((browserOptions) => new Observable(obs => {
-        const browserBuilder = new BrowserBuilder(this.context);
-        const webpackConfig = browserBuilder.buildWebpackConfig(target.root, browserOptions);
+        const browserRunner = new BrowserRunner(this.context);
+        const webpackConfig = browserRunner.buildWebpackConfig(target.root, browserOptions);
         const webpackCompiler = webpack(webpackConfig);
         const statsConfig = getWebpackStatsConfig(browserOptions.verbose);
 
@@ -209,8 +209,8 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
 
   private _buildServerConfig(
     root: string,
-    options: DevServerBuilderOptions,
-    browserOptions: BrowserBuilderOptions,
+    options: DevServerRunnerOptions,
+    browserOptions: BrowserRunnerOptions,
   ) {
     if (options.disableHostCheck) {
       this.context.logger.warn(tags.oneLine`
@@ -258,8 +258,8 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
   }
 
   private _addLiveReload(
-    options: DevServerBuilderOptions,
-    browserOptions: BrowserBuilderOptions,
+    options: DevServerRunnerOptions,
+    browserOptions: BrowserRunnerOptions,
     webpackConfig: any, // tslint:disable-line:no-any
     clientAddress: string,
   ) {
@@ -303,7 +303,7 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
 
   private _addSslConfig(
     root: string,
-    options: DevServerBuilderOptions,
+    options: DevServerRunnerOptions,
     config: WebpackDevServerConfigurationOptions,
   ) {
     let sslKey: string | undefined = undefined;
@@ -330,7 +330,7 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
 
   private _addProxyConfig(
     root: string,
-    options: DevServerBuilderOptions,
+    options: DevServerRunnerOptions,
     config: WebpackDevServerConfigurationOptions,
   ) {
     let proxyConfig = {};
@@ -344,7 +344,7 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
     config.proxy = proxyConfig;
   }
 
-  private _buildServePath(options: DevServerBuilderOptions, browserOptions: BrowserBuilderOptions) {
+  private _buildServePath(options: DevServerRunnerOptions, browserOptions: BrowserRunnerOptions) {
     let servePath = options.servePath;
     if (!servePath && servePath !== '') {
       const defaultServePath =
@@ -403,21 +403,21 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
     return `${normalizedBaseHref}${deployUrl || ''}`;
   }
 
-  private _getBrowserOptions(options: DevServerBuilderOptions) {
+  private _getBrowserOptions(options: DevServerRunnerOptions) {
     const [project, target, configuration] = options.browserTarget.split(':');
     // Override browser build watch setting.
     const overrides = { watch: options.watch };
-    let browserTarget: Target<BrowserBuilderOptions>;
+    let browserTarget: Target<BrowserRunnerOptions>;
 
     const browserTargetOptions = { project, target, configuration, overrides };
-    browserTarget = this.context.architect.getTarget<BrowserBuilderOptions>(browserTargetOptions);
+    browserTarget = this.context.architect.getTarget<BrowserRunnerOptions>(browserTargetOptions);
 
-    return this.context.architect.getBuilderDescription(browserTarget).pipe(
+    return this.context.architect.getRunnerDescription(browserTarget).pipe(
       concatMap(browserDescription =>
-        this.context.architect.validateBuilderOptions(browserTarget, browserDescription)),
+        this.context.architect.validateRunnerOptions(browserTarget, browserDescription)),
     );
   }
 }
 
 
-export default DevServerBuilder;
+export default DevServerRunner;

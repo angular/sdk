@@ -8,9 +8,9 @@
 
 import {
   BuildEvent,
-  Builder,
-  BuilderContext,
-  BuilderDescription,
+  Runner,
+  RunnerContext,
+  RunnerDescription,
   Target,
 } from '@angular-devkit/architect';
 import { getSystemPath, tags } from '@angular-devkit/core';
@@ -21,11 +21,11 @@ import { of } from 'rxjs/observable/of';
 import { concatMap, take } from 'rxjs/operators';
 import * as url from 'url';
 import { requireProjectModule } from '../angular-cli-files/utilities/require-project-module';
-import { DevServerBuilderOptions } from '../dev-server';
+import { DevServerRunnerOptions } from '../dev-server';
 import { runModuleAsObservableFork } from '../utils';
 
 
-export interface ProtractorBuilderOptions {
+export interface ProtractorRunnerOptions {
   protractorConfig: string;
   devServerTarget?: string;
   specs: string[];
@@ -37,11 +37,11 @@ export interface ProtractorBuilderOptions {
   baseUrl: string;
 }
 
-export class ProtractorBuilder implements Builder<ProtractorBuilderOptions> {
+export class ProtractorRunner implements Runner<ProtractorRunnerOptions> {
 
-  constructor(public context: BuilderContext) { }
+  constructor(public context: RunnerContext) { }
 
-  run(target: Target<ProtractorBuilderOptions>): Observable<BuildEvent> {
+  run(target: Target<ProtractorRunnerOptions>): Observable<BuildEvent> {
 
     const root = getSystemPath(target.root);
     const options = target.options;
@@ -55,21 +55,21 @@ export class ProtractorBuilder implements Builder<ProtractorBuilderOptions> {
     );
   }
 
-  private _startDevServer(options: ProtractorBuilderOptions) {
+  private _startDevServer(options: ProtractorRunnerOptions) {
     const [project, targetName, configuration] = (options.devServerTarget as string).split(':');
     // Override browser build watch setting.
     const overrides = { watch: false, host: options.host, port: options.port };
     const browserTargetOptions = { project, target: targetName, configuration, overrides };
     const devServerTarget = this.context.architect
-      .getTarget<DevServerBuilderOptions>(browserTargetOptions);
-    let devServerDescription: BuilderDescription;
+      .getTarget<DevServerRunnerOptions>(browserTargetOptions);
+    let devServerDescription: RunnerDescription;
     let baseUrl: string;
 
-    return this.context.architect.getBuilderDescription(devServerTarget).pipe(
+    return this.context.architect.getRunnerDescription(devServerTarget).pipe(
       concatMap(description => {
         devServerDescription = description;
 
-        return this.context.architect.validateBuilderOptions(devServerTarget,
+        return this.context.architect.validateRunnerOptions(devServerTarget,
           devServerDescription);
       }),
       concatMap(() => {
@@ -94,9 +94,9 @@ export class ProtractorBuilder implements Builder<ProtractorBuilderOptions> {
         // Save the computed baseUrl back so that Protractor can use it.
         options.baseUrl = baseUrl;
 
-        return of(this.context.architect.getBuilder(devServerDescription, this.context));
+        return of(this.context.architect.getRunner(devServerDescription, this.context));
       }),
-      concatMap(builder => builder.run(devServerTarget)),
+      concatMap(runner => runner.run(devServerTarget)),
     );
   }
 
@@ -130,7 +130,7 @@ export class ProtractorBuilder implements Builder<ProtractorBuilderOptions> {
     }));
   }
 
-  private _runProtractor(root: string, options: ProtractorBuilderOptions): Observable<BuildEvent> {
+  private _runProtractor(root: string, options: ProtractorRunnerOptions): Observable<BuildEvent> {
     const additionalProtractorConfig = {
       elementExplorer: options.elementExplorer,
       baseUrl: options.baseUrl,
@@ -150,4 +150,4 @@ export class ProtractorBuilder implements Builder<ProtractorBuilderOptions> {
   }
 }
 
-export default ProtractorBuilder;
+export default ProtractorRunner;

@@ -10,7 +10,7 @@ import { Architect } from '@angular-devkit/architect';
 import { normalize } from '@angular-devkit/core';
 import { fromPromise } from 'rxjs/observable/fromPromise';
 import { concatMap, take, tap } from 'rxjs/operators';
-import { DevServerBuilderOptions } from '../../src';
+import { DevServerRunnerOptions } from '../../src';
 import {
   TestProjectHost,
   browserWorkspaceTarget,
@@ -21,7 +21,7 @@ import {
 } from '../utils';
 
 
-describe('Dev Server Builder serve path', () => {
+describe('Dev Server Runner serve path', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
 
@@ -30,7 +30,7 @@ describe('Dev Server Builder serve path', () => {
 
   // TODO: review this test, it seems to pass with or without the servePath.
   it('works', (done) => {
-    const overrides: Partial<DevServerBuilderOptions> = { servePath: 'test/' };
+    const overrides: Partial<DevServerRunnerOptions> = { servePath: 'test/' };
 
     architect.loadWorkspaceFromJson(makeWorkspace([
       browserWorkspaceTarget,

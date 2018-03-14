@@ -12,7 +12,7 @@ import { concatMap } from 'rxjs/operators';
 import { TestProjectHost, karmaWorkspaceTarget, makeWorkspace, workspaceRoot } from '../utils';
 
 
-describe('Karma Builder assets', () => {
+describe('Karma Runner assets', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
 

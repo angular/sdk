@@ -18,7 +18,7 @@ import {
 } from '../utils';
 
 
-describe('Browser Builder errors', () => {
+describe('Browser Runner errors', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
 

@@ -18,7 +18,7 @@ import {
 } from '../utils';
 
 
-describe('Browser Builder circular dependency detection', () => {
+describe('Browser Runner circular dependency detection', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
 

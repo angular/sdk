@@ -9,7 +9,7 @@
 import { Architect } from '@angular-devkit/architect';
 import { join, normalize } from '@angular-devkit/core';
 import { concatMap, tap } from 'rxjs/operators';
-import { BrowserBuilderOptions } from '../../src';
+import { BrowserRunnerOptions } from '../../src';
 import { TestProjectHost, browserWorkspaceTarget, makeWorkspace, workspaceRoot } from '../utils';
 
 
@@ -70,7 +70,7 @@ export const lazyModuleImport: { [path: string]: string } = {
   `,
 };
 
-describe('Browser Builder lazy modules', () => {
+describe('Browser Runner lazy modules', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
   const outputPath = normalize('dist');
@@ -141,7 +141,7 @@ describe('Browser Builder lazy modules', () => {
     });
     host.replaceInFile('src/tsconfig.app.json', `"module": "es2015"`, `"module": "esnext"`);
 
-    const overrides: Partial<BrowserBuilderOptions> = { namedChunks: false };
+    const overrides: Partial<BrowserRunnerOptions> = { namedChunks: false };
 
     architect.loadWorkspaceFromJson(makeWorkspace(browserWorkspaceTarget)).pipe(
       concatMap(() => architect.run(architect.getTarget({ overrides }))),
@@ -176,7 +176,7 @@ describe('Browser Builder lazy modules', () => {
     });
     host.replaceInFile('src/tsconfig.app.json', `"module": "es2015"`, `"module": "esnext"`);
 
-    const overrides: Partial<BrowserBuilderOptions> = { commonChunk: false };
+    const overrides: Partial<BrowserRunnerOptions> = { commonChunk: false };
 
     architect.loadWorkspaceFromJson(makeWorkspace(browserWorkspaceTarget)).pipe(
       concatMap(() => architect.run(architect.getTarget({ overrides }))),
@@ -210,7 +210,7 @@ describe('Browser Builder lazy modules', () => {
     });
     host.replaceInFile('src/tsconfig.app.json', `"module": "es2015"`, `"module": "esnext"`);
 
-    const overrides: Partial<BrowserBuilderOptions> = { lazyModules: ['app/lazy/lazy.module'] };
+    const overrides: Partial<BrowserRunnerOptions> = { lazyModules: ['app/lazy/lazy.module'] };
 
     architect.loadWorkspaceFromJson(makeWorkspace(browserWorkspaceTarget)).pipe(
       concatMap(() => architect.run(architect.getTarget({ overrides }))),

@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import { BuildEvent, Builder, BuilderContext, Target } from '@angular-devkit/architect';
+import { BuildEvent, Runner, RunnerContext, Target } from '@angular-devkit/architect';
 import { getSystemPath } from '@angular-devkit/core';
 import { readFileSync } from 'fs';
 import * as glob from 'glob';
@@ -19,7 +19,7 @@ import { requireProjectModule } from '../angular-cli-files/utilities/require-pro
 import { stripBom } from '../angular-cli-files/utilities/strip-bom';
 
 
-export interface TslintBuilderOptions {
+export interface TslintRunnerOptions {
   tslintConfig?: string;
   tsConfig?: string;
   fix: boolean;
@@ -31,11 +31,11 @@ export interface TslintBuilderOptions {
   files: string[];
 }
 
-export class TslintBuilder implements Builder<TslintBuilderOptions> {
+export class TslintRunner implements Runner<TslintRunnerOptions> {
 
-  constructor(public context: BuilderContext) { }
+  constructor(public context: RunnerContext) { }
 
-  run(target: Target<TslintBuilderOptions>): Observable<BuildEvent> {
+  run(target: Target<TslintRunnerOptions>): Observable<BuildEvent> {
 
     const root = getSystemPath(target.root);
     const options = target.options;
@@ -124,7 +124,7 @@ export class TslintBuilder implements Builder<TslintBuilderOptions> {
 
 function getFilesToLint(
   root: string,
-  options: TslintBuilderOptions,
+  options: TslintRunnerOptions,
   linter: typeof tslint.Linter,
   program?: ts.Program,
 ): string[] {
@@ -155,7 +155,7 @@ function getFilesToLint(
 
 function getFileContents(
   file: string,
-  options: TslintBuilderOptions,
+  options: TslintRunnerOptions,
   program?: ts.Program,
 ): string | undefined {
   // The linter retrieves the SourceFile TS node directly if a program is used
@@ -177,4 +177,4 @@ function getFileContents(
   }
 }
 
-export default TslintBuilder;
+export default TslintRunner;

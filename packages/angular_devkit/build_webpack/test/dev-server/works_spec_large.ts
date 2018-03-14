@@ -20,7 +20,7 @@ import {
 } from '../utils';
 
 
-describe('Dev Server Builder', () => {
+describe('Dev Server Runner', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
 

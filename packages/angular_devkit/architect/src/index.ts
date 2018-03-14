@@ -7,5 +7,5 @@
  */
 
 export * from './architect';
-export * from './builder';
+export * from './runner';
 export * from './workspace';

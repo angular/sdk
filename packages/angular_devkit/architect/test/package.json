@@ -1,5 +1,5 @@
 {
-  "builders": "builders.json",
+  "runners": "runners.json",
   "dependencies": {
     "rxjs": "^5.5.6"
   }

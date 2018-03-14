@@ -10,7 +10,7 @@ import { Architect } from '@angular-devkit/architect';
 import { normalize } from '@angular-devkit/core';
 import { fromPromise } from 'rxjs/observable/fromPromise';
 import { concatMap, take, tap } from 'rxjs/operators';
-import { DevServerBuilderOptions } from '../../src';
+import { DevServerRunnerOptions } from '../../src';
 import {
   TestProjectHost,
   browserWorkspaceTarget,
@@ -21,7 +21,7 @@ import {
 } from '../utils';
 
 
-describe('Dev Server Builder public host', () => {
+describe('Dev Server Runner public host', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
   // We have to spoof the host to a non-numeric one because Webpack Dev Server does not
@@ -45,7 +45,7 @@ describe('Dev Server Builder public host', () => {
   }, 30000);
 
   it('works', (done) => {
-    const overrides: Partial<DevServerBuilderOptions> = { publicHost: headers.host };
+    const overrides: Partial<DevServerRunnerOptions> = { publicHost: headers.host };
 
     architect.loadWorkspaceFromJson(makeWorkspace([
       browserWorkspaceTarget,
@@ -60,7 +60,7 @@ describe('Dev Server Builder public host', () => {
   }, 30000);
 
   it('works', (done) => {
-    const overrides: Partial<DevServerBuilderOptions> = { disableHostCheck: true };
+    const overrides: Partial<DevServerRunnerOptions> = { disableHostCheck: true };
 
     architect.loadWorkspaceFromJson(makeWorkspace([
       browserWorkspaceTarget,

@@ -1,35 +1,35 @@
 {
   "$schema": "http://json-schema.org/schema",
-  "id": "BuildersSchema",
-  "title": "Builders schema for validating a list of builders.",
+  "id": "RunnersSchema",
+  "title": "Runners schema for validating a list of runners.",
   "type": "object",
   "properties": {
     "$schema": {
       "type": "string",
       "description": "Link to schema."
     },
-    "builders": {
+    "runners": {
       "additionalProperties": {
-        "$ref": "#/definitions/builder"
+        "$ref": "#/definitions/runner"
       }
     }
   },
   "definitions": {
-    "builder": {
+    "runner": {
       "type": "object",
       "description": "Target options.",
       "properties": {
         "class": {
           "type": "string",
-          "description": "The builder class module."
+          "description": "The runner class module."
         },
         "schema": {
           "type": "string",
-          "description": "Schema for builder option validation."
+          "description": "Schema for runner option validation."
         },
         "description": {
           "type": "string",
-          "description": "Builder description."
+          "description": "Runner description."
         }
       },
       "required": [

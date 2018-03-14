@@ -11,7 +11,7 @@ import { Observable } from 'rxjs/Observable';
 import { Architect, Target } from './architect';
 
 
-export interface BuilderContext {
+export interface RunnerContext {
   logger: logging.Logger;
   host: virtualFs.Host<{}>;
   architect: Architect;
@@ -24,26 +24,26 @@ export interface BuildEvent {
   success: boolean;
 }
 
-export interface Builder<OptionsT> {
-  run(_target: Target<Partial<OptionsT>>): Observable<BuildEvent>;
+export interface Runner<OptionsT> {
+  run(target: Target<Partial<OptionsT>>): Observable<BuildEvent>;
 }
 
-export interface BuilderPathsMap {
-  builders: { [k: string]: BuilderPaths };
+export interface RunnerPathsMap {
+  runners: { [k: string]: RunnerPaths };
 }
 
-export interface BuilderPaths {
+export interface RunnerPaths {
   class: Path;
   schema: Path;
   description: string;
 }
 
-export interface BuilderDescription {
+export interface RunnerDescription {
   name: string;
   schema: JsonObject;
   description: string;
 }
 
-export interface BuilderConstructor<OptionsT> {
-  new(context: BuilderContext): Builder<OptionsT>;
+export interface RunnerConstructor<OptionsT> {
+  new(context: RunnerContext): Runner<OptionsT>;
 }

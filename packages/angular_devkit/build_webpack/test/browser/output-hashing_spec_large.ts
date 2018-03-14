@@ -13,7 +13,7 @@ import { TestProjectHost, browserWorkspaceTarget, makeWorkspace, workspaceRoot }
 import { lazyModuleFiles, lazyModuleImport } from './lazy-module_spec_large';
 
 
-describe('Browser Builder output hashing', () => {
+describe('Browser Runner output hashing', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
 

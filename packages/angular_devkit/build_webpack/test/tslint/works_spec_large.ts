@@ -9,7 +9,7 @@
 import { Architect } from '@angular-devkit/architect';
 import { normalize, virtualFs } from '@angular-devkit/core';
 import { concatMap, tap } from 'rxjs/operators';
-import { TslintBuilderOptions } from '../../src';
+import { TslintRunnerOptions } from '../../src';
 import {
   TestLogger,
   TestProjectHost,
@@ -43,7 +43,7 @@ describe('Tslint Target', () => {
 
   it('supports exclude', (done) => {
     host.writeMultipleFiles(filesWithErrors);
-    const overrides: Partial<TslintBuilderOptions> = { exclude: ['**/foo.ts'] };
+    const overrides: Partial<TslintRunnerOptions> = { exclude: ['**/foo.ts'] };
 
     architect.loadWorkspaceFromJson(makeWorkspace(tslintWorkspaceTarget)).pipe(
       concatMap(() => architect.run(architect.getTarget({ overrides }))),
@@ -53,7 +53,7 @@ describe('Tslint Target', () => {
 
   it('supports fix', (done) => {
     host.writeMultipleFiles(filesWithErrors);
-    const overrides: Partial<TslintBuilderOptions> = { fix: true };
+    const overrides: Partial<TslintRunnerOptions> = { fix: true };
 
     architect.loadWorkspaceFromJson(makeWorkspace(tslintWorkspaceTarget)).pipe(
       concatMap(() => architect.run(architect.getTarget({ overrides }))),
@@ -69,7 +69,7 @@ describe('Tslint Target', () => {
   it('supports force', (done) => {
     host.writeMultipleFiles(filesWithErrors);
     const logger = new TestLogger('lint-force');
-    const overrides: Partial<TslintBuilderOptions> = { force: true };
+    const overrides: Partial<TslintRunnerOptions> = { force: true };
 
     architect.loadWorkspaceFromJson(makeWorkspace(tslintWorkspaceTarget)).pipe(
       concatMap(() => architect.run(architect.getTarget({ overrides }), { logger })),
@@ -84,7 +84,7 @@ describe('Tslint Target', () => {
   it('supports format', (done) => {
     host.writeMultipleFiles(filesWithErrors);
     const logger = new TestLogger('lint-format');
-    const overrides: Partial<TslintBuilderOptions> = { format: 'stylish' };
+    const overrides: Partial<TslintRunnerOptions> = { format: 'stylish' };
 
     architect.loadWorkspaceFromJson(makeWorkspace(tslintWorkspaceTarget)).pipe(
       concatMap(() => architect.run(architect.getTarget({ overrides }), { logger })),
@@ -109,7 +109,7 @@ describe('Tslint Target', () => {
         }
       `,
     });
-    const overrides: Partial<TslintBuilderOptions> = { tslintConfig: undefined };
+    const overrides: Partial<TslintRunnerOptions> = { tslintConfig: undefined };
 
     architect.loadWorkspaceFromJson(makeWorkspace(tslintWorkspaceTarget)).pipe(
       concatMap(() => architect.run(architect.getTarget({ overrides }))),
@@ -131,7 +131,7 @@ describe('Tslint Target', () => {
         }
       `,
     });
-    const overrides: Partial<TslintBuilderOptions> = { tslintConfig: '../tslint.json' };
+    const overrides: Partial<TslintRunnerOptions> = { tslintConfig: '../tslint.json' };
 
     architect.loadWorkspaceFromJson(makeWorkspace(tslintWorkspaceTarget)).pipe(
       concatMap(() => architect.run(architect.getTarget({ overrides }))),
@@ -140,7 +140,7 @@ describe('Tslint Target', () => {
   }, 30000);
 
   it('supports using files with no project', (done) => {
-    const overrides: Partial<TslintBuilderOptions> = {
+    const overrides: Partial<TslintRunnerOptions> = {
       tsConfig: undefined,
       files: ['app/**/*.ts'],
     };
@@ -152,7 +152,7 @@ describe('Tslint Target', () => {
   }, 30000);
 
   it('errors when type checking is used without a project', (done) => {
-    const overrides: Partial<TslintBuilderOptions> = {
+    const overrides: Partial<TslintRunnerOptions> = {
       tsConfig: undefined,
       typeCheck: true,
     };

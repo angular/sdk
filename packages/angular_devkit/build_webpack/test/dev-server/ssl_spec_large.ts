@@ -10,7 +10,7 @@ import { Architect } from '@angular-devkit/architect';
 import { normalize, tags } from '@angular-devkit/core';
 import { fromPromise } from 'rxjs/observable/fromPromise';
 import { concatMap, take, tap } from 'rxjs/operators';
-import { DevServerBuilderOptions } from '../../src';
+import { DevServerRunnerOptions } from '../../src';
 import {
   TestProjectHost,
   browserWorkspaceTarget,
@@ -21,7 +21,7 @@ import {
 } from '../utils';
 
 
-describe('Dev Server Builder ssl', () => {
+describe('Dev Server Runner ssl', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
 
@@ -29,7 +29,7 @@ describe('Dev Server Builder ssl', () => {
   afterEach(done => host.restore().subscribe(undefined, done.fail, done));
 
   it('works', (done) => {
-    const overrides: Partial<DevServerBuilderOptions> = { ssl: true };
+    const overrides: Partial<DevServerRunnerOptions> = { ssl: true };
 
     architect.loadWorkspaceFromJson(makeWorkspace([
       browserWorkspaceTarget,
@@ -101,7 +101,7 @@ describe('Dev Server Builder ssl', () => {
       `,
     });
 
-    const overrides: Partial<DevServerBuilderOptions> = {
+    const overrides: Partial<DevServerRunnerOptions> = {
       ssl: true,
       sslKey: '../ssl/server.key',
       sslCert: '../ssl/server.crt',

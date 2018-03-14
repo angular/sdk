@@ -19,7 +19,7 @@ import {
 import { lazyModuleFiles, lazyModuleImport } from './lazy-module_spec_large';
 
 
-describe('Browser Builder', () => {
+describe('Browser Runner', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
   const outputPath = normalize('dist');

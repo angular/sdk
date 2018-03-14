@@ -24,7 +24,7 @@ export interface WorkspaceProject {
 }
 
 export interface WorkspaceTarget<TargetOptions = JsonObject> {
-  builder: string;
+  runner: string;
   options: TargetOptions;
   configurations?: { [k: string]: Partial<TargetOptions> };
 }

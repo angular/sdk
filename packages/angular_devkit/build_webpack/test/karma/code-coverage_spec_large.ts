@@ -9,11 +9,11 @@
 import { Architect } from '@angular-devkit/architect';
 import { normalize, virtualFs } from '@angular-devkit/core';
 import { concatMap, debounceTime, tap } from 'rxjs/operators';
-import { KarmaBuilderOptions } from '../../src';
+import { KarmaRunnerOptions } from '../../src';
 import { TestProjectHost, karmaWorkspaceTarget, makeWorkspace, workspaceRoot } from '../utils';
 
 
-describe('Karma Builder code coverage', () => {
+describe('Karma Runner code coverage', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
   const coverageFilePath = normalize('coverage/lcov.info');
@@ -22,7 +22,7 @@ describe('Karma Builder code coverage', () => {
   afterEach(done => host.restore().subscribe(undefined, done.fail, done));
 
   it('works', (done) => {
-    const overrides: Partial<KarmaBuilderOptions> = { codeCoverage: true };
+    const overrides: Partial<KarmaRunnerOptions> = { codeCoverage: true };
 
     architect.loadWorkspaceFromJson(makeWorkspace(karmaWorkspaceTarget)).pipe(
       concatMap(() => architect.run(architect.getTarget({ overrides }))),
@@ -39,7 +39,7 @@ describe('Karma Builder code coverage', () => {
   }, 120000);
 
   it('supports exclude', (done) => {
-    const overrides: Partial<KarmaBuilderOptions> = {
+    const overrides: Partial<KarmaRunnerOptions> = {
       codeCoverage: true,
       codeCoverageExclude: [
         'polyfills.ts',

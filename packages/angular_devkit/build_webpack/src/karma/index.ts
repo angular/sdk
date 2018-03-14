@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import { BuildEvent, Builder, BuilderContext, Target } from '@angular-devkit/architect';
+import { BuildEvent, Runner, RunnerContext, Target } from '@angular-devkit/architect';
 import { getSystemPath } from '@angular-devkit/core';
 import * as path from 'path';
 import { Observable } from 'rxjs/Observable';
@@ -26,7 +26,7 @@ import {
 const webpackMerge = require('webpack-merge');
 
 
-export interface KarmaBuilderOptions {
+export interface KarmaRunnerOptions {
   main: string;
   tsConfig: string; // previously 'tsconfig'.
   karmaConfig: string; // previously 'config'.
@@ -62,10 +62,10 @@ export interface KarmaBuilderOptions {
   environment?: string; // Maybe replace with 'fileReplacement' object?
 }
 
-export class KarmaBuilder implements Builder<KarmaBuilderOptions> {
-  constructor(public context: BuilderContext) { }
+export class KarmaRunner implements Runner<KarmaRunnerOptions> {
+  constructor(public context: RunnerContext) { }
 
-  run(target: Target<KarmaBuilderOptions>): Observable<BuildEvent> {
+  run(target: Target<KarmaRunnerOptions>): Observable<BuildEvent> {
 
     const root = getSystemPath(target.root);
     const options = target.options;
@@ -116,7 +116,7 @@ export class KarmaBuilder implements Builder<KarmaBuilderOptions> {
     });
   }
 
-  private _buildWebpackConfig(projectRoot: string, options: KarmaBuilderOptions) {
+  private _buildWebpackConfig(projectRoot: string, options: KarmaRunnerOptions) {
     // tslint:disable-next-line:no-any
     let wco: any;
 
@@ -157,4 +157,4 @@ export class KarmaBuilder implements Builder<KarmaBuilderOptions> {
   }
 }
 
-export default KarmaBuilder;
+export default KarmaRunner;

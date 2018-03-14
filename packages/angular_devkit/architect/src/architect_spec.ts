@@ -12,9 +12,9 @@ import { concatMap, tap, toArray } from 'rxjs/operators';
 import { BrowserTargetOptions } from '../test/browser';
 import {
   Architect,
-  BuilderCannotBeResolvedException,
   ConfigurationNotFoundException,
   ProjectNotFoundException,
+  RunnerCannotBeResolvedException,
   Target,
   TargetNotFoundException,
 } from './architect';
@@ -36,7 +36,7 @@ describe('Architect', () => {
         defaultTarget: 'browser',
         targets: {
           browser: {
-            builder: '../test:browser',
+            runner: '../test:browser',
             options: {
               browserOption: 1,
             },
@@ -47,7 +47,7 @@ describe('Architect', () => {
             },
           },
           karma: {
-            builder: '../test:karma',
+            runner: '../test:karma',
             options: {},
           },
         },
@@ -65,7 +65,7 @@ describe('Architect', () => {
         // Check options were composed properly.
         expect(target.root).toBe(join(root, 'app'));
         expect(target.projectType).toBe('application');
-        expect(target.builder).toBe('../test:browser');
+        expect(target.runner).toBe('../test:browser');
         expect(options.browserOption).toBe(1);
 
         done();
@@ -89,7 +89,7 @@ describe('Architect', () => {
         // Check options were composed properly.
         expect(target.root).toBe(join(root, 'app'));
         expect(target.projectType).toBe('application');
-        expect(target.builder).toBe('../test:browser');
+        expect(target.runner).toBe('../test:browser');
         expect(options.browserOption).toBe(1);
         expect(options.optimizationLevel).toBe(1);
 
@@ -165,7 +165,7 @@ describe('Architect', () => {
         return architect.run(target);
       }),
     ).subscribe(() => done.fail(), (err: Error) => {
-      const expectedErr = new BuilderCannotBeResolvedException(target.builder);
+      const expectedErr = new RunnerCannotBeResolvedException(target.runner);
       expect(err.message).toEqual(expectedErr.message);
       done();
     });

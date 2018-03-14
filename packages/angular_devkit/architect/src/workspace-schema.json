@@ -78,9 +78,9 @@
       "type": "object",
       "description": "Target options.",
       "properties": {
-        "builder": {
+        "runner": {
           "type": "string",
-          "description": "The builder used for this package."
+          "description": "The runner used for this target."
         },
         "options": {
           "$ref": "#/definitions/options"
@@ -94,7 +94,7 @@
         }
       },
       "required": [
-        "builder",
+        "runner",
         "options"
       ]
     },

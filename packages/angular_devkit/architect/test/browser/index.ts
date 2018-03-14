@@ -7,7 +7,7 @@
  */
 
 import { Observable } from 'rxjs/Observable';
-import { BuildEvent, Builder, Target } from '../../src';
+import { BuildEvent, Runner, Target } from '../../src';
 
 
 const successBuildEvent: BuildEvent = {
@@ -23,8 +23,8 @@ export interface BrowserTargetOptions {
   optimizationLevel: number;
 }
 
-export default class BrowserTarget implements Builder<BrowserTargetOptions> {
-  // constructor(public context: BuilderContext) { }
+export default class BrowserTarget implements Runner<BrowserTargetOptions> {
+  // constructor(public context: RunnerContext) { }
 
   run(_info: Target<Partial<BrowserTargetOptions>>): Observable<BuildEvent> {
     return new Observable(obs => {

@@ -12,7 +12,7 @@ import * as express from 'express'; // tslint:disable-line:no-implicit-dependenc
 import * as http from 'http';
 import { fromPromise } from 'rxjs/observable/fromPromise';
 import { concatMap, take, tap } from 'rxjs/operators';
-import { DevServerBuilderOptions } from '../../src';
+import { DevServerRunnerOptions } from '../../src';
 import {
   TestProjectHost,
   browserWorkspaceTarget,
@@ -23,7 +23,7 @@ import {
 } from '../utils';
 
 
-describe('Dev Server Builder proxy', () => {
+describe('Dev Server Runner proxy', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
 
@@ -49,7 +49,7 @@ describe('Dev Server Builder proxy', () => {
       'proxy.config.json': `{ "/api/*": { "target": "${proxyServerUrl}" } }`,
     });
 
-    const overrides: Partial<DevServerBuilderOptions> = { proxyConfig: '../proxy.config.json' };
+    const overrides: Partial<DevServerRunnerOptions> = { proxyConfig: '../proxy.config.json' };
 
     architect.loadWorkspaceFromJson(makeWorkspace([
       browserWorkspaceTarget,
@@ -67,7 +67,7 @@ describe('Dev Server Builder proxy', () => {
   }, 30000);
 
   it('errors out with a missing proxy file', (done) => {
-    const overrides: Partial<DevServerBuilderOptions> = { proxyConfig: '../proxy.config.json' };
+    const overrides: Partial<DevServerRunnerOptions> = { proxyConfig: '../proxy.config.json' };
 
     architect.loadWorkspaceFromJson(makeWorkspace([
       browserWorkspaceTarget,

@@ -1,6 +1,6 @@
 {
-  "$schema": "../architect/src/builders-schema.json",
-  "builders": {
+  "$schema": "../architect/src/runners-schema.json",
+  "runners": {
     "browser": {
       "class": "./src/browser",
       "schema": "./src/browser/schema.json",

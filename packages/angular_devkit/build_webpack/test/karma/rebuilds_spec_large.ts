@@ -16,7 +16,7 @@ import { TestProjectHost, karmaWorkspaceTarget, makeWorkspace, workspaceRoot } f
 // - errors print a huge stack trace
 // - karma does not have a way to close the server gracefully.
 // TODO: fix these before 6.0 final.
-xdescribe('Karma Builder watch mode', () => {
+xdescribe('Karma Runner watch mode', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
 

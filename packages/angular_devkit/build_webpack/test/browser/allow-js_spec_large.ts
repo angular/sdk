@@ -12,7 +12,7 @@ import { concatMap, tap } from 'rxjs/operators';
 import { TestProjectHost, browserWorkspaceTarget, makeWorkspace, workspaceRoot } from '../utils';
 
 
-describe('Browser Builder allow js', () => {
+describe('Browser Runner allow js', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
 

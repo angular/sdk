@@ -13,7 +13,7 @@
 
 
 // TODO: re-enable this test when the functionality is implemented, wether by option or via VFS.
-// describe('Browser Builder file replacements', () => {
+// describe('Browser Runner file replacements', () => {
 //   const host = new TestProjectHost(workspaceRoot);
 //   const architect = new Architect(normalize(workspaceRoot), host);
 //   const outputPath = normalize('dist');

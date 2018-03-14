@@ -9,20 +9,20 @@
 import { Workspace, WorkspaceTarget } from '@angular-devkit/architect';
 import { getSystemPath, join, normalize, relative } from '@angular-devkit/core';
 import {
-  BrowserBuilderOptions,
-  DevServerBuilderOptions,
-  ExtractI18nBuilderOptions,
-  KarmaBuilderOptions,
-  ProtractorBuilderOptions,
-  TslintBuilderOptions,
+  BrowserRunnerOptions,
+  DevServerRunnerOptions,
+  ExtractI18nRunnerOptions,
+  KarmaRunnerOptions,
+  ProtractorRunnerOptions,
+  TslintRunnerOptions,
 } from '../../src';
 
 
 const devkitRoot = normalize((global as any)._DevKitRoot); // tslint:disable-line:no-any
 export const workspaceRoot = join(devkitRoot,
   'tests/@angular_devkit/build_webpack/hello-world-app/');
-const builderPath = join(devkitRoot, 'packages/angular_devkit/build_webpack');
-const relativeBuilderPath = relative(workspaceRoot, builderPath);
+const runnerPath = join(devkitRoot, 'packages/angular_devkit/build_webpack');
+const relativeRunnerPath = relative(workspaceRoot, runnerPath);
 
 
 // Workspace and options need to be created from functions because JSON Schema validation
@@ -49,19 +49,19 @@ export function makeWorkspace(
   };
 
   WorkspaceTargets.forEach(WorkspaceTarget => {
-    workspace.projects.app.targets[WorkspaceTarget.builder] = {
-      builder: `${getSystemPath(relativeBuilderPath)}:${WorkspaceTarget.builder}`,
+    workspace.projects.app.targets[WorkspaceTarget.runner] = {
+      runner: `${getSystemPath(relativeRunnerPath)}:${WorkspaceTarget.runner}`,
       options: WorkspaceTarget.options,
     } as WorkspaceTarget;
     // Last spec target is the default.
-    workspace.projects.app.defaultTarget = WorkspaceTarget.builder;
+    workspace.projects.app.defaultTarget = WorkspaceTarget.runner;
   });
 
   return workspace;
 }
 
-export const browserWorkspaceTarget: WorkspaceTarget<Partial<BrowserBuilderOptions>> = {
-  builder: 'browser',
+export const browserWorkspaceTarget: WorkspaceTarget<Partial<BrowserRunnerOptions>> = {
+  runner: 'browser',
   options: {
     outputPath: '../dist',
     index: 'index.html',
@@ -79,23 +79,23 @@ export const browserWorkspaceTarget: WorkspaceTarget<Partial<BrowserBuilderOptio
   },
 };
 
-export const devServerWorkspaceTarget: WorkspaceTarget<Partial<DevServerBuilderOptions>> = {
-  builder: 'devServer',
+export const devServerWorkspaceTarget: WorkspaceTarget<Partial<DevServerRunnerOptions>> = {
+  runner: 'devServer',
   options: {
     browserTarget: 'app:browser',
     watch: false,
   },
 };
 
-export const extractI18nWorkspaceTarget: WorkspaceTarget<Partial<ExtractI18nBuilderOptions>> = {
-  builder: 'extractI18n',
+export const extractI18nWorkspaceTarget: WorkspaceTarget<Partial<ExtractI18nRunnerOptions>> = {
+  runner: 'extractI18n',
   options: {
     browserTarget: 'app:browser',
   },
 };
 
-export const karmaWorkspaceTarget: WorkspaceTarget<Partial<KarmaBuilderOptions>> = {
-  builder: 'karma',
+export const karmaWorkspaceTarget: WorkspaceTarget<Partial<KarmaRunnerOptions>> = {
+  runner: 'karma',
   options: {
     main: 'test.ts',
     polyfills: 'polyfills.ts',
@@ -113,16 +113,16 @@ export const karmaWorkspaceTarget: WorkspaceTarget<Partial<KarmaBuilderOptions>>
   },
 };
 
-export const protractorWorkspaceTarget: WorkspaceTarget<Partial<ProtractorBuilderOptions>> = {
-  builder: 'protractor',
+export const protractorWorkspaceTarget: WorkspaceTarget<Partial<ProtractorRunnerOptions>> = {
+  runner: 'protractor',
   options: {
     protractorConfig: '../protractor.conf.js',
     devServerTarget: 'app:devServer',
   },
 };
 
-export const tslintWorkspaceTarget: WorkspaceTarget<Partial<TslintBuilderOptions>> = {
-  builder: 'tslint',
+export const tslintWorkspaceTarget: WorkspaceTarget<Partial<TslintRunnerOptions>> = {
+  runner: 'tslint',
   options: {
     tsConfig: 'tsconfig.app.json',
     exclude: ['**/node_modules/**'],

@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import { BuildEvent, Builder, BuilderContext, Target } from '@angular-devkit/architect';
+import { BuildEvent, Runner, RunnerContext, Target } from '@angular-devkit/architect';
 import { Path, getSystemPath, normalize, resolve } from '@angular-devkit/core';
 import { Observable } from 'rxjs/Observable';
 import { of } from 'rxjs/observable/of';
@@ -33,7 +33,7 @@ const webpackMerge = require('webpack-merge');
 
 // TODO: Use quicktype to build our TypeScript interfaces from the JSON Schema itself, in
 // the build system.
-export interface BrowserBuilderOptions {
+export interface BrowserRunnerOptions {
   outputPath: string;
   index: string;
   main: string;
@@ -107,17 +107,17 @@ export interface ExtraEntryPoint {
 
 export interface WebpackConfigOptions {
   projectRoot: string;
-  buildOptions: BrowserBuilderOptions;
-  appConfig: BrowserBuilderOptions;
+  buildOptions: BrowserRunnerOptions;
+  appConfig: BrowserRunnerOptions;
   tsConfig: ts.ParsedCommandLine;
   supportES2015: boolean;
 }
 
-export class BrowserBuilder implements Builder<BrowserBuilderOptions> {
+export class BrowserRunner implements Runner<BrowserRunnerOptions> {
 
-  constructor(public context: BuilderContext) { }
+  constructor(public context: RunnerContext) { }
 
-  run(target: Target<BrowserBuilderOptions>): Observable<BuildEvent> {
+  run(target: Target<BrowserRunnerOptions>): Observable<BuildEvent> {
     const options = target.options;
 
     // TODO: verify using of(null) to kickstart things is a pattern.
@@ -200,7 +200,7 @@ export class BrowserBuilder implements Builder<BrowserBuilderOptions> {
     );
   }
 
-  buildWebpackConfig(root: Path, options: BrowserBuilderOptions) {
+  buildWebpackConfig(root: Path, options: BrowserRunnerOptions) {
     const systemRoot = getSystemPath(root);
     let wco: WebpackConfigOptions;
 
@@ -285,4 +285,4 @@ export class BrowserBuilder implements Builder<BrowserBuilderOptions> {
   }
 }
 
-export default BrowserBuilder;
+export default BrowserRunner;

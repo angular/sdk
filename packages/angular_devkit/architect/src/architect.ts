@@ -29,13 +29,13 @@ import { _throw } from 'rxjs/observable/throw';
 import { concatMap, map } from 'rxjs/operators';
 import {
   BuildEvent,
-  Builder,
-  BuilderConstructor,
-  BuilderContext,
-  BuilderDescription,
-  BuilderPaths,
-  BuilderPathsMap,
-} from './builder';
+  Runner,
+  RunnerConstructor,
+  RunnerContext,
+  RunnerDescription,
+  RunnerPaths,
+  RunnerPathsMap,
+} from './runner';
 import { Workspace } from './workspace';
 
 
@@ -66,9 +66,9 @@ export class SchemaValidationException extends BaseException {
 }
 
 // TODO: break this exception apart into more granular ones.
-export class BuilderCannotBeResolvedException extends BaseException {
-  constructor(builder: string) {
-    super(`Builder '${builder}' cannot be resolved.`);
+export class RunnerCannotBeResolvedException extends BaseException {
+  constructor(runner: string) {
+    super(`Runner '${runner}' cannot be resolved.`);
   }
 }
 
@@ -76,16 +76,16 @@ export class WorkspaceNotYetLoadedException extends BaseException {
   constructor() { super(`Workspace needs to be loaded before Architect is used.`); }
 }
 
-export class BuilderNotFoundException extends BaseException {
-  constructor(builder: string) {
-    super(`Builder ${builder} could not be found.`);
+export class RunnerNotFoundException extends BaseException {
+  constructor(runner: string) {
+    super(`Runner ${runner} could not be found.`);
   }
 }
 
 export interface Target<OptionsT = {}> {
   root: Path;
   projectType: string;
-  builder: string;
+  runner: string;
   options: OptionsT;
 }
 
@@ -97,13 +97,13 @@ export interface TargetOptions<OptionsT = {}> {
 }
 export class Architect {
   private readonly _workspaceSchemaPath = join(normalize(__dirname), 'workspace-schema.json');
-  private readonly _buildersSchemaPath = join(normalize(__dirname), 'builders-schema.json');
+  private readonly _runnersSchemaPath = join(normalize(__dirname), 'runners-schema.json');
   private _workspaceSchema: JsonObject;
-  private _buildersSchema: JsonObject;
+  private _runnersSchema: JsonObject;
   private _architectSchemasLoaded = false;
-  private _builderPathsMap = new Map<string, BuilderPaths>();
-  private _builderDescriptionMap = new Map<string, BuilderDescription>();
-  private _builderConstructorMap = new Map<string, BuilderConstructor<{}>>();
+  private _runnerPathsMap = new Map<string, RunnerPaths>();
+  private _runnerDescriptionMap = new Map<string, RunnerDescription>();
+  private _runnerConstructorMap = new Map<string, RunnerConstructor<{}>>();
   private _workspace: Workspace;
 
   constructor(private _root: Path, private _host: virtualFs.Host<{}>) { }
@@ -132,11 +132,11 @@ export class Architect {
     } else {
       return forkJoin(
         this._loadJsonFile(this._workspaceSchemaPath),
-        this._loadJsonFile(this._buildersSchemaPath),
+        this._loadJsonFile(this._runnersSchemaPath),
       ).pipe(
-        concatMap(([workspaceSchema, buildersSchema]) => {
+        concatMap(([workspaceSchema, runnersSchema]) => {
           this._workspaceSchema = workspaceSchema;
-          this._buildersSchema = buildersSchema;
+          this._runnersSchema = runnersSchema;
 
           return of(null);
         }),
@@ -183,7 +183,7 @@ export class Architect {
     const target: Target<OptionsT> = {
       root: resolve(this._root, normalize(workspaceProject.root)),
       projectType: workspaceProject.projectType,
-      builder: workspaceTarget.builder,
+      runner: workspaceTarget.runner,
       options: {
         ...workspaceTargetOptions,
         ...workspaceConfiguration,
@@ -199,124 +199,124 @@ export class Architect {
   // Will run the target using the target.
   run<OptionsT>(
     target: Target<OptionsT>,
-    partialContext: Partial<BuilderContext> = {},
+    partialContext: Partial<RunnerContext> = {},
   ): Observable<BuildEvent> {
-    const context: BuilderContext = {
+    const context: RunnerContext = {
       logger: new logging.NullLogger(),
       architect: this,
       host: this._host,
       ...partialContext,
     };
 
-    let builderDescription: BuilderDescription;
+    let runnerDescription: RunnerDescription;
 
-    return this.getBuilderDescription(target).pipe(
+    return this.getRunnerDescription(target).pipe(
       concatMap(description => {
-        builderDescription = description;
+        runnerDescription = description;
 
-        return this.validateBuilderOptions(target, builderDescription);
+        return this.validateRunnerOptions(target, runnerDescription);
       }),
-      map(() => this.getBuilder(builderDescription, context)),
-      concatMap(builder => builder.run(target)),
+      map(() => this.getRunner(runnerDescription, context)),
+      concatMap(runner => runner.run(target)),
     );
   }
 
-  getBuilderDescription<OptionsT>(target: Target<OptionsT>): Observable<BuilderDescription> {
-    // Check cache for this builder description.
-    if (this._builderDescriptionMap.has(target.builder)) {
-      return of(this._builderDescriptionMap.get(target.builder) as BuilderDescription);
+  getRunnerDescription<OptionsT>(target: Target<OptionsT>): Observable<RunnerDescription> {
+    // Check cache for this runner description.
+    if (this._runnerDescriptionMap.has(target.runner)) {
+      return of(this._runnerDescriptionMap.get(target.runner) as RunnerDescription);
     }
 
     return new Observable((obs) => {
       // TODO: this probably needs to be more like NodeModulesEngineHost.
       const basedir = getSystemPath(this._root);
-      const [pkg, builderName] = target.builder.split(':');
+      const [pkg, runnerName] = target.runner.split(':');
       const pkgJsonPath = nodeResolve(pkg, { basedir, resolvePackageJson: true });
-      let buildersJsonPath: Path;
-      let builderPaths: BuilderPaths;
+      let runnersJsonPath: Path;
+      let runnerPaths: RunnerPaths;
 
-      // Read the `builders` entry of package.json.
+      // Read the `runners` entry of package.json.
       return this._loadJsonFile(normalize(pkgJsonPath)).pipe(
         concatMap((pkgJson: JsonObject) => {
-          const pkgJsonBuildersentry = pkgJson['builders'] as string;
-          if (!pkgJsonBuildersentry) {
-            throw new BuilderCannotBeResolvedException(target.builder);
+          const pkgJsonRunnersEntry = pkgJson['runners'] as string;
+          if (!pkgJsonRunnersEntry) {
+            throw new RunnerCannotBeResolvedException(target.runner);
           }
 
-          buildersJsonPath = join(dirname(normalize(pkgJsonPath)), pkgJsonBuildersentry);
+          runnersJsonPath = join(dirname(normalize(pkgJsonPath)), pkgJsonRunnersEntry);
 
-          return this._loadJsonFile(buildersJsonPath);
+          return this._loadJsonFile(runnersJsonPath);
         }),
-        // Validate builders json.
-        concatMap((builderPathsMap) =>
-          this._validateAgainstSchema<BuilderPathsMap>(builderPathsMap, this._buildersSchema)),
-        concatMap((builderPathsMap) => {
-          builderPaths = builderPathsMap.builders[builderName];
+        // Validate runners json.
+        concatMap((runnerPathsMap) =>
+          this._validateAgainstSchema<RunnerPathsMap>(runnerPathsMap, this._runnersSchema)),
+        concatMap((runnerPathsMap) => {
+          runnerPaths = runnerPathsMap.runners[runnerName];
 
-          if (!builderPaths) {
-            throw new BuilderCannotBeResolvedException(target.builder);
+          if (!runnerPaths) {
+            throw new RunnerCannotBeResolvedException(target.runner);
           }
 
-          // Resolve paths in the builder paths.
-          const builderJsonDir = dirname(buildersJsonPath);
-          builderPaths.schema = join(builderJsonDir, builderPaths.schema);
-          builderPaths.class = join(builderJsonDir, builderPaths.class);
+          // Resolve paths in the runner paths.
+          const runnerJsonDir = dirname(runnersJsonPath);
+          runnerPaths.schema = join(runnerJsonDir, runnerPaths.schema);
+          runnerPaths.class = join(runnerJsonDir, runnerPaths.class);
 
-          // Save the builder paths so that we can lazily load the builder.
-          this._builderPathsMap.set(target.builder, builderPaths);
+          // Save the runner paths so that we can lazily load the runner.
+          this._runnerPathsMap.set(target.runner, runnerPaths);
 
           // Load the schema.
-          return this._loadJsonFile(builderPaths.schema);
+          return this._loadJsonFile(runnerPaths.schema);
         }),
-        map(builderSchema => {
-          const builderDescription = {
-            name: target.builder,
-            schema: builderSchema,
-            description: builderPaths.description,
+        map(runnerSchema => {
+          const runnerDescription = {
+            name: target.runner,
+            schema: runnerSchema,
+            description: runnerPaths.description,
           };
 
           // Save to cache before returning.
-          this._builderDescriptionMap.set(builderDescription.name, builderDescription);
+          this._runnerDescriptionMap.set(runnerDescription.name, runnerDescription);
 
-          return builderDescription;
+          return runnerDescription;
         }),
       ).subscribe(obs);
     });
   }
 
-  validateBuilderOptions<OptionsT>(
-    target: Target<OptionsT>, builderDescription: BuilderDescription,
+  validateRunnerOptions<OptionsT>(
+    target: Target<OptionsT>, runnerDescription: RunnerDescription,
   ): Observable<OptionsT> {
-    return this._validateAgainstSchema<OptionsT>(target.options, builderDescription.schema);
+    return this._validateAgainstSchema<OptionsT>(target.options, runnerDescription.schema);
   }
 
-  getBuilder<OptionsT>(
-    builderDescription: BuilderDescription, context: BuilderContext,
-  ): Builder<OptionsT> {
-    const name = builderDescription.name;
-    let builderConstructor: BuilderConstructor<OptionsT>;
+  getRunner<OptionsT>(
+    runnerDescription: RunnerDescription, context: RunnerContext,
+  ): Runner<OptionsT> {
+    const name = runnerDescription.name;
+    let runnerConstructor: RunnerConstructor<OptionsT>;
 
-    // Check cache for this builder.
-    if (this._builderConstructorMap.has(name)) {
-      builderConstructor = this._builderConstructorMap.get(name) as BuilderConstructor<OptionsT>;
+    // Check cache for this runner.
+    if (this._runnerConstructorMap.has(name)) {
+      runnerConstructor = this._runnerConstructorMap.get(name) as RunnerConstructor<OptionsT>;
     } else {
-      if (!this._builderPathsMap.has(name)) {
-        throw new BuilderNotFoundException(name);
+      if (!this._runnerPathsMap.has(name)) {
+        throw new RunnerNotFoundException(name);
       }
 
-      const builderPaths = this._builderPathsMap.get(name) as BuilderPaths;
+      const runnerPaths = this._runnerPathsMap.get(name) as RunnerPaths;
 
-      // TODO: support more than the default export, maybe via builder#import-name.
-      const builderModule = require(getSystemPath(builderPaths.class));
-      builderConstructor = builderModule['default'] as BuilderConstructor<OptionsT>;
+      // TODO: support more than the default export, maybe via runner#import-name.
+      const runnerModule = require(getSystemPath(runnerPaths.class));
+      runnerConstructor = runnerModule['default'] as RunnerConstructor<OptionsT>;
 
-      // Save builder to cache before returning.
-      this._builderConstructorMap.set(builderDescription.name, builderConstructor);
+      // Save runner to cache before returning.
+      this._runnerConstructorMap.set(runnerDescription.name, runnerConstructor);
     }
 
-    const builder = new builderConstructor(context);
+    const runner = new runnerConstructor(context);
 
-    return builder;
+    return runner;
   }
 
   // Warning: this method changes contentJson in place.

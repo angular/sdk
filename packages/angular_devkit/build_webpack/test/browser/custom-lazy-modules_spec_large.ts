@@ -14,8 +14,8 @@
 
 
 // TODO: re-enable this test when the custom lazy module changes have been ported over to
-// webpack-builder from the CLI.
-// describe('Browser Builder custom lazy modules', () => {
+// webpack-runner from the CLI.
+// describe('Browser Runner custom lazy modules', () => {
 //   const host = new TestProjectHost(workspaceRoot);
 //   const architect = new Architect(normalize(workspaceRoot), host);
 //   const outputPath = normalize('dist');

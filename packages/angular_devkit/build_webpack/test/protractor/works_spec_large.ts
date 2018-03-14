@@ -19,7 +19,7 @@ import {
 } from '../utils';
 
 
-describe('Protractor Builder', () => {
+describe('Protractor Runner', () => {
   const host = new TestProjectHost(workspaceRoot);
   const architect = new Architect(normalize(workspaceRoot), host);
 
@@ -101,7 +101,7 @@ describe('Protractor Builder', () => {
     ).subscribe(undefined, done.fail, done);
   }, 60000);
 
-  // TODO: test `element-explorer` when the protractor builder emits build events with text.
+  // TODO: test `element-explorer` when the protractor runner emits build events with text.
   // .then(() => execAndWaitForOutputToMatch('ng', ['e2e', '--element-explorer'],
   // /Element Explorer/))
   // .then(() => killAllProcesses(), (err: any) => {

@@ -6,18 +6,18 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import { BuildEvent, Builder, BuilderContext, Target } from '@angular-devkit/architect';
+import { BuildEvent, Runner, RunnerContext, Target } from '@angular-devkit/architect';
 import * as path from 'path';
 import { Observable } from 'rxjs/Observable';
 import { concatMap } from 'rxjs/operators';
 import * as webpack from 'webpack';
 import { getWebpackStatsConfig } from '../angular-cli-files/models/webpack-configs/utils';
 import { statsErrorsToString, statsWarningsToString } from '../angular-cli-files/utilities/stats';
-import { BrowserBuilder, BrowserBuilderOptions } from '../browser';
+import { BrowserRunner, BrowserRunnerOptions } from '../browser';
 const MemoryFS = require('memory-fs');
 
 
-export interface ExtractI18nBuilderOptions {
+export interface ExtractI18nRunnerOptions {
   browserTarget: string;
   i18nFormat: string;
   i18nLocale: string;
@@ -25,11 +25,11 @@ export interface ExtractI18nBuilderOptions {
   outFile?: string;
 }
 
-export class ExtractI18nBuilder implements Builder<ExtractI18nBuilderOptions> {
+export class ExtractI18nRunner implements Runner<ExtractI18nRunnerOptions> {
 
-  constructor(public context: BuilderContext) { }
+  constructor(public context: RunnerContext) { }
 
-  run(target: Target<ExtractI18nBuilderOptions>): Observable<BuildEvent> {
+  run(target: Target<ExtractI18nRunnerOptions>): Observable<BuildEvent> {
     const options = target.options;
     const [project, targetName, configuration] = options.browserTarget.split(':');
     // Override browser build watch setting.
@@ -37,14 +37,14 @@ export class ExtractI18nBuilder implements Builder<ExtractI18nBuilderOptions> {
 
     const browserTargetOptions = { project, target: targetName, configuration, overrides };
     const browserTarget = this.context.architect
-      .getTarget<BrowserBuilderOptions>(browserTargetOptions);
+      .getTarget<BrowserRunnerOptions>(browserTargetOptions);
 
-    return this.context.architect.getBuilderDescription(browserTarget).pipe(
+    return this.context.architect.getRunnerDescription(browserTarget).pipe(
       concatMap(browserDescription =>
-        this.context.architect.validateBuilderOptions(browserTarget, browserDescription)),
+        this.context.architect.validateRunnerOptions(browserTarget, browserDescription)),
       concatMap((validatedBrowserOptions) => new Observable(obs => {
         const browserOptions = validatedBrowserOptions;
-        const browserBuilder = new BrowserBuilder(this.context);
+        const browserRunner = new BrowserRunner(this.context);
 
         // We need to determine the outFile name so that AngularCompiler can retrieve it.
         let outFile = options.outFile || getI18nOutfile(options.i18nFormat);
@@ -54,7 +54,7 @@ export class ExtractI18nBuilder implements Builder<ExtractI18nBuilderOptions> {
         }
 
         // Extracting i18n uses the browser target webpack config with some specific options.
-        const webpackConfig = browserBuilder.buildWebpackConfig(target.root, {
+        const webpackConfig = browserRunner.buildWebpackConfig(target.root, {
           ...browserOptions,
           optimizationLevel: 0,
           i18nLocale: options.i18nLocale,
@@ -114,4 +114,4 @@ function getI18nOutfile(format: string) {
   }
 }
 
-export default ExtractI18nBuilder;
+export default ExtractI18nRunner;

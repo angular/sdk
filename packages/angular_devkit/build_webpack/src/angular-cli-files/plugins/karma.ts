@@ -242,7 +242,7 @@ function requestBlocker() {
   };
 }
 
-// Emits builder events.
+// Emits build events.
 const eventReporter: any = function (this: any, baseReporterDecorator: any) {
   baseReporterDecorator(this);
 
