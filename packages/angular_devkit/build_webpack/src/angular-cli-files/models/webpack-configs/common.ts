@@ -6,7 +6,6 @@ import { HashedModuleIdsPlugin } from 'webpack';
 import * as CopyWebpackPlugin from 'copy-webpack-plugin';
 import { extraEntryParser, getOutputHashFormat, AssetPattern } from './utils';
 import { isDirectory } from '../../utilities/is-directory';
-import { requireProjectModule } from '../../utilities/require-project-module';
 import { WebpackConfigOptions } from '../build-options';
 import { BundleBudgetPlugin } from '../../plugins/bundle-budget';
 import { CleanCssWebpackPlugin } from '../../plugins/cleancss-webpack-plugin';
@@ -205,25 +204,13 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
     loaderNodeModules.push(potentialNodeModules);
   }
 
-  // Load rxjs path aliases.
-  // https://github.com/ReactiveX/rxjs/blob/master/doc/lettable-operators.md#build-and-treeshaking
-  let alias = {};
-  try {
-    const rxjsPathMappingImport = wco.supportES2015
-      ? 'rxjs/_esm2015/path-mapping'
-      : 'rxjs/_esm5/path-mapping';
-    const rxPaths = requireProjectModule(projectRoot, rxjsPathMappingImport);
-    alias = rxPaths(nodeModules);
-  } catch (e) { }
-
   return {
     mode: buildOptions.optimizationLevel === 0 ? 'development' : 'production',
     devtool: false,
     resolve: {
       extensions: ['.ts', '.js'],
       symlinks: !buildOptions.preserveSymlinks,
-      modules: [projectRoot, 'node_modules'],
-      alias
+      modules: [projectRoot, 'node_modules']
     },
     resolveLoader: {
       modules: loaderNodeModules
