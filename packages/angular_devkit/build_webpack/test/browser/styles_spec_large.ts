@@ -44,8 +44,8 @@ describe('Browser Builder styles', () => {
       './dist/renamed-lazy-style.css': '.pre-rename-lazy-style',
     };
     const cssIndexMatches: { [path: string]: string } = {
-      './dist/index.html': '<link rel="stylesheet" href="styles.css">'
-        + '<link rel="stylesheet" href="renamed-style.css">',
+      './dist/index.html': '<link href="styles.css" rel="stylesheet"/>'
+        + '<link href="renamed-style.css" rel="stylesheet"/>',
     };
     const jsMatches: { [path: string]: string } = {
       './dist/styles.js': '.input-style',

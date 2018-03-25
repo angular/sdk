@@ -5,9 +5,8 @@ import * as path from 'path';
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const SubresourceIntegrityPlugin = require('webpack-subresource-integrity');
 import { LicenseWebpackPlugin } from 'license-webpack-plugin';
-import { generateEntryPoints, packageChunkSort } from '../../utilities/package-chunk-sort';
+import { packageChunkSort } from '../../utilities/package-chunk-sort';
 import { BaseHrefWebpackPlugin } from '../../lib/base-href-webpack';
-import { IndexHtmlWebpackPlugin } from '../../plugins/index-html-webpack-plugin';
 import { extraEntryParser, lazyChunksFilter } from './utils';
 import { WebpackConfigOptions } from '../build-options';
 
@@ -21,8 +20,7 @@ import { WebpackConfigOptions } from '../build-options';
 export function getBrowserConfig(wco: WebpackConfigOptions) {
   const { root, projectRoot, buildOptions, appConfig } = wco;
 
-
-  let extraPlugins: any[] = [];
+  const extraPlugins: any[] = [];
 
   // figure out which are the lazy loaded entry points
   const lazyChunks = lazyChunksFilter([
@@ -30,25 +28,21 @@ export function getBrowserConfig(wco: WebpackConfigOptions) {
     ...extraEntryParser(appConfig.styles, root, 'styles')
   ]);
 
-  // TODO: Enable this once HtmlWebpackPlugin supports Webpack 4
-  const generateIndexHtml = false;
-  if (generateIndexHtml) {
-    extraPlugins.push(new HtmlWebpackPlugin({
-      template: path.resolve(root, appConfig.index),
-      filename: path.resolve(buildOptions.outputPath, appConfig.index),
-      chunksSortMode: packageChunkSort(appConfig),
-      excludeChunks: lazyChunks,
-      xhtml: true,
-      minify: buildOptions.optimization ? {
-        caseSensitive: true,
-        collapseWhitespace: true,
-        keepClosingSlash: true
-      } : false
-    }));
-    extraPlugins.push(new BaseHrefWebpackPlugin({
-      baseHref: buildOptions.baseHref as string
-    }));
-  }
+  extraPlugins.push(new HtmlWebpackPlugin({
+    template: path.resolve(root, appConfig.index),
+    filename: path.resolve(root, buildOptions.outputPath, path.basename(appConfig.index)),
+    chunksSortMode: packageChunkSort(appConfig),
+    excludeChunks: lazyChunks,
+    xhtml: true,
+    minify: buildOptions.optimization ? {
+      caseSensitive: true,
+      collapseWhitespace: true,
+      keepClosingSlash: true
+    } : false
+  }));
+  extraPlugins.push(new BaseHrefWebpackPlugin({
+    baseHref: buildOptions.baseHref !
+  }));
 
   let sourcemaps: string | false = false;
   if (buildOptions.sourceMap) {
@@ -110,15 +104,7 @@ export function getBrowserConfig(wco: WebpackConfigOptions) {
         }
       }
     },
-    plugins: extraPlugins.concat([
-      new IndexHtmlWebpackPlugin({
-        input: path.resolve(root, appConfig.index),
-        output: path.basename(appConfig.index),
-        baseHref: buildOptions.baseHref,
-        entrypoints: generateEntryPoints(appConfig),
-        deployUrl: buildOptions.deployUrl,
-      }),
-    ]),
+    plugins: extraPlugins,
     node: false,
   };
 }
