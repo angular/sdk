@@ -90,6 +90,9 @@ export interface AngularCompilerPluginOptions {
   compilerOptions?: ts.CompilerOptions;
 
   host: virtualFs.Host<fs.Stats>;
+
+  // Allows to keep the decorators in AOT production as an option.
+  keepAotRemoveDecorators?: boolean;
 }
 
 export enum PLATFORM {
@@ -750,7 +753,7 @@ export class AngularCompilerPlugin {
     if (this._JitMode) {
       // Replace resources in JIT.
       this._transformers.push(replaceResources(isAppPath));
-    } else {
+    } else if (this._options.keepAotRemoveDecorators !== true) {
       // Remove unneeded angular decorators.
       this._transformers.push(removeDecorators(isAppPath, getTypeChecker));
     }
