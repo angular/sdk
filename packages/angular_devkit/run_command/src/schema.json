@@ -1,0 +1,27 @@
+{
+  "title": "Command Runner",
+  "description": "Command Runner for Architect.",
+  "type": "object",
+  "properties": {
+    "command": {
+      "type": "string",
+      "description": "The command to run."
+    },
+    "args": {
+      "type": "array",
+      "description": "Arguments to pass to the command.",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "cwd": {
+      "type": "string",
+      "description": "The current working directory from where the command should be ran."
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "command"
+  ]
+}

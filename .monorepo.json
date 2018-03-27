@@ -102,6 +102,17 @@
       "hash": "530b50f4c826937facf9d94881e4040e",
       "snapshotRepo": "angular/angular-devkit-build-webpack-builds"
     },
+    "@angular-devkit/run-command": {
+      "name": "Command Runner",
+      "links": [
+        {
+          "label": "README",
+          "url": "https://github.com/angular/devkit/blob/master/packages/angular_devkit/run_command/README.md"
+        }
+      ],
+      "version": "0.0.1",
+      "hash": ""
+    },
     "@angular-devkit/core": {
       "name": "Core",
       "links": [

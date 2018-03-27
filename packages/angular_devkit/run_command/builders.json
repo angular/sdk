@@ -1,0 +1,10 @@
+{
+  "$schema": "../architect/src/builders-schema.json",
+  "builders": {
+    "command": {
+      "class": "./src/",
+      "schema": "./src/schema.json",
+      "description": "Run a command."
+    }
+  }
+}
