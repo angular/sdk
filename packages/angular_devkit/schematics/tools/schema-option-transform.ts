@@ -14,6 +14,7 @@ import { of as observableOf } from 'rxjs/observable/of';
 import { first } from 'rxjs/operators/first';
 import { map } from 'rxjs/operators/map';
 import { mergeMap } from 'rxjs/operators/mergeMap';
+import { tap } from 'rxjs/operators/tap';
 import { SchematicDescription } from '../src';
 import { FileSystemCollectionDescription, FileSystemSchematicDescription } from './description';
 
@@ -58,6 +59,17 @@ export function validateOptionsWithSchema(registry: schema.SchemaRegistry) {
       return registry
         .compile(schematic.schemaJson)
         .pipe(
+          // This tap should not do anything, but if it is not here then the mergeMap below
+          // does not seem to emit anything when there are multiple copies of RxJs
+          // in node_modules.
+          // This can be reproduced in https://github.com/filipesilva/schematics-rxjs-compat.
+          // Running `npm run lib` will work, but if `rxjs@6.0.0-beta.1` is installed, which
+          // forces each schematics package to have unhoist its RxJs version, then
+          // schematics stops working.
+          // This persists even after installing `rxjs@5.5.7` back, as long as
+          // `npm ls rxjs` shows multiple RxJs packages.
+          // TODO(filipesilva): followup on this.
+          tap(() => {}),
           mergeMap(validator => validator(options)),
           first(),
           map(result => {
