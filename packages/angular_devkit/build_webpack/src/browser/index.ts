@@ -26,6 +26,7 @@ import {
   getStylesConfig,
 } from '../angular-cli-files/models/webpack-configs';
 import { getWebpackStatsConfig } from '../angular-cli-files/models/webpack-configs/utils';
+import { Budget } from '../angular-cli-files/utilities/bundle-calculator';
 import { readTsconfig } from '../angular-cli-files/utilities/read-tsconfig';
 import { requireProjectModule } from '../angular-cli-files/utilities/require-project-module';
 import {
@@ -63,6 +64,7 @@ export interface BrowserBuilderOptions {
   forkTypeChecker: boolean;
   statsJson: boolean;
   lazyModules: string[];
+  budgets: Budget[];
 
   // Options with no defaults.
   // TODO: reconsider this list.
