@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@angular/cli": "~<%= version %>",
+    "@angular-devkit/local": "~<%= version %>",
     "@angular/compiler-cli": "<%= latestVersions.Angular %>",
     "@angular/language-service": "<%= latestVersions.Angular %>",
     "@types/jasmine": "~2.8.6",

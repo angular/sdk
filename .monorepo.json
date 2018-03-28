@@ -165,6 +165,17 @@
       "section": "Schematics",
       "hash": "adef93c50dbfc2a2bffa797b12c29141",
       "snapshotRepo": ""
+    },
+    "@angular-devkit/local": {
+      "name": "Local CLI Package",
+      "links": [
+        {
+          "label": "README",
+          "url": "https://github.com/angular/devkit/blob/master/packages/angular_devkit/local/README.md"
+        }
+      ],
+      "version": "0.0.1",
+      "hash": ""
     }
   }
 }
