@@ -79,7 +79,7 @@ function updateTsConfig(npmPackageName: string) {
   };
 }
 
-function addDependenciesAndScriptsToPackageJson() {
+function addDependenciesToPackageJson() {
 
   return (host: Tree) => {
     if (!host.exists('package.json')) { return host; }
@@ -105,7 +105,8 @@ function addDependenciesAndScriptsToPackageJson() {
 
       json.devDependencies = {
         '@angular/compiler-cli': latestVersions.Angular,
-        '@angular-devkit/build-ng-packagr': 'latest',
+        '@angular-devkit/build-ng-packagr': latestVersions.DevkitBuildNgPackagr,
+        '@angular-devkit/build-angular': latestVersions.DevkitBuildNgPackagr,
         'ng-packagr': '^2.4.1',
         'tsickle': '>=0.25.5',
         'tslib': '^1.7.1',
@@ -119,7 +120,6 @@ function addDependenciesAndScriptsToPackageJson() {
 
 function addAppToWorkspaceFile(options: LibraryOptions, workspace: WorkspaceSchema): Rule {
   return (host: Tree, context: SchematicContext) => {
-    context.logger.info(`Updating workspace file`);
 
     const projectRoot = `${workspace.newProjectRoot}/${options.name}`;
     // tslint:disable-next-line:no-any
@@ -139,7 +139,7 @@ function addAppToWorkspaceFile(options: LibraryOptions, workspace: WorkspaceSche
           },
         },
         test: {
-          builder: '@angular-devkit/build-webpack:karma',
+          builder: '@angular-devkit/build-angular:karma',
           options: {
             main: `${projectRoot}/src/test.ts`,
             tsConfig: `${projectRoot}/tsconfig.spec.json`,
@@ -147,7 +147,7 @@ function addAppToWorkspaceFile(options: LibraryOptions, workspace: WorkspaceSche
           },
         },
         lint: {
-          builder: '@angular-devkit/build-webpack:lint',
+          builder: '@angular-devkit/build-angular:lint',
           options: {
             tsConfig: [
               'projects/lib/tsconfig.lint.json',
@@ -192,7 +192,7 @@ export default function (options: LibraryOptions): Rule {
     return chain([
       branchAndMerge(mergeWith(templateSource)),
       addAppToWorkspaceFile(options, workspace),
-      options.skipPackageJson ? noop() : addDependenciesAndScriptsToPackageJson(),
+      options.skipPackageJson ? noop() : addDependenciesToPackageJson(),
       options.skipTsConfig ? noop() : updateTsConfig(name),
       schematic('module', {
         name: name,

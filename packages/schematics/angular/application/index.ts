@@ -25,6 +25,7 @@ import {
 } from '@angular-devkit/schematics';
 import { Schema as E2eOptions } from '../e2e/schema';
 import { getWorkspace, getWorkspacePath } from '../utility/config';
+import { latestVersions } from '../utility/latest-versions';
 import { Schema as ApplicationOptions } from './schema';
 
 type WorkspaceSchema = experimental.workspace.WorkspaceSchema;
@@ -53,9 +54,38 @@ type WorkspaceSchema = experimental.workspace.WorkspaceSchema;
 //   );
 // }
 
+function addDependenciesToPackageJson() {
+  return (host: Tree) => {
+    const packageJsonPath = 'package.json';
+
+    if (!host.exists('package.json')) { return host; }
+
+    const source = host.read('package.json');
+    if (!source) { return host; }
+
+    const sourceText = source.toString('utf-8');
+    const json = JSON.parse(sourceText);
+
+    if (!json['devDependencies']) {
+      json['devDependencies'] = {};
+    }
+
+    json.devDependencies = {
+      '@angular/compiler-cli': latestVersions.Angular,
+      '@angular-devkit/build-angular': latestVersions.DevkitBuildWebpack,
+      'typescript': latestVersions.TypeScript,
+      // De-structure last keeps existing user dependencies.
+      ...json.devDependencies,
+    };
+
+    host.overwrite(packageJsonPath, JSON.stringify(json, null, 2));
+
+    return host;
+  };
+}
+
 function addAppToWorkspaceFile(options: ApplicationOptions, workspace: WorkspaceSchema): Rule {
   return (host: Tree, context: SchematicContext) => {
-    context.logger.info(`Updating workspace file`);
     // TODO: use JsonAST
     // const workspacePath = '/angular.json';
     // const workspaceBuffer = host.read(workspacePath);
@@ -73,7 +103,7 @@ function addAppToWorkspaceFile(options: ApplicationOptions, workspace: Workspace
       projectType: 'application',
       architect: {
         build: {
-          builder: '@angular-devkit/build-webpack:browser',
+          builder: '@angular-devkit/build-angular:browser',
           options: {
             outputPath: `dist/${options.name}`,
             index: `${projectRoot}/src/index.html`,
@@ -118,7 +148,7 @@ function addAppToWorkspaceFile(options: ApplicationOptions, workspace: Workspace
           },
         },
         serve: {
-          builder: '@angular-devkit/build-webpack:dev-server',
+          builder: '@angular-devkit/build-angular:dev-server',
           options: {
             browserTarget: `${options.name}:build`,
           },
@@ -129,13 +159,13 @@ function addAppToWorkspaceFile(options: ApplicationOptions, workspace: Workspace
           },
         },
         'extract-i18n': {
-          builder: '@angular-devkit/build-webpack:extract-i18n',
+          builder: '@angular-devkit/build-angular:extract-i18n',
           options: {
             browserTarget: `${options.name}:build`,
           },
         },
         test: {
-          builder: '@angular-devkit/build-webpack:karma',
+          builder: '@angular-devkit/build-angular:karma',
           options: {
             main: `${projectRoot}/src/test.ts`,
             polyfills: `${projectRoot}/src/polyfills.ts`,
@@ -162,7 +192,7 @@ function addAppToWorkspaceFile(options: ApplicationOptions, workspace: Workspace
           },
         },
         lint: {
-          builder: '@angular-devkit/build-webpack:tslint',
+          builder: '@angular-devkit/build-angular:tslint',
           options: {
             tsConfig: [
               `${projectRoot}/tsconfig.app.json`,
@@ -252,6 +282,7 @@ export default function (options: ApplicationOptions): Rule {
 
     return chain([
       addAppToWorkspaceFile(options, workspace),
+      options.skipPackageJson ? noop() : addDependenciesToPackageJson(),
       mergeWith(
         apply(url('./files'), [
           template({
