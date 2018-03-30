@@ -98,7 +98,6 @@ export interface AssetPattern {
   glob: string;
   input: string;
   output: string;
-  allowOutsideOutDir: boolean;
 }
 
 export interface ExtraEntryPoint {
@@ -139,8 +138,6 @@ export class BrowserBuilder implements Builder<BrowserBuilderOptions> {
         try {
           webpackConfig = this.buildWebpackConfig(root, projectRoot, options);
         } catch (e) {
-          // TODO: why do I have to catch this error? I thought throwing inside an observable
-          // always got converted into an error.
           obs.error(e);
 
           return;
