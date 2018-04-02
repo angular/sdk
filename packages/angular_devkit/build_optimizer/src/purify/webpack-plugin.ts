@@ -18,9 +18,24 @@ interface Chunk {
 export class PurifyPlugin {
   constructor() { }
   public apply(compiler: webpack.Compiler): void {
-    // tslint:disable-next-line:no-any
-    compiler.plugin('compilation', (compilation: any) => {
-      compilation.plugin('optimize-chunk-assets', (chunks: Chunk[], callback: () => void) => {
+    let compilerPlugin: (callback: (compilation: any) => void) => void;
+    let compilationPlugin: (compilation: any,
+                            callback: (chunks: Chunk[], callback: () => void) => void) => void;
+    if (compiler.hooks) { // Webpack 4
+      compilerPlugin = (callback: (compilation: any) => void) =>
+        compiler.hooks.compilation.tap('purify', callback);
+      compilationPlugin = (compilation: any,
+                           callback: (chunks: Chunk[], callback: () => void) => void) =>
+        compilation.hooks.optimizeChunkAssets.tapAsync('purify', callback);
+    } else { // Webpack 3
+      compilerPlugin = (callback: (compilation: any) => void) =>
+        compiler.plugin('compilation', callback);
+      compilationPlugin = (compilation: any,
+                           callback: (chunks: Chunk[], callback: () => void) => void) =>
+        compilation.plugin('optimize-chunk-assets', callback);
+    }
+    compilerPlugin((compilation: any) => {
+      compilationPlugin(compilation, (chunks: Chunk[], callback: () => void) => {
         chunks.forEach((chunk: Chunk) => {
           chunk.files
             .filter((fileName: string) => fileName.endsWith('.js'))
