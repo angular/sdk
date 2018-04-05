@@ -11,10 +11,6 @@
 
 
     "no-implicit-dependencies": true,
-    "import-blacklist": [
-      true,
-      "rxjs"
-    ],
     "no-import-side-effect": [true, {"ignore-module": "^(?!rxjs\/)"}],
     "align": [
       true,
@@ -46,6 +42,7 @@
     "no-internal-module": true,
     "no-trailing-whitespace": true,
     "no-unused-expression": true,
+    "no-unused-variable": [true, {"ignore-pattern": "^_"}],
     "no-var-keyword": true,
     "one-line": [
       true,

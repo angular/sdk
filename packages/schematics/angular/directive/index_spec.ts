@@ -5,13 +5,13 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { Tree, VirtualTree } from '@angular-devkit/schematics';
-import { SchematicTestRunner } from '@angular-devkit/schematics/testing';
+import { SchematicTestRunner, UnitTestTree } from '@angular-devkit/schematics/testing';
 import * as path from 'path';
-import { createAppModule, getFileContent } from '../utility/test';
+import { Schema as ApplicationOptions } from '../application/schema';
+import { Schema as WorkspaceOptions } from '../workspace/schema';
 import { Schema as DirectiveOptions } from './schema';
 
-
+// tslint:disable:max-line-length
 describe('Directive Schematic', () => {
   const schematicRunner = new SchematicTestRunner(
     '@schematics/angular',
@@ -19,8 +19,6 @@ describe('Directive Schematic', () => {
   );
   const defaultOptions: DirectiveOptions = {
     name: 'foo',
-    path: 'app',
-    sourceDir: 'src',
     spec: true,
     module: undefined,
     export: false,
@@ -28,11 +26,25 @@ describe('Directive Schematic', () => {
     flat: true,
   };
 
-  let appTree: Tree;
+  const workspaceOptions: WorkspaceOptions = {
+    name: 'workspace',
+    newProjectRoot: 'projects',
+    version: '6.0.0',
+  };
 
+  const appOptions: ApplicationOptions = {
+    name: 'bar',
+    inlineStyle: false,
+    inlineTemplate: false,
+    routing: false,
+    style: 'css',
+    skipTests: false,
+    skipPackageJson: false,
+  };
+  let appTree: UnitTestTree;
   beforeEach(() => {
-    appTree = new VirtualTree();
-    appTree = createAppModule(appTree);
+    appTree = schematicRunner.runSchematic('workspace', workspaceOptions);
+    appTree = schematicRunner.runSchematic('application', appOptions, appTree);
   });
 
   it('should create a directive', () => {
@@ -40,9 +52,9 @@ describe('Directive Schematic', () => {
 
     const tree = schematicRunner.runSchematic('directive', options, appTree);
     const files = tree.files;
-    expect(files.indexOf('/src/app/foo.directive.spec.ts')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/src/app/foo.directive.ts')).toBeGreaterThanOrEqual(0);
-    const moduleContent = getFileContent(tree, '/src/app/app.module.ts');
+    expect(files.indexOf('/projects/bar/src/app/foo.directive.spec.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/bar/src/app/foo.directive.ts')).toBeGreaterThanOrEqual(0);
+    const moduleContent = tree.readContent('/projects/bar/src/app/app.module.ts');
     expect(moduleContent).toMatch(/import.*Foo.*from '.\/foo.directive'/);
     expect(moduleContent).toMatch(/declarations:\s*\[[^\]]+?,\r?\n\s+FooDirective\r?\n/m);
   });
@@ -52,13 +64,13 @@ describe('Directive Schematic', () => {
 
     const tree = schematicRunner.runSchematic('directive', options, appTree);
     const files = tree.files;
-    expect(files.indexOf('/src/app/foo/foo.directive.spec.ts')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/src/app/foo/foo.directive.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/bar/src/app/foo/foo.directive.spec.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/bar/src/app/foo/foo.directive.ts')).toBeGreaterThanOrEqual(0);
   });
 
   it('should find the closest module', () => {
     const options = { ...defaultOptions, flat: false };
-    const fooModule = '/src/app/foo/foo.module.ts';
+    const fooModule = '/projects/bar/src/app/foo/foo.module.ts';
     appTree.create(fooModule, `
       import { NgModule } from '@angular/core';
 
@@ -70,7 +82,7 @@ describe('Directive Schematic', () => {
     `);
 
     const tree = schematicRunner.runSchematic('directive', options, appTree);
-    const fooModuleContent = getFileContent(tree, fooModule);
+    const fooModuleContent = tree.readContent(fooModule);
     expect(fooModuleContent).toMatch(/import { FooDirective } from '.\/foo.directive'/);
   });
 
@@ -78,7 +90,7 @@ describe('Directive Schematic', () => {
     const options = { ...defaultOptions, export: true };
 
     const tree = schematicRunner.runSchematic('directive', options, appTree);
-    const appModuleContent = getFileContent(tree, '/src/app/app.module.ts');
+    const appModuleContent = tree.readContent('/projects/bar/src/app/app.module.ts');
     expect(appModuleContent).toMatch(/exports: \[FooDirective\]/);
   });
 
@@ -86,13 +98,13 @@ describe('Directive Schematic', () => {
     const options = { ...defaultOptions, module: 'app.module.ts' };
 
     const tree = schematicRunner.runSchematic('directive', options, appTree);
-    const appModule = getFileContent(tree, '/src/app/app.module.ts');
+    const appModule = tree.readContent('/projects/bar/src/app/app.module.ts');
 
     expect(appModule).toMatch(/import { FooDirective } from '.\/foo.directive'/);
   });
 
   it('should fail if specified module does not exist', () => {
-    const options = { ...defaultOptions, module: '/src/app/app.moduleXXX.ts' };
+    const options = { ...defaultOptions, module: '/projects/bar/src/app/app.moduleXXX.ts' };
     let thrownError: Error | null = null;
     try {
       schematicRunner.runSchematic('directive', options, appTree);
@@ -106,7 +118,15 @@ describe('Directive Schematic', () => {
     const options = { ...defaultOptions, name: 'my-dir' };
 
     const tree = schematicRunner.runSchematic('directive', options, appTree);
-    const content = getFileContent(tree, '/src/app/my-dir.directive.ts');
+    const content = tree.readContent('/projects/bar/src/app/my-dir.directive.ts');
     expect(content).toMatch(/selector: '\[appMyDir\]'/);
+  });
+
+  it('should create the right selector with a path in the name', () => {
+    const options = { ...defaultOptions, name: 'sub/test' };
+    appTree = schematicRunner.runSchematic('directive', options, appTree);
+
+    const content = appTree.readContent('/projects/bar/src/app/sub/test.directive.ts');
+    expect(content).toMatch(/selector: '\[appTest\]'/);
   });
 });

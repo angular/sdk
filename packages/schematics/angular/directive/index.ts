@@ -5,7 +5,7 @@
 * Use of this source code is governed by an MIT-style license that can be
 * found in the LICENSE file at https://angular.io/license
 */
-import { normalize, strings } from '@angular-devkit/core';
+import { strings } from '@angular-devkit/core';
 import {
   Rule,
   SchematicContext,
@@ -24,7 +24,10 @@ import {
 import * as ts from 'typescript';
 import { addDeclarationToModule, addExportToModule } from '../utility/ast-utils';
 import { InsertChange } from '../utility/change';
+import { getWorkspace } from '../utility/config';
 import { buildRelativePath, findModuleFromOptions } from '../utility/find-module';
+import { parseName } from '../utility/parse-name';
+import { validateHtmlSelector } from '../utility/validation';
 import { Schema as DirectiveOptions } from './schema';
 
 
@@ -42,7 +45,7 @@ function addDeclarationToNgModule(options: DirectiveOptions): Rule {
     const sourceText = text.toString('utf-8');
     const source = ts.createSourceFile(modulePath, sourceText, ts.ScriptTarget.Latest, true);
 
-    const directivePath = `/${options.sourceDir}/${options.path}/`
+    const directivePath = `/${options.path}/`
                           + (options.flat ? '' : strings.dasherize(options.name) + '/')
                           + strings.dasherize(options.name)
                           + '.directive';
@@ -97,15 +100,26 @@ function buildSelector(options: DirectiveOptions) {
 }
 
 export default function (options: DirectiveOptions): Rule {
-  options.selector = options.selector || buildSelector(options);
-  options.path = options.path ? normalize(options.path) : options.path;
-  const sourceDir = options.sourceDir;
-  if (!sourceDir) {
-    throw new SchematicsException(`sourceDir option is required.`);
-  }
-
   return (host: Tree, context: SchematicContext) => {
+    const workspace = getWorkspace(host);
+    if (!options.project) {
+      options.project = Object.keys(workspace.projects)[0];
+    }
+    const project = workspace.projects[options.project];
+
+    if (options.path === undefined) {
+      options.path = `/${project.root}/src/app`;
+    }
+
     options.module = findModuleFromOptions(host, options);
+
+    const parsedPath = parseName(options.path, options.name);
+    options.name = parsedPath.name;
+    options.path = parsedPath.path;
+    options.selector = options.selector || buildSelector(options);
+
+    validateHtmlSelector(options.selector);
+
     const templateSource = apply(url('./files'), [
       options.spec ? noop() : filter(path => !path.endsWith('.spec.ts')),
       template({
@@ -113,7 +127,7 @@ export default function (options: DirectiveOptions): Rule {
         'if-flat': (s: string) => options.flat ? '' : s,
         ...options,
       }),
-      move(sourceDir),
+      move(parsedPath.path),
     ]);
 
     return chain([

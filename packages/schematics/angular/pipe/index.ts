@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { normalize, strings } from '@angular-devkit/core';
+import { strings } from '@angular-devkit/core';
 import {
   Rule,
   SchematicContext,
@@ -24,7 +24,9 @@ import {
 import * as ts from 'typescript';
 import { addDeclarationToModule, addExportToModule } from '../utility/ast-utils';
 import { InsertChange } from '../utility/change';
+import { getWorkspace } from '../utility/config';
 import { buildRelativePath, findModuleFromOptions } from '../utility/find-module';
+import { parseName } from '../utility/parse-name';
 import { Schema as PipeOptions } from './schema';
 
 
@@ -42,7 +44,7 @@ function addDeclarationToNgModule(options: PipeOptions): Rule {
     const sourceText = text.toString('utf-8');
     const source = ts.createSourceFile(modulePath, sourceText, ts.ScriptTarget.Latest, true);
 
-    const pipePath = `/${options.sourceDir}/${options.path}/`
+    const pipePath = `/${options.path}/`
                      + (options.flat ? '' : strings.dasherize(options.name) + '/')
                      + strings.dasherize(options.name)
                      + '.pipe';
@@ -84,13 +86,21 @@ function addDeclarationToNgModule(options: PipeOptions): Rule {
 }
 
 export default function (options: PipeOptions): Rule {
-  options.path = options.path ? normalize(options.path) : options.path;
-  const sourceDir = options.sourceDir;
-  if (!sourceDir) {
-    throw new SchematicsException(`sourceDir option is required.`);
-  }
-
   return (host: Tree, context: SchematicContext) => {
+    const workspace = getWorkspace(host);
+    if (!options.project) {
+      options.project = Object.keys(workspace.projects)[0];
+    }
+    const project = workspace.projects[options.project];
+
+    if (options.path === undefined) {
+      options.path = `/${project.root}/src/app`;
+    }
+
+    const parsedPath = parseName(options.path, options.name);
+    options.name = parsedPath.name;
+    options.path = parsedPath.path;
+
     options.module = findModuleFromOptions(host, options);
 
     const templateSource = apply(url('./files'), [
@@ -100,14 +110,12 @@ export default function (options: PipeOptions): Rule {
         'if-flat': (s: string) => options.flat ? '' : s,
         ...options,
       }),
-      move(sourceDir),
+      move(parsedPath.path),
     ]);
 
-    return chain([
-      branchAndMerge(chain([
+    return branchAndMerge(chain([
         addDeclarationToNgModule(options),
         mergeWith(templateSource),
-      ])),
-    ])(host, context);
+      ]))(host, context);
   };
 }
