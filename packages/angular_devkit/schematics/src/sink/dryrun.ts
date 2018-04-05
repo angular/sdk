@@ -7,9 +7,7 @@
  */
 import { normalize, virtualFs } from '@angular-devkit/core';
 import { NodeJsSyncHost } from '@angular-devkit/core/node';
-import { Observable } from 'rxjs/Observable';
-import { Subject } from 'rxjs/Subject';
-import { empty } from 'rxjs/observable/empty';
+import { Observable, Subject, of } from 'rxjs';
 import { HostSink } from './host';
 
 
@@ -105,6 +103,9 @@ export class DryRunSink extends HostSink {
 
       this._subject.next({ kind: 'delete', path });
     });
+    this._filesToRename.forEach(([path, to]) => {
+      this._subject.next({ kind: 'rename', path, to });
+    });
     this._filesToCreate.forEach((content, path) => {
       // Check if this is a renaming.
       for (const [_, to] of this._filesToRename) {
@@ -123,12 +124,9 @@ export class DryRunSink extends HostSink {
     this._filesToUpdate.forEach((content, path) => {
       this._subject.next({ kind: 'update', path, content: content.generate() });
     });
-    this._filesToRename.forEach(([path, to]) => {
-      this._subject.next({ kind: 'rename', path, to });
-    });
 
     this._subject.complete();
 
-    return empty<void>();
+    return of<void>(undefined);
   }
 }

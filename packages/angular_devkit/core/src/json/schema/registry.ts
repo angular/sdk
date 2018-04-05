@@ -7,12 +7,9 @@
  */
 import * as ajv from 'ajv';
 import * as http from 'http';
-import { Observable } from 'rxjs/Observable';
-import { fromPromise } from 'rxjs/observable/fromPromise';
-import { of as observableOf } from 'rxjs/observable/of';
-import { concatMap, switchMap } from 'rxjs/operators';
-import { map } from 'rxjs/operators/map';
-import { PartiallyOrderedSet } from '../../utils';
+import { Observable, from, of as observableOf } from 'rxjs';
+import { concatMap, map, switchMap, tap } from 'rxjs/operators';
+import { PartiallyOrderedSet, isObservable } from '../../utils';
 import { JsonObject, JsonValue } from '../interface';
 import {
   SchemaFormat,
@@ -20,6 +17,7 @@ import {
   SchemaRegistry,
   SchemaValidator,
   SchemaValidatorResult,
+  SmartDefaultProvider,
 } from './interface';
 import { addUndefinedDefaults } from './transforms';
 import { JsonVisitor, visitJson } from './visitor';
@@ -30,6 +28,10 @@ export class CoreSchemaRegistry implements SchemaRegistry {
   private _uriCache = new Map<string, JsonObject>();
   private _pre = new PartiallyOrderedSet<JsonVisitor>();
   private _post = new PartiallyOrderedSet<JsonVisitor>();
+
+  private _smartDefaultKeyword = false;
+  private _sourceMap = new Map<string, SmartDefaultProvider<{}>>();
+  private _smartDefaultRecord = new Map<string, JsonObject>();
 
   constructor(formats: SchemaFormat[] = []) {
     /**
@@ -136,7 +138,10 @@ export class CoreSchemaRegistry implements SchemaRegistry {
     // in synchronous (if available).
     let validator: Observable<ajv.ValidateFunction>;
     try {
-      const maybeFnValidate = this._ajv.compile(schema);
+      const maybeFnValidate = this._ajv.compile({
+        $async: this._smartDefaultKeyword ? true : undefined,
+        ...schema,
+      });
       validator = observableOf(maybeFnValidate);
     } catch (e) {
       // Propagate the error.
@@ -157,44 +162,27 @@ export class CoreSchemaRegistry implements SchemaRegistry {
 
     return validator
       .pipe(
-        // tslint:disable-next-line:no-any
-        map(validate => (data: any): Observable<SchemaValidatorResult> => {
-          let dataObs = observableOf(data);
-          this._pre.forEach(visitor =>
-            dataObs = dataObs.pipe(
-              concatMap(data => {
-                return visitJson(data as JsonValue, visitor, schema, this._resolver, validate);
-              }),
-            ),
-          );
-
-          return dataObs.pipe(
+        map(validate => (data: JsonValue): Observable<SchemaValidatorResult> => {
+          return observableOf(data).pipe(
+            ...[...this._pre].map(visitor => concatMap((data: JsonValue) => {
+              return visitJson(data, visitor, schema, this._resolver, validate);
+            })),
+          ).pipe(
             switchMap(updatedData => {
               const result = validate(updatedData);
 
               return typeof result == 'boolean'
                 ? observableOf([updatedData, result])
-                : fromPromise((result as PromiseLike<boolean>)
-                  .then(result => [updatedData, result]));
+                : from((result as PromiseLike<boolean>)
+                  .then(r => [updatedData, r]));
             }),
             switchMap(([data, valid]) => {
               if (valid) {
-                let dataObs = observableOf(data);
-                this._post.forEach(visitor =>
-                  dataObs = dataObs.pipe(
-                    concatMap(data => {
-                      return visitJson(
-                        data as JsonValue,
-                        visitor,
-                        schema,
-                        this._resolver,
-                        validate,
-                      );
-                    }),
-                  ),
-                );
-
-                return dataObs.pipe(
+                return this._applySmartDefaults(data).pipe(
+                  ...[...this._post].map(visitor => concatMap(data => {
+                    return visitJson(data as JsonValue, visitor, schema, this._resolver, validate);
+                  })),
+                ).pipe(
                   map(data => [data, valid]),
                 );
               } else {
@@ -203,10 +191,6 @@ export class CoreSchemaRegistry implements SchemaRegistry {
             }),
             map(([data, valid]) => {
               if (valid) {
-                // tslint:disable-next-line:no-any
-                const schemaDataMap = new WeakMap<object, any>();
-                schemaDataMap.set(schema, data);
-
                 return { data, success: true } as SchemaValidatorResult;
               }
 
@@ -232,7 +216,11 @@ export class CoreSchemaRegistry implements SchemaRegistry {
     const validate = (data: any) => {
       const result = format.formatter.validate(data);
 
-      return result instanceof Observable ? result.toPromise() : result;
+      if (typeof result == 'boolean') {
+        return result;
+      } else {
+        return result.toPromise();
+      }
     };
 
     this._ajv.addFormat(format.name, {
@@ -241,5 +229,127 @@ export class CoreSchemaRegistry implements SchemaRegistry {
     // AJV typings list `compare` as required, but it is optional.
     // tslint:disable-next-line:no-any
     } as any);
+  }
+
+  addSmartDefaultProvider<T>(source: string, provider: SmartDefaultProvider<T>) {
+    if (this._sourceMap.has(source)) {
+      throw new Error(source);
+    }
+
+    this._sourceMap.set(source, provider);
+
+    if (!this._smartDefaultKeyword) {
+      this._smartDefaultKeyword = true;
+
+      this._ajv.addKeyword('$default', {
+        modifying: true,
+        async: true,
+        compile: (schema, _parentSchema, it) => {
+          const source = this._sourceMap.get((schema as JsonObject).$source as string);
+
+          if (!source) {
+            throw new Error(`Invalid source: ${JSON.stringify(source)}.`);
+          }
+
+          // We cheat, heavily.
+          this._smartDefaultRecord.set(
+            // tslint:disable-next-line:no-any
+            JSON.stringify((it as any).dataPathArr.slice(1, (it as any).dataLevel + 1) as string[]),
+            schema,
+          );
+
+          return function() {
+            return <ajv.Thenable<boolean>> Promise.resolve(true);
+          };
+        },
+      });
+    }
+  }
+
+  // tslint:disable-next-line:no-any
+  private _applySmartDefaults(data: any): Observable<any> {
+    function _set(
+      // tslint:disable-next-line:no-any
+      data: any,
+      fragments: string[],
+      value: {},
+      // tslint:disable-next-line:no-any
+      parent: any | null = null,
+      parentProperty?: string,
+    ): void {
+      for (let i = 0; i < fragments.length; i++) {
+        const f = fragments[i];
+
+        if (f[0] == 'i') {
+          if (!Array.isArray(data)) {
+            return;
+          }
+
+          for (let j = 0; j < data.length; j++) {
+            _set(data[j], fragments.slice(i + 1), value, data, '' + j);
+          }
+
+          return;
+        } else if (f.startsWith('key')) {
+          if (typeof data !== 'object') {
+            return;
+          }
+
+          Object.getOwnPropertyNames(data).forEach(property => {
+            _set(data[property], fragments.slice(i + 1), value, data, property);
+          });
+
+          return;
+        } else if (f.startsWith('\'') && f[f.length - 1] == '\'') {
+          const property = f
+            .slice(1, -1)
+            .replace(/\\'/g, '\'')
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '\r')
+            .replace(/\\f/g, '\f')
+            .replace(/\\t/g, '\t');
+
+          // We know we need an object because the fragment is a property key.
+          if (!data && parent !== null && parentProperty) {
+            data = parent[parentProperty] = {};
+          }
+          parent = data;
+          parentProperty = property;
+
+          data = data[property];
+        } else {
+          return;
+        }
+      }
+
+      if (parent && parentProperty && parent[parentProperty] === undefined) {
+        parent[parentProperty] = value;
+      }
+    }
+
+    return observableOf(data).pipe(
+      ...[...this._smartDefaultRecord.entries()].map(([pointer, schema]) => {
+        return concatMap(data => {
+          const fragments = JSON.parse(pointer);
+          const source = this._sourceMap.get((schema as JsonObject).$source as string);
+
+          if (!source) {
+            throw new Error('Invalid source.');
+          }
+
+          let value = source(schema);
+          if (!isObservable(value)) {
+            value = observableOf(value);
+          }
+
+          return (value as Observable<{}>).pipe(
+            // Synchronously set the new data at the proper JsonSchema path.
+            tap(x => _set(data, fragments, x)),
+            // But return the data object.
+            map(() => data),
+          );
+        });
+      }),
+    );
   }
 }

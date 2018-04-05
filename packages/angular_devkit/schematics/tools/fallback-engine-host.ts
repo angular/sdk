@@ -5,10 +5,8 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { Observable } from 'rxjs/Observable';
-import { of as observableOf } from 'rxjs/observable/of';
-import { _throw } from 'rxjs/observable/throw';
-import { mergeMap } from 'rxjs/operators/mergeMap';
+import { Observable, of as observableOf, throwError } from 'rxjs';
+import { mergeMap } from 'rxjs/operators';
 import { Url } from 'url';
 import {
   Collection,
@@ -31,6 +29,8 @@ export type FallbackCollectionDescription = {
 export type FallbackSchematicDescription = {
   description: SchematicDescription<{}, {}>;
 };
+export type FallbackContext =
+  TypedSchematicContext<FallbackCollectionDescription, FallbackSchematicDescription>;
 export declare type OptionTransform<T extends object, R extends object> = (
   schematic: SchematicDescription<FallbackCollectionDescription, FallbackSchematicDescription>,
   options: T,
@@ -85,7 +85,7 @@ export class FallbackEngineHost implements EngineHost<{}, {}> {
 
   createSourceFromUrl(
     url: Url,
-    context: TypedSchematicContext<FallbackCollectionDescription, FallbackSchematicDescription>,
+    context: FallbackContext,
   ): Source | null {
     return context.schematic.collection.description.host.createSourceFromUrl(url, context);
   }
@@ -97,6 +97,16 @@ export class FallbackEngineHost implements EngineHost<{}, {}> {
     return (observableOf(options)
       .pipe(...this._hosts.map(host => mergeMap(opt => host.transformOptions(schematic, opt))))
     ) as {} as Observable<ResultT>;
+  }
+
+  transformContext(context: FallbackContext): FallbackContext {
+    let result = context;
+
+    this._hosts.forEach(host => {
+      result = (host.transformContext(result) || result) as FallbackContext;
+    });
+
+    return result;
   }
 
   /**
@@ -126,7 +136,7 @@ export class FallbackEngineHost implements EngineHost<{}, {}> {
       }
     }
 
-    return _throw(new UnregisteredTaskException(name));
+    return throwError(new UnregisteredTaskException(name));
   }
 
   hasTaskExecutor(name: string): boolean {

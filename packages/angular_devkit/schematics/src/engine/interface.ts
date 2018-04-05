@@ -6,9 +6,10 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import { logging } from '@angular-devkit/core';
-import { Observable } from 'rxjs/Observable';
+import { Observable } from 'rxjs';
 import { Url } from 'url';
 import { FileEntry, MergeStrategy, Tree } from '../tree/interface';
+import { Workflow } from '../workflow';
 import { TaskConfigurationGenerator, TaskExecutor, TaskId } from './task';
 
 
@@ -64,6 +65,9 @@ export interface EngineHost<CollectionMetadataT extends object, SchematicMetadat
     schematic: SchematicDescription<CollectionMetadataT, SchematicMetadataT>,
     options: OptionT,
   ): Observable<ResultT>;
+  transformContext(
+    context: TypedSchematicContext<CollectionMetadataT, SchematicMetadataT>,
+  ): TypedSchematicContext<CollectionMetadataT, SchematicMetadataT> | void;
   createTaskExecutor(name: string): Observable<TaskExecutor>;
   hasTaskExecutor(name: string): boolean;
 
@@ -102,6 +106,7 @@ export interface Engine<CollectionMetadataT extends object, SchematicMetadataT e
   executePostTasks(): Observable<void>;
 
   readonly defaultMergeStrategy: MergeStrategy;
+  readonly workflow: Workflow | null;
 }
 
 

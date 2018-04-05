@@ -6,14 +6,15 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import { Path, logging, virtualFs } from '@angular-devkit/core';
-import { Observable } from 'rxjs/Observable';
-import { Architect, Target } from './architect';
+import { JsonObject, Path, experimental, logging, virtualFs } from '@angular-devkit/core';
+import { Observable } from 'rxjs';
+import { Architect, BuilderConfiguration } from './architect';
 
 
 export interface BuilderContext {
   logger: logging.Logger;
   host: virtualFs.Host<{}>;
+  workspace: experimental.workspace.Workspace;
   architect: Architect;
 }
 
@@ -25,16 +26,22 @@ export interface BuildEvent {
 }
 
 export interface Builder<OptionsT> {
-  run(_target: Target<Partial<OptionsT>>): Observable<BuildEvent>;
+  run(builderConfig: BuilderConfiguration<Partial<OptionsT>>): Observable<BuildEvent>;
 }
 
-export interface BuilderMap {
-  builders: { [k: string]: BuilderDescription };
+export interface BuilderPathsMap {
+  builders: { [k: string]: BuilderPaths };
+}
+
+export interface BuilderPaths {
+  class: Path;
+  schema: Path;
+  description: string;
 }
 
 export interface BuilderDescription {
-  class: Path;
-  schema: Path;
+  name: string;
+  schema: JsonObject;
   description: string;
 }
 

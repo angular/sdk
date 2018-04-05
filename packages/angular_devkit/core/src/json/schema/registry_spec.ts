@@ -7,7 +7,7 @@
  */
 // tslint:disable:no-any
 // tslint:disable:non-null-operator
-import { of as observableOf } from 'rxjs/observable/of';
+import { of as observableOf } from 'rxjs';
 import { map, mergeMap } from 'rxjs/operators';
 import { CoreSchemaRegistry } from './registry';
 
@@ -247,6 +247,96 @@ describe('CoreSchemaRegistry', () => {
           expect(result.success).toBe(false);
           expect(result.errors && result.errors[0]).toBe(
             'Data path ".banana" should match format "is-hotdog".');
+        }),
+      )
+      .subscribe(done, done.fail);
+  });
+
+  it('supports smart defaults', done => {
+    const registry = new CoreSchemaRegistry();
+    const data: any = {
+      arr: [{}],
+    };
+
+    registry.addSmartDefaultProvider('test', (schema) => {
+      expect(schema).toEqual({
+        $source: 'test',
+      });
+
+      return true;
+    });
+    registry.addSmartDefaultProvider('test2', (schema) => {
+      expect(schema).toEqual({
+        $source: 'test2',
+        blue: 'yep',
+      });
+
+      return schema['blue'];
+    });
+    registry.addSmartDefaultProvider('test3', (schema) => {
+      return [ 1, 2, 3 ];
+    });
+
+    registry
+      .compile({
+        properties: {
+          bool: {
+            $ref: '#/definitions/example',
+          },
+          arr: {
+            items: {
+              properties: {
+                'test': {
+                  $ref: '#/definitions/other',
+                },
+              },
+            },
+          },
+          arr2: {
+            $ref: '#/definitions/test3',
+          },
+          obj: {
+            properties: {
+              deep: {
+                properties: {
+                  arr: {
+                    $ref: '#/definitions/test3',
+                  },
+                },
+              },
+            },
+          },
+        },
+        definitions: {
+          example: {
+            type: 'boolean',
+            $default: {
+              $source: 'test',
+            },
+          },
+          other: {
+            type: 'string',
+            $default: {
+              $source: 'test2',
+              blue: 'yep',
+            },
+          },
+          test3: {
+            type: 'array',
+            $default: {
+              $source: 'test3',
+            },
+          },
+        },
+      })
+      .pipe(
+        mergeMap(validator => validator(data)),
+        map(result => {
+          expect(result.success).toBe(true);
+          expect(data.bool).toBe(true);
+          expect(data.arr[0].test).toBe('yep');
+          expect(data.arr2).toEqual([1, 2, 3]);
+          expect(data.obj.deep.arr).toEqual([1, 2, 3]);
         }),
       )
       .subscribe(done, done.fail);

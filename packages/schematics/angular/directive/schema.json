@@ -6,19 +6,21 @@
   "properties": {
     "name": {
       "type": "string",
-      "description": "The name of the directive."
+      "description": "The name of the directive.",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      }
     },
     "path": {
       "type": "string",
       "format": "path",
-      "description": "The path to create the directive.",
-      "default": "app",
+      "description": "The path to create the interface.",
       "visible": false
     },
-    "appRoot": {
+    "project": {
       "type": "string",
-      "format": "path",
-      "description": "The root of the application.",
+      "description": "The name of the project.",
       "visible": false
     },
     "prefix": {
@@ -27,13 +29,6 @@
       "description": "The prefix to apply to generated selectors.",
       "default": "app",
       "alias": "p"
-    },
-    "sourceDir": {
-      "type": "string",
-      "format": "path",
-      "description": "The path of the source directory.",
-      "default": "src",
-      "visible": false
     },
     "spec": {
       "type": "boolean",
@@ -66,7 +61,5 @@
       "description": "Specifies if declaring module exports the directive."
     }
   },
-  "required": [
-    "name"
-  ]
+  "required": []
 }
