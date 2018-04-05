@@ -12,54 +12,42 @@ import {
   JsonParseMode,
   Path,
   dirname,
+  experimental,
   getSystemPath,
   join,
   logging,
   normalize,
   parseJson,
-  resolve,
-  schema,
   virtualFs,
 } from '@angular-devkit/core';
 import { resolve as nodeResolve } from '@angular-devkit/core/node';
-import { Observable } from 'rxjs/Observable';
-import { of } from 'rxjs/observable/of';
-import { _throw } from 'rxjs/observable/throw';
-import { concatMap } from 'rxjs/operators';
+import { Observable, forkJoin, of, throwError } from 'rxjs';
+import { concatMap, map, tap } from 'rxjs/operators';
 import {
   BuildEvent,
   Builder,
   BuilderConstructor,
   BuilderContext,
   BuilderDescription,
-  BuilderMap,
+  BuilderPaths,
+  BuilderPathsMap,
 } from './builder';
-import { Workspace } from './workspace';
-
 
 export class ProjectNotFoundException extends BaseException {
-  constructor(name?: string) {
-    const nameOrDefault = name ? `Project '${name}'` : `Default project`;
-    super(`${nameOrDefault} could not be found in workspace.`);
+  constructor(projectName: string) {
+    super(`Project '${projectName}' could not be found in Workspace.`);
   }
 }
 
 export class TargetNotFoundException extends BaseException {
-  constructor(name?: string) {
-    const nameOrDefault = name ? `Target '${name}'` : `Default target`;
-    super(`${nameOrDefault} could not be found in workspace.`);
+  constructor(projectName: string, targetName: string) {
+    super(`Target '${targetName}' could not be found in project '${projectName}'.`);
   }
 }
 
 export class ConfigurationNotFoundException extends BaseException {
-  constructor(name: string) {
-    super(`Configuration '${name}' could not be found in project.`);
-  }
-}
-
-export class SchemaValidationException extends BaseException {
-  constructor(errors: string[]) {
-    super(`Schema validation failed with the following errors:\n  ${errors.join('\n  ')}`);
+  constructor(projectName: string, configurationName: string) {
+    super(`Configuration '${configurationName}' could not be found in project '${projectName}'.`);
   }
 }
 
@@ -70,206 +58,284 @@ export class BuilderCannotBeResolvedException extends BaseException {
   }
 }
 
-export class WorkspaceNotYetLoadedException extends BaseException {
-  constructor() { super(`Workspace needs to be loaded before Architect is used.`); }
+export class ArchitectNotYetLoadedException extends BaseException {
+  constructor() { super(`Architect needs to be loaded before Architect is used.`); }
 }
 
-export interface Target<OptionsT = {}> {
+export class BuilderNotFoundException extends BaseException {
+  constructor(builder: string) {
+    super(`Builder ${builder} could not be found.`);
+  }
+}
+
+export interface BuilderConfiguration<OptionsT = {}> {
   root: Path;
   projectType: string;
   builder: string;
   options: OptionsT;
 }
 
-export interface TargetOptions<OptionsT = {}> {
-  project?: string;
-  target?: string;
+export interface TargetSpecifier<OptionsT = {}> {
+  project: string;
+  target: string;
   configuration?: string;
   overrides?: Partial<OptionsT>;
 }
 
+export interface TargetMap {
+  [k: string]: Target;
+}
+
+export declare type TargetOptions<T = JsonObject> = T;
+export declare type TargetConfiguration<T = JsonObject> = Partial<T>;
+
+export interface Target<T = JsonObject> {
+  builder: string;
+  options: TargetOptions<T>;
+  configurations?: { [k: string]: TargetConfiguration<T> };
+}
+
 export class Architect {
-  private readonly _workspaceSchema = join(normalize(__dirname), 'workspace-schema.json');
-  private readonly _buildersSchema = join(normalize(__dirname), 'builders-schema.json');
-  private _workspace: Workspace;
+  private readonly _targetsSchemaPath = join(normalize(__dirname), 'targets-schema.json');
+  private readonly _buildersSchemaPath = join(normalize(__dirname), 'builders-schema.json');
+  private _targetsSchema: JsonObject;
+  private _buildersSchema: JsonObject;
+  private _architectSchemasLoaded = false;
+  private _targetMapMap = new Map<string, TargetMap>();
+  private _builderPathsMap = new Map<string, BuilderPaths>();
+  private _builderDescriptionMap = new Map<string, BuilderDescription>();
+  private _builderConstructorMap = new Map<string, BuilderConstructor<{}>>();
 
-  constructor(private _root: Path, private _host: virtualFs.Host<{}>) { }
+  constructor(private _workspace: experimental.workspace.Workspace) { }
 
-  loadWorkspaceFromHost(workspacePath: Path) {
-    return this._host.read(join(this._root, workspacePath)).pipe(
-      concatMap((buffer) => {
-        const json = JSON.parse(virtualFs.fileBufferToString(buffer));
+  loadArchitect() {
+    if (this._architectSchemasLoaded) {
+      return of(this);
+    } else {
+      return forkJoin(
+        this._loadJsonFile(this._targetsSchemaPath),
+        this._loadJsonFile(this._buildersSchemaPath),
+      ).pipe(
+        concatMap(([targetsSchema, buildersSchema]) => {
+          this._targetsSchema = targetsSchema;
+          this._buildersSchema = buildersSchema;
+          this._architectSchemasLoaded = true;
 
-        return this.loadWorkspaceFromJson(json);
-      }),
-    );
+          // Validate and cache all project target maps.
+          return forkJoin(
+            ...this._workspace.listProjectNames().map(projectName => {
+              const unvalidatedTargetMap = this._workspace.getProjectArchitect(projectName);
+
+              return this._workspace.validateAgainstSchema<TargetMap>(
+                unvalidatedTargetMap, this._targetsSchema).pipe(
+                  tap(targetMap => this._targetMapMap.set(projectName, targetMap)),
+              );
+            }),
+          );
+        }),
+        map(() => this),
+      );
+    }
   }
 
-  loadWorkspaceFromJson(json: Workspace) {
-    return this._validateAgainstSchema(json, this._workspaceSchema).pipe(
-      concatMap((validatedWorkspace: Workspace) => {
-        this._workspace = validatedWorkspace;
-
-        return of(this);
-      }),
-    );
+  listProjectTargets(projectName: string): string[] {
+    return Object.keys(this._getProjectTargetMap(projectName));
   }
 
-  getTarget<OptionsT>(options: TargetOptions = {}): Target<OptionsT> {
-    let { project, target: targetName } = options;
-    const { configuration, overrides } = options;
-
-    if (!this._workspace) {
-      throw new WorkspaceNotYetLoadedException();
+  private _getProjectTargetMap(projectName: string): TargetMap {
+    if (!this._targetMapMap.has(projectName)) {
+      throw new ProjectNotFoundException(projectName);
     }
 
-    project = project || this._workspace.defaultProject as string;
-    const workspaceProject = this._workspace.projects[project];
+    return this._targetMapMap.get(projectName) as TargetMap;
+  }
 
-    if (!workspaceProject) {
-      throw new ProjectNotFoundException(project);
+  private _getProjectTarget<T = {}>(projectName: string, targetName: string): Target<T> {
+    const targetMap = this._getProjectTargetMap(projectName);
+
+    const target = targetMap[targetName] as {} as Target<T>;
+
+    if (!target) {
+      throw new TargetNotFoundException(projectName, targetName);
     }
-
-    targetName = targetName || workspaceProject.defaultTarget as string;
-    const workspaceTarget = workspaceProject.targets[targetName];
-
-    if (!workspaceTarget) {
-      throw new TargetNotFoundException(targetName);
-    }
-
-    const workspaceTargetOptions = workspaceTarget.options;
-    let workspaceConfiguration;
-
-    if (configuration) {
-      workspaceConfiguration = workspaceTarget.configurations
-        && workspaceTarget.configurations[configuration];
-
-      if (!workspaceConfiguration) {
-        throw new ConfigurationNotFoundException(configuration);
-      }
-    }
-
-    // Resolve root for the target.
-    // TODO: add Path format to JSON schemas
-    const target: Target<OptionsT> = {
-      root: resolve(this._root, normalize(workspaceProject.root)),
-      projectType: workspaceProject.projectType,
-      builder: workspaceTarget.builder,
-      options: {
-        ...workspaceTargetOptions,
-        ...workspaceConfiguration,
-        ...overrides as {},
-      } as OptionsT,
-    };
 
     return target;
   }
 
-  // Will run the target using the target.
+  getBuilderConfiguration<OptionsT>(targetSpec: TargetSpecifier): BuilderConfiguration<OptionsT> {
+    const {
+      project: projectName,
+      target: targetName,
+      configuration: configurationName,
+      overrides,
+    } = targetSpec;
+
+    const project = this._workspace.getProject(projectName);
+    const target = this._getProjectTarget(projectName, targetName);
+    const options = target.options;
+    let configuration: TargetConfiguration = {};
+
+    if (configurationName) {
+      if (!target.configurations) {
+        throw new ConfigurationNotFoundException(projectName, configurationName);
+      }
+
+      configuration = target.configurations[configurationName];
+
+      if (!configuration) {
+        throw new ConfigurationNotFoundException(projectName, configurationName);
+      }
+    }
+
+    const builderConfiguration: BuilderConfiguration<OptionsT> = {
+      root: project.root,
+      projectType: project.projectType,
+      builder: target.builder,
+      options: {
+        ...options,
+        ...configuration,
+        ...overrides as {},
+      } as OptionsT,
+    };
+
+    return builderConfiguration;
+  }
+
   run<OptionsT>(
-    target: Target<OptionsT>,
+    builderConfig: BuilderConfiguration<OptionsT>,
     partialContext: Partial<BuilderContext> = {},
   ): Observable<BuildEvent> {
     const context: BuilderContext = {
       logger: new logging.NullLogger(),
       architect: this,
-      host: this._host,
+      host: this._workspace.host,
+      workspace: this._workspace,
       ...partialContext,
     };
 
     let builderDescription: BuilderDescription;
 
-    return this.getBuilderDescription(target).pipe(
-      concatMap(description => {
-        builderDescription = description;
-
-        return this.validateBuilderOptions(target, builderDescription);
-      }),
-      concatMap(() => of(this.getBuilder(builderDescription, context))),
-      concatMap(builder => builder.run(target)),
+    return this.getBuilderDescription(builderConfig).pipe(
+      tap(description => builderDescription = description),
+      concatMap(() => this.validateBuilderOptions(builderConfig, builderDescription)),
+      tap(validatedBuilderConfig => builderConfig = validatedBuilderConfig),
+      map(() => this.getBuilder(builderDescription, context)),
+      concatMap(builder => builder.run(builderConfig)),
     );
   }
 
-  getBuilderDescription<OptionsT>(target: Target<OptionsT>): Observable<BuilderDescription> {
+  getBuilderDescription<OptionsT>(
+    builderConfig: BuilderConfiguration<OptionsT>,
+  ): Observable<BuilderDescription> {
+    // Check cache for this builder description.
+    if (this._builderDescriptionMap.has(builderConfig.builder)) {
+      return of(this._builderDescriptionMap.get(builderConfig.builder) as BuilderDescription);
+    }
+
     return new Observable((obs) => {
       // TODO: this probably needs to be more like NodeModulesEngineHost.
-      const basedir = getSystemPath(this._root);
-      const [pkg, builderName] = target.builder.split(':');
-      const pkgJsonPath = nodeResolve(pkg, { basedir, resolvePackageJson: true });
+      const basedir = getSystemPath(this._workspace.root);
+      const [pkg, builderName] = builderConfig.builder.split(':');
+      const pkgJsonPath = nodeResolve(pkg, { basedir, resolvePackageJson: true, checkLocal: true });
       let buildersJsonPath: Path;
+      let builderPaths: BuilderPaths;
 
       // Read the `builders` entry of package.json.
-      return this._host.read(normalize(pkgJsonPath)).pipe(
-        concatMap(buffer =>
-          of(parseJson(virtualFs.fileBufferToString(buffer), JsonParseMode.Loose))),
+      return this._loadJsonFile(normalize(pkgJsonPath)).pipe(
         concatMap((pkgJson: JsonObject) => {
           const pkgJsonBuildersentry = pkgJson['builders'] as string;
           if (!pkgJsonBuildersentry) {
-            throw new BuilderCannotBeResolvedException(target.builder);
+            return throwError(new BuilderCannotBeResolvedException(builderConfig.builder));
           }
 
           buildersJsonPath = join(dirname(normalize(pkgJsonPath)), pkgJsonBuildersentry);
 
-          return this._host.read(buildersJsonPath);
+          return this._loadJsonFile(buildersJsonPath);
         }),
-        concatMap((buffer) => of(JSON.parse(virtualFs.fileBufferToString(buffer)))),
         // Validate builders json.
-        concatMap((builderMap) =>
-          this._validateAgainstSchema<BuilderMap>(builderMap, this._buildersSchema)),
+        concatMap((builderPathsMap) => this._workspace.validateAgainstSchema<BuilderPathsMap>(
+          builderPathsMap, this._buildersSchema)),
+        concatMap((builderPathsMap) => {
+          builderPaths = builderPathsMap.builders[builderName];
 
-
-        concatMap((builderMap) => {
-          const builderDescription = builderMap.builders[builderName];
-
-          if (!builderDescription) {
-            throw new BuilderCannotBeResolvedException(target.builder);
+          if (!builderPaths) {
+            return throwError(new BuilderCannotBeResolvedException(builderConfig.builder));
           }
 
-          // Resolve paths in the builder description.
+          // Resolve paths in the builder paths.
           const builderJsonDir = dirname(buildersJsonPath);
-          builderDescription.schema = join(builderJsonDir, builderDescription.schema);
-          builderDescription.class = join(builderJsonDir, builderDescription.class);
+          builderPaths.schema = join(builderJsonDir, builderPaths.schema);
+          builderPaths.class = join(builderJsonDir, builderPaths.class);
 
-          // Validate options again builder schema.
-          return of(builderDescription);
+          // Save the builder paths so that we can lazily load the builder.
+          this._builderPathsMap.set(builderConfig.builder, builderPaths);
+
+          // Load the schema.
+          return this._loadJsonFile(builderPaths.schema);
+        }),
+        map(builderSchema => {
+          const builderDescription = {
+            name: builderConfig.builder,
+            schema: builderSchema,
+            description: builderPaths.description,
+          };
+
+          // Save to cache before returning.
+          this._builderDescriptionMap.set(builderDescription.name, builderDescription);
+
+          return builderDescription;
         }),
       ).subscribe(obs);
     });
   }
 
   validateBuilderOptions<OptionsT>(
-    target: Target<OptionsT>, builderDescription: BuilderDescription,
-  ): Observable<OptionsT> {
-    return this._validateAgainstSchema<OptionsT>(target.options,
-      normalize(builderDescription.schema));
+    builderConfig: BuilderConfiguration<OptionsT>, builderDescription: BuilderDescription,
+  ): Observable<BuilderConfiguration<OptionsT>> {
+    return this._workspace.validateAgainstSchema<OptionsT>(
+      builderConfig.options, builderDescription.schema,
+    ).pipe(
+      map(validatedOptions => {
+        builderConfig.options = validatedOptions;
+
+        return builderConfig;
+      }),
+    );
   }
 
   getBuilder<OptionsT>(
     builderDescription: BuilderDescription, context: BuilderContext,
   ): Builder<OptionsT> {
-    // TODO: support more than the default export, maybe via builder#import-name.
-    const builderModule = require(getSystemPath(builderDescription.class));
-    const builderClass = builderModule['default'] as BuilderConstructor<OptionsT>;
+    const name = builderDescription.name;
+    let builderConstructor: BuilderConstructor<OptionsT>;
 
-    return new builderClass(context);
+    // Check cache for this builder.
+    if (this._builderConstructorMap.has(name)) {
+      builderConstructor = this._builderConstructorMap.get(name) as BuilderConstructor<OptionsT>;
+    } else {
+      if (!this._builderPathsMap.has(name)) {
+        throw new BuilderNotFoundException(name);
+      }
+
+      const builderPaths = this._builderPathsMap.get(name) as BuilderPaths;
+
+      // TODO: support more than the default export, maybe via builder#import-name.
+      const builderModule = require(getSystemPath(builderPaths.class));
+      builderConstructor = builderModule['default'] as BuilderConstructor<OptionsT>;
+
+      // Save builder to cache before returning.
+      this._builderConstructorMap.set(builderDescription.name, builderConstructor);
+    }
+
+    const builder = new builderConstructor(context);
+
+    return builder;
   }
 
-  // Warning: this method changes contentJson in place.
-  // TODO: add transforms to resolve paths.
-  private _validateAgainstSchema<T = {}>(contentJson: {}, schemaPath: Path): Observable<T> {
-    const registry = new schema.CoreSchemaRegistry();
-
-    return this._host.read(schemaPath).pipe(
-      concatMap((buffer) => of(JSON.parse(virtualFs.fileBufferToString(buffer)))),
-      concatMap((schemaContent) => registry.compile(schemaContent)),
-      concatMap(validator => validator(contentJson)),
-      concatMap(validatorResult => {
-        if (validatorResult.success) {
-          return of(contentJson as T);
-        } else {
-          return _throw(new SchemaValidationException(validatorResult.errors as string[]));
-        }
-      }),
+  private _loadJsonFile(path: Path): Observable<JsonObject> {
+    return this._workspace.host.read(normalize(path)).pipe(
+      map(buffer => virtualFs.fileBufferToString(buffer)),
+      map(str => parseJson(str, JsonParseMode.Loose) as {} as JsonObject),
     );
   }
 }

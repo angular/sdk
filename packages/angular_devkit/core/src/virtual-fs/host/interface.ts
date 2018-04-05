@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { Observable } from 'rxjs/Observable';
+import { Observable } from 'rxjs';
 import { Path, PathFragment } from '../path';
 
 
@@ -24,7 +24,7 @@ export const enum HostWatchEventType {
   Renamed = 3,  // Applied to the original file path.
 }
 
-export type Stats<T extends object> = T & {
+export type Stats<T extends object = {}> = T & {
   isFile(): boolean;
   isDirectory(): boolean;
 
@@ -60,8 +60,8 @@ export interface Host<StatsT extends object = {}> {
   isDirectory(path: Path): Observable<boolean>;
   isFile(path: Path): Observable<boolean>;
 
-  // Some hosts may not support stats.
-  stats(path: Path): Observable<Stats<StatsT>> | null;
+  // Some hosts may not support stat.
+  stat(path: Path): Observable<Stats<StatsT>> | null;
 
   // Some hosts may not support watching.
   watch(path: Path, options?: HostWatchOptions): Observable<HostWatchEvent> | null;

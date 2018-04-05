@@ -5,11 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { Observable } from 'rxjs/Observable';
-import { PartialObserver } from 'rxjs/Observer';
-import { Operator } from 'rxjs/Operator';
-import { Subject } from 'rxjs/Subject';
-import { Subscription } from 'rxjs/Subscription';
+import { Observable, Operator, PartialObserver, Subject, Subscription } from 'rxjs';
 import { JsonObject } from '../json/interface';
 
 
@@ -77,7 +73,7 @@ export class Logger extends Observable<LogEntry> implements LoggerApi {
     }
     this._metadata = { name, path };
     this._observable = this._subject.asObservable();
-    if (this.parent) {
+    if (this.parent && this.parent._subject) {
       // When the parent completes, complete us as well.
       this.parent._subject.subscribe(undefined, undefined, () => this.complete());
     }
@@ -98,7 +94,7 @@ export class Logger extends Observable<LogEntry> implements LoggerApi {
   }
 
   createChild(name: string) {
-    return new Logger(name, this);
+    return new (this.constructor as typeof Logger)(name, this);
   }
 
   complete() {

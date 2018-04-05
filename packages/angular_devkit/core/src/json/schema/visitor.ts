@@ -5,16 +5,12 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { Observable } from 'rxjs/Observable';
-import { from } from 'rxjs/observable/from';
-import { of as observableOf } from 'rxjs/observable/of';
-import { concat, concatMap, ignoreElements, mergeMap, tap } from 'rxjs/operators';
-import { observable } from 'rxjs/symbol/observable';
+import { Observable, concat, from, of as observableOf } from 'rxjs';
+import { concatMap, ignoreElements, mergeMap, tap } from 'rxjs/operators';
 import { JsonArray, JsonObject, JsonValue } from '..';
-
-export type JsonPointer = string & {
-  __PRIVATE_DEVKIT_JSON_POINTER: void;
-};
+import { isObservable } from '../../utils';
+import { JsonPointer } from './interface';
+import { buildJsonPointer, joinJsonPointer } from './pointer';
 
 export interface JsonSchemaVisitor {
   (
@@ -27,39 +23,16 @@ export interface JsonSchemaVisitor {
 
 export interface JsonVisitor {
   (
-    value: JsonValue | undefined,
+    value: JsonValue,
     pointer: JsonPointer,
     schema?: JsonObject,
     root?: JsonObject | JsonArray,
-  ): Observable<JsonValue | undefined> | JsonValue | undefined;
+  ): Observable<JsonValue> | JsonValue;
 }
 
 
 export interface ReferenceResolver<ContextT> {
   (ref: string, context?: ContextT): { context?: ContextT, schema?: JsonObject };
-}
-
-
-export function buildJsonPointer(fragments: string[]): JsonPointer {
-  return (
-    '/' + fragments.map(f => {
-      return f.replace(/~/g, '~0')
-              .replace(/\//g, '~1');
-    }).join('/')
-  ) as JsonPointer;
-}
-export function joinJsonPointer(root: JsonPointer, ...others: string[]): JsonPointer {
-  if (root == '/') {
-    return buildJsonPointer(others);
-  }
-
-  return (root + buildJsonPointer(others)) as JsonPointer;
-}
-export function parseJsonPointer(pointer: JsonPointer): string[] {
-  if (pointer === '') { return []; }
-  if (pointer.charAt(0) !== '/') { throw new Error('Relative pointer: ' + pointer); }
-
-  return pointer.substring(1).split(/\//).map(str => str.replace(/~1/g, '/').replace(/~0/g, '~'));
 }
 
 function _getObjectSubSchema(
@@ -99,7 +72,7 @@ function _visitJsonRecursive<ContextT>(
   refResolver?: ReferenceResolver<ContextT>,
   context?: ContextT,  // tslint:disable-line:no-any
   root?: JsonObject | JsonArray,
-): Observable<JsonValue | undefined> {
+): Observable<JsonValue> {
   if (schema && schema.hasOwnProperty('$ref') && typeof schema['$ref'] == 'string') {
     if (refResolver) {
       const resolved = refResolver(schema['$ref'] as string, context);
@@ -110,43 +83,46 @@ function _visitJsonRecursive<ContextT>(
 
   const value = visitor(json, ptr, schema, root);
 
-  return (
-    (typeof value == 'object' && value != null && observable in value)
-      ? value as Observable<JsonValue | undefined>
-      : observableOf(value as JsonValue | undefined)
+  return (isObservable(value)
+      ? value as Observable<JsonValue>
+      : observableOf(value as JsonValue)
   ).pipe(
-    concatMap((value: JsonValue | undefined) => {
+    concatMap((value: JsonValue) => {
       if (Array.isArray(value)) {
-        return from(value).pipe(
-          mergeMap((item, i) => {
-            return _visitJsonRecursive(
-              item,
-              visitor,
-              joinJsonPointer(ptr, '' + i),
-              _getObjectSubSchema(schema, '' + i),
-              refResolver,
-              context,
-              root || value,
-            ).pipe(tap<JsonValue>(x => value[i] = x));
-          }),
-          ignoreElements(),
-          concat(observableOf(value)),
+        return concat(
+          from(value).pipe(
+            mergeMap((item, i) => {
+              return _visitJsonRecursive(
+                item,
+                visitor,
+                joinJsonPointer(ptr, '' + i),
+                _getObjectSubSchema(schema, '' + i),
+                refResolver,
+                context,
+                root || value,
+              ).pipe(tap<JsonValue>(x => value[i] = x));
+            }),
+            ignoreElements(),
+          ),
+          observableOf(value),
         );
       } else if (typeof value == 'object' && value !== null) {
-        return from(Object.getOwnPropertyNames(value)).pipe(
-          mergeMap(key => {
-            return _visitJsonRecursive(
-              value[key],
-              visitor,
-              joinJsonPointer(ptr, key),
-              _getObjectSubSchema(schema, key),
-              refResolver,
-              context,
-              root || value,
-            ).pipe(tap<JsonValue>(x => value[key] = x));
-          }),
-          ignoreElements(),
-          concat(observableOf(value)),
+        return concat(
+          from(Object.getOwnPropertyNames(value)).pipe(
+            mergeMap(key => {
+              return _visitJsonRecursive(
+                value[key],
+                visitor,
+                joinJsonPointer(ptr, key),
+                _getObjectSubSchema(schema, key),
+                refResolver,
+                context,
+                root || value,
+              ).pipe(tap<JsonValue>(x => value[key] = x));
+            }),
+            ignoreElements(),
+           ),
+           observableOf(value),
         );
       } else {
         return observableOf(value);
@@ -176,7 +152,7 @@ export function visitJson<ContextT>(
   schema?: JsonObject,
   refResolver?: ReferenceResolver<ContextT>,
   context?: ContextT,  // tslint:disable-line:no-any
-): Observable<JsonValue | undefined> {
+): Observable<JsonValue> {
   return _visitJsonRecursive(json, visitor, buildJsonPointer([]), schema, refResolver, context);
 }
 

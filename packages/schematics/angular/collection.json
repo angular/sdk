@@ -1,9 +1,33 @@
 {
   "schematics": {
+    "ng-new": {
+      "factory": "./ng-new",
+      "schema": "./ng-new/schema.json",
+      "description": "Create an Angular workspace.",
+      "hidden": true
+    },
+    "workspace": {
+      "factory": "./workspace",
+      "schema": "./workspace/schema.json",
+      "description": "Create an Angular workspace.",
+      "hidden": true
+    },
+    "serviceWorker": {
+      "aliases": [ "service-worker" ],
+      "factory": "./service-worker",
+      "description": "Initializes a service worker setup.",
+      "schema": "./service-worker/schema.json"
+    },
     "application": {
       "factory": "./application",
       "schema": "./application/schema.json",
       "description": "Create an Angular application."
+    },
+    "e2e": {
+      "factory": "./e2e",
+      "schema": "./e2e/schema.json",
+      "description": "Create an Angular e2e application.",
+      "hidden": true
     },
     "class": {
       "aliases": [ "cl" ],
@@ -69,6 +93,12 @@
       "factory": "./app-shell",
       "description": "Create an app shell.",
       "schema": "./app-shell/schema.json"
+    },
+    "library": {
+      "aliases": ["lib"],
+      "factory": "./library",
+      "schema": "./library/schema.json",
+      "description": "Generate a library project for Angular."
     }
   }
 }

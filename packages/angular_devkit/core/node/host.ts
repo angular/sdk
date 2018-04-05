@@ -6,17 +6,15 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import * as fs from 'fs';
-import { Observable } from 'rxjs/Observable';
-import { empty } from 'rxjs/observable/empty';
-import { from as observableFrom } from 'rxjs/observable/from';
-import { of as observableOf } from 'rxjs/observable/of';
-import { concat } from 'rxjs/operators/concat';
-import { concatMap } from 'rxjs/operators/concatMap';
-import { ignoreElements } from 'rxjs/operators/ignoreElements';
-import { map } from 'rxjs/operators/map';
-import { mergeMap } from 'rxjs/operators/mergeMap';
-import { publish } from 'rxjs/operators/publish';
-import { refCount } from 'rxjs/operators/refCount';
+import { EMPTY, Observable, concat, from as observableFrom } from 'rxjs';
+import {
+  concatMap,
+  ignoreElements,
+  map,
+  mergeMap,
+  publish,
+  refCount,
+} from 'rxjs/operators';
 import {
   Path,
   PathFragment,
@@ -123,15 +121,16 @@ export class NodeJsAsyncHost implements virtualFs.Host<fs.Stats> {
           };
           _recurseList(path);
 
-          return observableFrom(allFiles)
-            .pipe(
+          return concat(
+            observableFrom(allFiles).pipe(
               mergeMap(p => _callFs(fs.unlink, getSystemPath(p))),
               ignoreElements(),
-              concat(observableFrom(allDirs).pipe(
-                concatMap(p => _callFs(fs.rmdir, getSystemPath(p))),
-              )),
+            ),
+            observableFrom(allDirs).pipe(
+              concatMap(p => _callFs(fs.rmdir, getSystemPath(p))),
               map(() => {}),
-            );
+            ),
+          );
         } else {
           return _callFs(fs.unlink, getSystemPath(path));
         }
@@ -170,8 +169,8 @@ export class NodeJsAsyncHost implements virtualFs.Host<fs.Stats> {
     );
   }
 
-  // Some hosts may not support stats.
-  stats(path: Path): Observable<virtualFs.Stats<fs.Stats>> | null {
+  // Some hosts may not support stat.
+  stat(path: Path): Observable<virtualFs.Stats<fs.Stats>> | null {
     return _callFs(fs.stat, getSystemPath(path));
   }
 
@@ -224,24 +223,30 @@ export class NodeJsSyncHost implements virtualFs.Host<fs.Stats> {
   }
 
   write(path: Path, content: virtualFs.FileBuffer): Observable<void> {
-    // Create folders if necessary.
-    const _createDir = (path: Path) => {
-      if (fs.existsSync(getSystemPath(path))) {
-        return;
-      }
+    return new Observable(obs => {
+      // Create folders if necessary.
+      const _createDir = (path: Path) => {
+        if (fs.existsSync(getSystemPath(path))) {
+          return;
+        }
+        _createDir(dirname(path));
+        fs.mkdirSync(getSystemPath(path));
+      };
       _createDir(dirname(path));
-      fs.mkdirSync(getSystemPath(path));
-    };
-    _createDir(dirname(path));
-    fs.writeFileSync(getSystemPath(path), new Uint8Array(content));
+      fs.writeFileSync(getSystemPath(path), new Uint8Array(content));
 
-    return empty<void>();
+      obs.next();
+      obs.complete();
+    });
   }
 
   read(path: Path): Observable<virtualFs.FileBuffer> {
-    const buffer = fs.readFileSync(getSystemPath(path));
+    return new Observable(obs => {
+      const buffer = fs.readFileSync(getSystemPath(path));
 
-    return observableOf(new Uint8Array(buffer).buffer as virtualFs.FileBuffer);
+      obs.next(new Uint8Array(buffer).buffer as virtualFs.FileBuffer);
+      obs.complete();
+    });
   }
 
   delete(path: Path): Observable<void> {
@@ -257,39 +262,49 @@ export class NodeJsSyncHost implements virtualFs.Host<fs.Stats> {
           fs.unlinkSync(getSystemPath(path));
         }
 
-        return empty();
+        return EMPTY;
       }),
     );
   }
 
   rename(from: Path, to: Path): Observable<void> {
-    fs.renameSync(getSystemPath(from), getSystemPath(to));
-
-    return empty();
+    return new Observable(obs => {
+      fs.renameSync(getSystemPath(from), getSystemPath(to));
+      obs.next();
+      obs.complete();
+    });
   }
 
   list(path: Path): Observable<PathFragment[]> {
-    return observableOf(fs.readdirSync(getSystemPath(path))).pipe(
-      map(names => names.map(name => fragment(name))),
-    );
+    return new Observable(obs => {
+      const names = fs.readdirSync(getSystemPath(path));
+      obs.next(names.map(name => fragment(name)));
+      obs.complete();
+    });
   }
 
   exists(path: Path): Observable<boolean> {
-    return observableOf(fs.existsSync(getSystemPath(path)));
+    return new Observable(obs => {
+      obs.next(fs.existsSync(getSystemPath(path)));
+      obs.complete();
+    });
   }
 
   isDirectory(path: Path): Observable<boolean> {
     // tslint:disable-next-line:non-null-operator
-    return this.stats(path) !.pipe(map(stat => stat.isDirectory()));
+    return this.stat(path) !.pipe(map(stat => stat.isDirectory()));
   }
   isFile(path: Path): Observable<boolean> {
     // tslint:disable-next-line:non-null-operator
-    return this.stats(path) !.pipe(map(stat => stat.isFile()));
+    return this.stat(path) !.pipe(map(stat => stat.isFile()));
   }
 
-  // Some hosts may not support stats.
-  stats(path: Path): Observable<virtualFs.Stats<fs.Stats>> | null {
-    return observableOf(fs.statSync(getSystemPath(path)));
+  // Some hosts may not support stat.
+  stat(path: Path): Observable<virtualFs.Stats<fs.Stats>> {
+    return new Observable(obs => {
+      obs.next(fs.statSync(getSystemPath(path)));
+      obs.complete();
+    });
   }
 
   // Some hosts may not support watching.

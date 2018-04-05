@@ -7,112 +7,195 @@
  */
 import { SchematicTestRunner, UnitTestTree } from '@angular-devkit/schematics/testing';
 import * as path from 'path';
-import { getFileContent } from '../utility/test';
+import { latestVersions } from '../utility/latest-versions';
+import { Schema as WorkspaceOptions } from '../workspace/schema';
 import { Schema as ApplicationOptions } from './schema';
 
-
+// tslint:disable:max-line-length
 describe('Application Schematic', () => {
   const schematicRunner = new SchematicTestRunner(
     '@schematics/angular',
     path.join(__dirname, '../collection.json'),
   );
+
+  const workspaceOptions: WorkspaceOptions = {
+    name: 'workspace',
+    newProjectRoot: 'projects',
+    version: '6.0.0',
+  };
+
   const defaultOptions: ApplicationOptions = {
-    directory: 'foo',
     name: 'foo',
-    sourceDir: 'src',
     inlineStyle: false,
     inlineTemplate: false,
-    viewEncapsulation: 'Emulated',
-    version: '1.2.3',
     routing: false,
     style: 'css',
     skipTests: false,
-    minimal: false,
+    skipPackageJson: false,
     strict: true,
   };
+
+  let workspaceTree: UnitTestTree;
+  beforeEach(() => {
+    workspaceTree = schematicRunner.runSchematic('workspace', workspaceOptions);
+  });
 
   it('should create all files of an application', () => {
     const options = { ...defaultOptions };
 
-    const tree = schematicRunner.runSchematic('application', options);
+    const tree = schematicRunner.runSchematic('application', options, workspaceTree);
     const files = tree.files;
-    expect(files.indexOf('/foo/.editorconfig')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/.angular-cli.json')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/.gitignore')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/karma.conf.js')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/package.json')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/protractor.conf.js')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/README.md')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/tsconfig.json')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/tslint.json')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/e2e/app.e2e-spec.ts')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/e2e/app.po.ts')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/favicon.ico')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/index.html')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/main.ts')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/polyfills.ts')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/styles.css')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/test.ts')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/tsconfig.app.json')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/tsconfig.spec.json')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/typings.d.ts')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/assets/.gitkeep')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/environments/environment.prod.ts')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/environments/environment.ts')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/app/app.module.ts')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/app/app.component.css')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/app/app.component.html')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/app/app.component.spec.ts')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/app/app.component.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/karma.conf.js')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/tsconfig.app.json')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/tsconfig.spec.json')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/environments/environment.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/environments/environment.prod.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/favicon.ico')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/index.html')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/main.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/polyfills.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/styles.css')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/test.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/app/app.module.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/app/app.component.css')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/app/app.component.html')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/app/app.component.spec.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/app/app.component.ts')).toBeGreaterThanOrEqual(0);
   });
 
-  it('should handle a different sourceDir', () => {
-    const options = { ...defaultOptions, sourceDir: 'some/custom/path' };
+  it('should add the application to the workspace', () => {
+    const options = { ...defaultOptions };
 
-    let tree: UnitTestTree | null = null;
-    expect(() => tree = schematicRunner.runSchematic('application', options))
-      .not.toThrow();
-
-    if (tree) {
-      // tslint:disable-next-line:non-null-operator
-      const files = tree !.files;
-      expect(files.indexOf('/foo/some/custom/path/app/app.module.ts')).toBeGreaterThanOrEqual(0);
-      expect(files.indexOf('/foo/some/custom/path/tsconfig.app.json')).toBeGreaterThanOrEqual(0);
-    }
+    const tree = schematicRunner.runSchematic('application', options, workspaceTree);
+    const workspace = JSON.parse(tree.readContent('/angular.json'));
+    expect(workspace.projects.foo).toBeDefined();
   });
 
   it('should handle the routing flag', () => {
     const options = { ...defaultOptions, routing: true };
 
-    const tree = schematicRunner.runSchematic('application', options);
+    const tree = schematicRunner.runSchematic('application', options, workspaceTree);
     const files = tree.files;
-    expect(files.indexOf('/foo/src/app/app.module.ts')).toBeGreaterThanOrEqual(0);
-    expect(files.indexOf('/foo/src/app/app-routing.module.ts')).toBeGreaterThanOrEqual(0);
-    const moduleContent = getFileContent(tree, '/foo/src/app/app.module.ts');
+    expect(files.indexOf('/projects/foo/src/app/app.module.ts')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/app/app-routing.module.ts')).toBeGreaterThanOrEqual(0);
+    const moduleContent = tree.readContent('/projects/foo/src/app/app.module.ts');
     expect(moduleContent).toMatch(/import { AppRoutingModule } from '.\/app-routing.module'/);
-    const routingModuleContent = getFileContent(tree, '/foo/src/app/app-routing.module.ts');
+    const routingModuleContent = tree.readContent('/projects/foo/src/app/app-routing.module.ts');
     expect(routingModuleContent).toMatch(/RouterModule.forRoot\(routes\)/);
   });
 
-  it('should handle the skip git flag', () => {
-    const options = { ...defaultOptions, skipGit: true };
-
-    const tree = schematicRunner.runSchematic('application', options);
-    const files = tree.files;
-    expect(files.indexOf('/foo/.gitignore')).toEqual(-1);
-  });
-
   it('should import BrowserModule in the app module', () => {
-    const tree = schematicRunner.runSchematic('application', defaultOptions);
-    const path = '/foo/src/app/app.module.ts';
+    const tree = schematicRunner.runSchematic('application', defaultOptions, workspaceTree);
+    const path = '/projects/foo/src/app/app.module.ts';
     const content = tree.readContent(path);
     expect(content).toMatch(/import { BrowserModule } from \'@angular\/platform-browser\';/);
   });
 
   it('should declare app component in the app module', () => {
-    const tree = schematicRunner.runSchematic('application', defaultOptions);
-    const path = '/foo/src/app/app.module.ts';
+    const tree = schematicRunner.runSchematic('application', defaultOptions, workspaceTree);
+    const path = '/projects/foo/src/app/app.module.ts';
     const content = tree.readContent(path);
     expect(content).toMatch(/import { AppComponent } from \'\.\/app\.component\';/);
+  });
+
+  it('should set the right paths in the tsconfig files', () => {
+    const tree = schematicRunner.runSchematic('application', defaultOptions, workspaceTree);
+    let path = '/projects/foo/tsconfig.app.json';
+    let content = tree.readContent(path);
+    expect(content).toMatch('../../tsconfig.json');
+    path = '/projects/foo/tsconfig.spec.json';
+    content = tree.readContent(path);
+    expect(content).toMatch('../../tsconfig.json');
+    const specTsConfig = JSON.parse(content);
+    expect(specTsConfig.files).toEqual(['src/test.ts', 'src/polyfills.ts']);
+  });
+
+  describe(`update package.json`, () => {
+    it(`should add build-angular to devDependencies`, () => {
+      const tree = schematicRunner.runSchematic('application', defaultOptions, workspaceTree);
+
+      const packageJson = JSON.parse(tree.readContent('package.json'));
+      expect(packageJson.devDependencies['@angular-devkit/build-angular'])
+        .toEqual(latestVersions.DevkitBuildAngular);
+    });
+
+    it('should use the latest known versions in package.json', () => {
+      const tree = schematicRunner.runSchematic('application', defaultOptions, workspaceTree);
+      const pkg = JSON.parse(tree.readContent('/package.json'));
+      expect(pkg.devDependencies['@angular/compiler-cli']).toEqual(latestVersions.Angular);
+      expect(pkg.devDependencies['typescript']).toEqual(latestVersions.TypeScript);
+    });
+
+    it(`should not override existing users dependencies`, () => {
+      const oldPackageJson = workspaceTree.readContent('package.json');
+      workspaceTree.overwrite('package.json', oldPackageJson.replace(
+        `"typescript": "${latestVersions.TypeScript}"`,
+        `"typescript": "~2.5.2"`,
+      ));
+
+      const tree = schematicRunner.runSchematic('application', defaultOptions, workspaceTree);
+      const packageJson = JSON.parse(tree.readContent('package.json'));
+      expect(packageJson.devDependencies.typescript).toEqual('~2.5.2');
+    });
+
+    it(`should not modify the file when --skipPackageJson`, () => {
+      const tree = schematicRunner.runSchematic('application', {
+        name: 'foo',
+        skipPackageJson: true,
+      }, workspaceTree);
+
+      const packageJson = JSON.parse(tree.readContent('package.json'));
+      expect(packageJson.devDependencies['@angular-devkit/build-angular']).toBeUndefined();
+    });
+  });
+
+  describe('custom projectRoot', () => {
+    it('should put app files in the right spot', () => {
+      const options = { ...defaultOptions, projectRoot: '' };
+
+      const tree = schematicRunner.runSchematic('application', options, workspaceTree);
+      const files = tree.files;
+      expect(files.indexOf('/src/karma.conf.js')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/tsconfig.app.json')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/tsconfig.spec.json')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/environments/environment.ts')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/environments/environment.prod.ts')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/favicon.ico')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/index.html')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/main.ts')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/polyfills.ts')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/styles.css')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/test.ts')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/app/app.module.ts')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/app/app.component.css')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/app/app.component.html')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/app/app.component.spec.ts')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/app/app.component.ts')).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should set values in angular.json correctly', () => {
+      const options = { ...defaultOptions, projectRoot: '' };
+
+      const tree = schematicRunner.runSchematic('application', options, workspaceTree);
+      const config = JSON.parse(tree.readContent('/angular.json'));
+      const prj = config.projects.foo;
+      expect(prj.root).toEqual('');
+      const buildOpt = prj.architect.build.options;
+      expect(buildOpt.index).toEqual('src/index.html');
+      expect(buildOpt.main).toEqual('src/main.ts');
+      expect(buildOpt.polyfills).toEqual('src/polyfills.ts');
+      expect(buildOpt.tsConfig).toEqual('src/tsconfig.app.json');
+    });
+
+    it('should set the relative tsconfig paths', () => {
+      const options = { ...defaultOptions, projectRoot: '' };
+
+      const tree = schematicRunner.runSchematic('application', options, workspaceTree);
+      const appTsConfig = JSON.parse(tree.readContent('/src/tsconfig.app.json'));
+      expect(appTsConfig.extends).toEqual('../tsconfig.json');
+      const specTsConfig = JSON.parse(tree.readContent('/src/tsconfig.spec.json'));
+      expect(specTsConfig.extends).toEqual('../tsconfig.json');
+      expect(specTsConfig.files).toEqual(['test.ts', 'polyfills.ts']);
+    });
   });
 });

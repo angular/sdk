@@ -5,15 +5,13 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { normalize, strings } from '@angular-devkit/core';
+import { Path, strings } from '@angular-devkit/core';
 import {
   Rule,
   SchematicContext,
   SchematicsException,
   Tree,
   apply,
-  branchAndMerge,
-  chain,
   filter,
   mergeWith,
   move,
@@ -22,62 +20,72 @@ import {
   url,
 } from '@angular-devkit/schematics';
 import * as ts from 'typescript';
-import { addProviderToModule } from '../utility/ast-utils';
-import { InsertChange } from '../utility/change';
+import { getFirstNgModuleName } from '../utility/ast-utils';
+import { getWorkspace } from '../utility/config';
 import { buildRelativePath, findModuleFromOptions } from '../utility/find-module';
+import { parseName } from '../utility/parse-name';
 import { Schema as ServiceOptions } from './schema';
 
+function getModuleNameFromPath(host: Tree, modulePath: Path) {
+  if (!host.exists(modulePath)) {
+    throw new SchematicsException(`File ${modulePath} does not exist.`);
+  }
 
-function addProviderToNgModule(options: ServiceOptions): Rule {
-  return (host: Tree) => {
-    if (!options.module) {
-      return host;
-    }
+  const text = host.read(modulePath);
+  if (text === null) {
+    throw new SchematicsException(`File ${modulePath} cannot be read.`);
+  }
+  const sourceText = text.toString('utf-8');
+  const source = ts.createSourceFile(modulePath, sourceText, ts.ScriptTarget.Latest, true);
 
-    const modulePath = options.module;
-    if (!host.exists(options.module)) {
-      throw new Error('Specified module does not exist');
-    }
+  return getFirstNgModuleName(source);
+}
 
-    const text = host.read(modulePath);
-    if (text === null) {
-      throw new SchematicsException(`File ${modulePath} does not exist.`);
-    }
-    const sourceText = text.toString('utf-8');
+function stripTsExtension(path: string): string {
+  if (!path.endsWith('.ts')) {
+    throw new SchematicsException(`File ${path} is not a Typescript file.`);
+  }
 
-    const source = ts.createSourceFile(modulePath, sourceText, ts.ScriptTarget.Latest, true);
-
-    const servicePath = `/${options.sourceDir}/${options.path}/`
-                        + (options.flat ? '' : strings.dasherize(options.name) + '/')
-                        + strings.dasherize(options.name)
-                        + '.service';
-    const relativePath = buildRelativePath(modulePath, servicePath);
-    const changes = addProviderToModule(source, modulePath,
-                                        strings.classify(`${options.name}Service`),
-                                        relativePath);
-    const recorder = host.beginUpdate(modulePath);
-    for (const change of changes) {
-      if (change instanceof InsertChange) {
-        recorder.insertLeft(change.pos, change.toAdd);
-      }
-    }
-    host.commitUpdate(recorder);
-
-    return host;
-  };
+  return path.substr(0, path.length - 3);
 }
 
 export default function (options: ServiceOptions): Rule {
-  options.path = options.path ? normalize(options.path) : options.path;
-  const sourceDir = options.sourceDir;
-  if (!sourceDir) {
-    throw new SchematicsException(`sourceDir option is required.`);
-  }
-
   return (host: Tree, context: SchematicContext) => {
-    if (options.module) {
-      options.module = findModuleFromOptions(host, options);
+    let providedByModule = '';
+    let providedInPath = '';
+
+    const workspace = getWorkspace(host);
+    if (!options.project) {
+      options.project = Object.keys(workspace.projects)[0];
     }
+    const project = workspace.projects[options.project];
+
+    if (options.path === undefined) {
+      options.path = `/${project.root}/src/app`;
+    }
+
+    if (options.module) {
+      const modulePath = findModuleFromOptions(host, options);
+      if (!modulePath || !host.exists(modulePath)) {
+        throw new Error('Specified module does not exist');
+      }
+      providedByModule = getModuleNameFromPath(host, modulePath) || '';
+
+      if (!providedByModule) {
+        throw new SchematicsException(`module option did not point to an @NgModule.`);
+      }
+
+      const servicePath = `/${options.path}/`
+        + (options.flat ? '' : strings.dasherize(options.name) + '/')
+        + strings.dasherize(options.name)
+        + '.service';
+
+      providedInPath = stripTsExtension(buildRelativePath(servicePath, modulePath));
+    }
+
+    const parsedPath = parseName(options.path, options.name);
+    options.name = parsedPath.name;
+    options.path = parsedPath.path;
 
     const templateSource = apply(url('./files'), [
       options.spec ? noop() : filter(path => !path.endsWith('.spec.ts')),
@@ -85,16 +93,12 @@ export default function (options: ServiceOptions): Rule {
         ...strings,
         'if-flat': (s: string) => options.flat ? '' : s,
         ...options,
+        providedIn: providedByModule,
+        providedInPath: providedInPath,
       }),
-      move(sourceDir),
+      move(parsedPath.path),
     ]);
 
-    return chain([
-      branchAndMerge(chain([
-        filter(path => path.endsWith('.module.ts') && !path.endsWith('-routing.module.ts')),
-        addProviderToNgModule(options),
-        mergeWith(templateSource),
-      ])),
-    ])(host, context);
+    return mergeWith(templateSource)(host, context);
   };
 }
