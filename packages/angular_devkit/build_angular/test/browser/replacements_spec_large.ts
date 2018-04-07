@@ -8,7 +8,7 @@
 
 import { join, normalize, virtualFs } from '@angular-devkit/core';
 import { tap } from 'rxjs/operators';
-import { browserTargetSpec, host, runTargetSpec } from '../utils';
+import { Timeout, browserTargetSpec, host, runTargetSpec } from '../utils';
 
 
 describe('Browser Builder file replacements', () => {
@@ -32,8 +32,8 @@ describe('Browser Builder file replacements', () => {
     const overrides = {
       fileReplacements: [
         {
-          from: normalize('/src/meaning.ts'),
-          to: normalize('/src/meaning-too.ts'),
+          src: normalize('/src/meaning.ts'),
+          replaceWith: normalize('/src/meaning-too.ts'),
         },
       ],
     };
@@ -48,14 +48,14 @@ describe('Browser Builder file replacements', () => {
           .not.toMatch(/meaning\s*=\s*10/);
       }),
     ).subscribe(undefined, done.fail, done);
-  }, 30000);
+  }, Timeout.Basic);
 
   it(`fails compilation with missing 'to' file`, (done) => {
     const overrides = {
       fileReplacements: [
         {
-          from: normalize('/src/meaning.ts'),
-          to: normalize('/src/meaning-three.ts'),
+          src: normalize('/src/meaning.ts'),
+          replaceWith: normalize('/src/meaning-three.ts'),
         },
       ],
     };
@@ -63,5 +63,5 @@ describe('Browser Builder file replacements', () => {
     runTargetSpec(host, browserTargetSpec, overrides).pipe(
       tap((buildEvent) => expect(buildEvent.success).toBe(false)),
     ).subscribe(undefined, done.fail, done);
-  }, 30000);
+  }, Timeout.Basic);
 });

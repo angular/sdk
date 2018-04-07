@@ -11,7 +11,6 @@ import { SchematicTestRunner, UnitTestTree } from '@angular-devkit/schematics/te
 import * as path from 'path';
 
 
-// tslint:disable:max-line-length
 describe('Migration to v6', () => {
   const schematicRunner = new SchematicTestRunner(
     'migrations',
@@ -38,6 +37,8 @@ describe('Migration to v6', () => {
           assets: [
             'assets',
             'favicon.ico',
+            { glob: '**/*', input: './assets/', output: './assets/' },
+            { glob: 'favicon.ico', input: './', output: './' },
           ],
           index: 'index.html',
           main: 'main.ts',
@@ -83,6 +84,12 @@ describe('Migration to v6', () => {
       },
       defaults: {
         styleExt: 'css',
+        build: {
+          namedChunks: true,
+        },
+        serve: {
+          port: 8080,
+        },
       },
     };
     tree = new UnitTestTree(new EmptyTree());
@@ -90,6 +97,14 @@ describe('Migration to v6', () => {
       devDependencies: {},
     };
     tree.create('/package.json', JSON.stringify(packageJson, null, 2));
+
+    // Create a prod environment.
+    tree.create('/src/environments/environment.prod.ts', `
+      export const environment = {
+        production: true
+      };
+    `);
+    tree.create('/src/favicon.ico', '');
   });
 
   describe('file creation/deletion', () => {
@@ -491,16 +506,41 @@ describe('Migration to v6', () => {
         expect(build.builder).toEqual('@angular-devkit/build-angular:browser');
         expect(build.options.scripts).toEqual([]);
         expect(build.options.styles).toEqual([{ input: 'src/styles.css' }]);
-        expect(build.options.assets).toEqual([{ glob: 'src/assets' }, { glob: 'src/favicon.ico' }]);
-        const prodConfig = build.configurations.production;
-        expect(prodConfig.outputHashing).toEqual('all');
-        expect(prodConfig.sourceMap).toEqual(false);
-        expect(prodConfig.extractCss).toEqual(true);
-        expect(prodConfig.namedChunks).toEqual(false);
-        expect(prodConfig.aot).toEqual(true);
-        expect(prodConfig.extractLicenses).toEqual(true);
-        expect(prodConfig.vendorChunk).toEqual(false);
-        expect(prodConfig.buildOptimizer).toEqual(true);
+        expect(build.options.assets).toEqual([
+          { glob: '**/*', input: 'src/assets', output: '/assets' },
+          { glob: 'favicon.ico', input: 'src', output: '/' },
+          { glob: '**/*', input: 'src/assets', output: '/assets' },
+          { glob: 'favicon.ico', input: 'src', output: '/' },
+        ]);
+        expect(build.options.namedChunks).toEqual(true);
+        expect(build.configurations).toEqual({
+          production: {
+            optimization: true,
+            outputHashing: 'all',
+            sourceMap: false,
+            extractCss: true,
+            namedChunks: false,
+            aot: true,
+            extractLicenses: true,
+            vendorChunk: false,
+            buildOptimizer: true,
+            fileReplacements: [{
+              src: 'src/environments/environment.ts',
+              replaceWith: 'src/environments/environment.prod.ts',
+            }],
+          },
+        });
+      });
+
+      it('should add serviceWorker to production configuration', () => {
+        baseConfig.apps[0].serviceWorker = true;
+        tree.create(oldConfigPath, JSON.stringify(baseConfig, null, 2));
+        tree = schematicRunner.runSchematic('migration-01', defaultOptions, tree);
+        const config = getConfig(tree);
+        expect(config.projects.foo.architect.build.options.serviceWorker).toBeUndefined();
+        expect(
+          config.projects.foo.architect.build.configurations.production.serviceWorker,
+        ).toBe(true);
       });
 
       it('should set the serve target', () => {
@@ -508,9 +548,12 @@ describe('Migration to v6', () => {
         tree = schematicRunner.runSchematic('migration-01', defaultOptions, tree);
         const serve = getConfig(tree).projects.foo.architect.serve;
         expect(serve.builder).toEqual('@angular-devkit/build-angular:dev-server');
-        expect(serve.options).toEqual({ browserTarget: 'foo:build' });
+        expect(serve.options).toEqual({
+          browserTarget: 'foo:build',
+          port: 8080,
+        });
         const prodConfig = serve.configurations.production;
-        expect(prodConfig.browserTarget).toEqual('foo:build');
+        expect(prodConfig.browserTarget).toEqual('foo:build:production');
       });
 
       it('should set the test target', () => {
@@ -524,17 +567,12 @@ describe('Migration to v6', () => {
         expect(test.options.karmaConfig).toEqual('./karma.conf.js');
         expect(test.options.scripts).toEqual([]);
         expect(test.options.styles).toEqual([{ input: 'src/styles.css' }]);
-        expect(test.options.assets).toEqual([{ glob: 'src/assets' }, { glob: 'src/favicon.ico' }]);
-      });
-
-      it('should set the serve target', () => {
-        tree.create(oldConfigPath, JSON.stringify(baseConfig, null, 2));
-        tree = schematicRunner.runSchematic('migration-01', defaultOptions, tree);
-        const serve = getConfig(tree).projects.foo.architect.serve;
-        expect(serve.builder).toEqual('@angular-devkit/build-angular:dev-server');
-        expect(serve.options).toEqual({ browserTarget: 'foo:build' });
-        const prodConfig = serve.configurations.production;
-        expect(prodConfig.browserTarget).toEqual('foo:build');
+        expect(test.options.assets).toEqual([
+          { glob: '**/*', input: 'src/assets', output: '/assets' },
+          { glob: 'favicon.ico', input: 'src', output: '/' },
+          { glob: '**/*', input: 'src/assets', output: '/assets' },
+          { glob: 'favicon.ico', input: 'src', output: '/' },
+        ]);
       });
 
       it('should set the extract i18n target', () => {
@@ -552,7 +590,8 @@ describe('Migration to v6', () => {
         const tslint = getConfig(tree).projects.foo.architect['lint'];
         expect(tslint.builder).toEqual('@angular-devkit/build-angular:tslint');
         expect(tslint.options).toBeDefined();
-        expect(tslint.options.tsConfig).toEqual(['src/tsconfig.app.json', 'src/tsconfig.spec.json']);
+        expect(tslint.options.tsConfig)
+          .toEqual(['src/tsconfig.app.json', 'src/tsconfig.spec.json']);
         expect(tslint.options.exclude).toEqual([ '**/node_modules/**' ]);
       });
     });

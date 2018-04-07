@@ -8,7 +8,7 @@
 
 import { normalize, tags, virtualFs } from '@angular-devkit/core';
 import { concatMap, tap } from 'rxjs/operators';
-import { browserTargetSpec, host, runTargetSpec } from '../utils';
+import { Timeout, browserTargetSpec, host, runTargetSpec } from '../utils';
 
 
 describe('Browser Builder styles', () => {
@@ -33,9 +33,9 @@ describe('Browser Builder styles', () => {
     };
     const getStylesOption = () => [
       { input: 'src/input-style.css' },
-      { input: 'src/lazy-style.css', lazy: true },
-      { input: 'src/pre-rename-style.css', output: 'renamed-style' },
-      { input: 'src/pre-rename-lazy-style.css', output: 'renamed-lazy-style', lazy: true },
+      { input: 'src/lazy-style.css', bundleName: 'lazy-style', lazy: true },
+      { input: 'src/pre-rename-style.css', bundleName: 'renamed-style' },
+      { input: 'src/pre-rename-lazy-style.css', bundleName: 'renamed-lazy-style', lazy: true },
     ];
     const cssMatches: { [path: string]: string } = {
       './dist/styles.css': '.input-style',
@@ -103,7 +103,7 @@ describe('Browser Builder styles', () => {
         expect(content).toMatch(jsIndexMatches[fileName]);
       })),
     ).subscribe(undefined, done.fail, done);
-  }, 30000);
+  }, Timeout.Basic);
 
   it('supports empty styleUrls in components', (done) => {
     host.writeMultipleFiles({
@@ -126,7 +126,7 @@ describe('Browser Builder styles', () => {
     runTargetSpec(host, browserTargetSpec, overrides).pipe(
       tap((buildEvent) => expect(buildEvent.success).toBe(true)),
     ).subscribe(undefined, done.fail, done);
-  }, 30000);
+  }, Timeout.Basic);
 
   extensionsWithImportSupport.forEach(ext => {
     it(`supports imports in ${ext} files`, (done) => {
@@ -179,7 +179,7 @@ describe('Browser Builder styles', () => {
           expect(content).toMatch(matches[fileName]);
         })),
       ).subscribe(undefined, done.fail, done);
-    }, 30000);
+    }, Timeout.Basic);
   });
 
   extensionsWithImportSupport.forEach(ext => {
@@ -205,7 +205,7 @@ describe('Browser Builder styles', () => {
       runTargetSpec(host, browserTargetSpec, overrides).pipe(
         tap((buildEvent) => expect(buildEvent.success).toBe(true)),
       ).subscribe(undefined, done.fail, done);
-    }, 30000);
+    }, Timeout.Basic);
   });
 
   it(`supports material icons`, (done) => {
@@ -220,7 +220,7 @@ describe('Browser Builder styles', () => {
     runTargetSpec(host, browserTargetSpec, overrides).pipe(
       tap((buildEvent) => expect(buildEvent.success).toBe(true)),
     ).subscribe(undefined, done.fail, done);
-  }, 30000);
+  }, Timeout.Basic);
 
   extensionsWithVariableSupport.forEach(ext => {
     it(`supports ${ext} includePaths`, (done) => {
@@ -273,7 +273,7 @@ describe('Browser Builder styles', () => {
           expect(content).toMatch(matches[fileName]);
         })),
       ).subscribe(undefined, done.fail, done);
-    }, 30000);
+    }, Timeout.Standard);
   });
 
   it('inlines resources', (done) => {
@@ -330,7 +330,7 @@ describe('Browser Builder styles', () => {
       //   throw new Error('Expected no postcss-url file read warnings.');
       // }
     ).subscribe(undefined, done.fail, done);
-  }, 30000);
+  }, Timeout.Basic);
 
   // Disables a test that relies on node_modules.
   xit(`supports font-awesome imports`, (done) => {
@@ -373,7 +373,7 @@ describe('Browser Builder styles', () => {
           div { -ms-flex: 1; flex: 1 }`);
       }),
     ).subscribe(undefined, done.fail, done);
-  }, 30000);
+  }, Timeout.Basic);
 
   it(`minimizes css`, (done) => {
     host.writeMultipleFiles({
@@ -394,7 +394,7 @@ describe('Browser Builder styles', () => {
           '/*! important-comment */div{-ms-flex:1;flex:1}');
       }),
     ).subscribe(undefined, done.fail, done);
-  }, 45000);
+  }, Timeout.Standard);
 
   // TODO: consider making this a unit test in the url processing plugins.
   it(`supports baseHref and deployUrl in resource urls`, (done) => {
@@ -519,7 +519,7 @@ describe('Browser Builder styles', () => {
         expect(main).toContain(`url('/base/assets/component-img-absolute.svg')`);
       }),
     ).subscribe(undefined, done.fail, done);
-  }, 60000);
+  }, 90000);
 
   it(`supports bootstrap@4`, (done) => {
     const overrides = {
@@ -531,5 +531,5 @@ describe('Browser Builder styles', () => {
     runTargetSpec(host, browserTargetSpec, overrides).pipe(
       tap((buildEvent) => expect(buildEvent.success).toBe(true)),
     ).subscribe(undefined, done.fail, done);
-  }, 30000);
+  }, Timeout.Basic);
 });

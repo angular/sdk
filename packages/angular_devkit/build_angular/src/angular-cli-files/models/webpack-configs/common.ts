@@ -4,7 +4,7 @@
 import * as path from 'path';
 import { HashedModuleIdsPlugin } from 'webpack';
 import * as CopyWebpackPlugin from 'copy-webpack-plugin';
-import { extraEntryParser, getOutputHashFormat, AssetPattern } from './utils';
+import { getOutputHashFormat } from './utils';
 import { isDirectory } from '../../utilities/is-directory';
 import { requireProjectModule } from '../../utilities/require-project-module';
 import { WebpackConfigOptions } from '../build-options';
@@ -12,6 +12,8 @@ import { BundleBudgetPlugin } from '../../plugins/bundle-budget';
 import { CleanCssWebpackPlugin } from '../../plugins/cleancss-webpack-plugin';
 import { ScriptsWebpackPlugin } from '../../plugins/scripts-webpack-plugin';
 import { findUp } from '../../utilities/find-up';
+import { AssetPattern, ExtraEntryPoint } from '../../../browser';
+import { computeBundleName } from './utils';
 
 const ProgressPlugin = require('webpack/lib/ProgressPlugin');
 const CircularDependencyPlugin = require('circular-dependency-plugin');
@@ -33,7 +35,7 @@ const resolve = require('resolve');
  */
 
 export function getCommonConfig(wco: WebpackConfigOptions) {
-  const { root, projectRoot, buildOptions, appConfig } = wco;
+  const { root, projectRoot, buildOptions } = wco;
 
   const nodeModules = findUp('node_modules', projectRoot);
   if (!nodeModules) {
@@ -43,32 +45,37 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
   let extraPlugins: any[] = [];
   let entryPoints: { [key: string]: string[] } = {};
 
-  if (appConfig.main) {
-    entryPoints['main'] = [path.resolve(root, appConfig.main)];
+  if (buildOptions.main) {
+    entryPoints['main'] = [path.resolve(root, buildOptions.main)];
   }
 
-  if (appConfig.polyfills) {
-    entryPoints['polyfills'] = [path.resolve(root, appConfig.polyfills)];
+  if (buildOptions.polyfills) {
+    entryPoints['polyfills'] = [path.resolve(root, buildOptions.polyfills)];
   }
 
   // determine hashing format
   const hashFormat = getOutputHashFormat(buildOptions.outputHashing as any);
 
   // process global scripts
-  if (appConfig.scripts.length > 0) {
-    const globalScripts = extraEntryParser(appConfig.scripts, root, 'scripts');
-    const globalScriptsByEntry = globalScripts
-      .reduce((prev: { entry: string, paths: string[], lazy: boolean }[], curr) => {
-
-        let existingEntry = prev.find((el) => el.entry === curr.entry);
+  if (buildOptions.scripts.length > 0) {
+    const globalScriptsByBundleName = (buildOptions.scripts as ExtraEntryPoint[])
+      .reduce((prev: { bundleName: string, paths: string[], lazy: boolean }[], curr) => {
+        const bundleName = computeBundleName(curr, 'scripts');
+        const resolvedPath = path.resolve(root, curr.input);
+        let existingEntry = prev.find((el) => el.bundleName === bundleName);
         if (existingEntry) {
-          existingEntry.paths.push(curr.path as string);
-          // All entries have to be lazy for the bundle to be lazy.
-          (existingEntry as any).lazy = existingEntry.lazy && curr.lazy;
+          if (existingEntry.lazy && !curr.lazy) {
+            // All entries have to be lazy for the bundle to be lazy.
+            throw new Error(`The ${curr.bundleName} bundle is mixing lazy and non-lazy scripts.`);
+          }
+
+          existingEntry.paths.push(resolvedPath);
+
         } else {
           prev.push({
-            entry: curr.entry as string, paths: [curr.path as string],
-            lazy: curr.lazy as boolean
+            bundleName,
+            paths: [resolvedPath],
+            lazy: curr.lazy
           });
         }
         return prev;
@@ -76,13 +83,15 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
 
 
     // Add a new asset for each entry.
-    globalScriptsByEntry.forEach((script) => {
+    globalScriptsByBundleName.forEach((script) => {
       // Lazy scripts don't get a hash, otherwise they can't be loaded by name.
       const hash = script.lazy ? '' : hashFormat.script;
+      const bundleName = script.bundleName;
+
       extraPlugins.push(new ScriptsWebpackPlugin({
-        name: script.entry,
+        name: bundleName,
         sourceMap: buildOptions.sourceMap,
-        filename: `${path.basename(script.entry)}${hash}.js`,
+        filename: `${path.basename(bundleName)}${hash}.js`,
         scripts: script.paths,
         basePath: projectRoot,
       }));
@@ -90,55 +99,24 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
   }
 
   // process asset entries
-  if (appConfig.assets) {
-    const copyWebpackPluginPatterns = appConfig.assets.map((asset: AssetPattern) => {
-      // Add defaults.
-      // Input is always resolved relative to the projectRoot.
-      // TODO: add smart defaults to schema to use project root as default.
-      asset.input = path.resolve(root, asset.input || projectRoot).replace(/\\/g, '/');
-      asset.output = asset.output || '';
-      asset.glob = asset.glob || '';
+  if (buildOptions.assets) {
+    const copyWebpackPluginPatterns = buildOptions.assets.map((asset: AssetPattern) => {
 
-      // Prevent asset configurations from writing outside of the output path, except if the user
-      // specify a configuration flag.
-      // Also prevent writing outside the project path. That is not overridable.
-      const absoluteOutputPath = path.resolve(projectRoot, buildOptions.outputPath as string);
-      const absoluteAssetOutput = path.resolve(absoluteOutputPath, asset.output);
-      const outputRelativeOutput = path.relative(absoluteOutputPath, absoluteAssetOutput);
+      // Resolve input paths relative to workspace root and add slash at the end.
+      asset.input = path.resolve(root, asset.input).replace(/\\/g, '/');
+      asset.input = asset.input.endsWith('/') ? asset.input : asset.input + '/';
+      asset.output = asset.output.endsWith('/') ? asset.output : asset.output + '/';
 
-      if (outputRelativeOutput.startsWith('..') || path.isAbsolute(outputRelativeOutput)) {
-
-        // TODO: This check doesn't make a lot of sense anymore with multiple project. Review it.
-        // const projectRelativeOutput = path.relative(projectRoot, absoluteAssetOutput);
-        // if (projectRelativeOutput.startsWith('..') || path.isAbsolute(projectRelativeOutput)) {
-        //   const message = 'An asset cannot be written to a location outside the project.';
-        //   throw new SilentError(message);
-        // }
-
-        if (!asset.allowOutsideOutDir) {
-          const message = 'An asset cannot be written to a location outside of the output path. '
-            + 'You can override this message by setting the `allowOutsideOutDir` '
-            + 'property on the asset to true in the CLI configuration.';
-          throw new SilentError(message);
-        }
+      if (asset.output.startsWith('..')) {
+        const message = 'An asset cannot be written to a location outside of the . '
+          + 'You can override this message by setting the `allowOutsideOutDir` '
+          + 'property on the asset to true in the CLI configuration.';
+        throw new Error(message);
       }
 
-      // TODO: This check doesn't make a lot of sense anymore with multiple project. Review it.
-      // Prevent asset configurations from reading files outside of the project.
-      // const projectRelativeInput = path.relative(projectRoot, asset.input);
-      // if (projectRelativeInput.startsWith('..') || path.isAbsolute(projectRelativeInput)) {
-      //   const message = 'An asset cannot be read from a location outside the project.';
-      //   throw new SilentError(message);
-      // }
-
-      // Ensure trailing slash.
-      if (isDirectory(path.resolve(asset.input))) {
-        asset.input += '/';
-      }
-
-      // Convert dir patterns to globs.
-      if (isDirectory(path.resolve(asset.input, asset.glob))) {
-        asset.glob = asset.glob + '/**/*';
+      if (asset.output.startsWith('/')) {
+        // Now we remove starting slash to make Webpack place it from the output root.
+        asset.output = asset.output.slice(1);
       }
 
       return {
@@ -217,12 +195,15 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
   } catch (e) { }
 
   return {
-    mode: buildOptions.optimization ? 'production': 'development',
+    mode: buildOptions.optimization ? 'production' : 'development',
     devtool: false,
     resolve: {
       extensions: ['.ts', '.js'],
       symlinks: !buildOptions.preserveSymlinks,
-      modules: [projectRoot, 'node_modules'],
+      modules: [
+        wco.tsConfig.options.baseUrl || projectRoot,
+        'node_modules',
+      ],
       alias
     },
     resolveLoader: {
@@ -274,7 +255,7 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
       minimizer: [
         new HashedModuleIdsPlugin(),
         // TODO: check with Mike what this feature needs.
-        new BundleBudgetPlugin({ budgets: appConfig.budgets }),
+        new BundleBudgetPlugin({ budgets: buildOptions.budgets }),
         new CleanCssWebpackPlugin({
           sourceMap: buildOptions.sourceMap,
           // component styles retain their original file name

@@ -14,8 +14,9 @@ import {
 } from '@angular-devkit/architect';
 import { Path, getSystemPath, join,  normalize, resolve, virtualFs } from '@angular-devkit/core';
 import * as fs from 'fs';
-import { Observable } from 'rxjs/Observable';
+import { Observable } from 'rxjs';
 import * as ts from 'typescript'; // tslint:disable-line:no-implicit-dependencies
+import { WebpackConfigOptions } from '../angular-cli-files/models/build-options';
 import {
   getCommonConfig,
   getNonAotTestConfig,
@@ -63,7 +64,7 @@ export interface KarmaBuilderOptions {
   // logLevel?: string; // same as above
   // reporters?: string; // same as above
 
-  fileReplacements: { from: string; to: string; }[];
+  fileReplacements: { src: string; replaceWith: string; }[];
 }
 
 export class KarmaBuilder implements Builder<KarmaBuilderOptions> {
@@ -125,31 +126,27 @@ export class KarmaBuilder implements Builder<KarmaBuilderOptions> {
   }
 
   private _buildWebpackConfig(root: Path, projectRoot: Path, options: KarmaBuilderOptions) {
-    // tslint:disable-next-line:no-any
-    let wco: any;
+    let wco: WebpackConfigOptions;
 
     const host = new virtualFs.AliasHost(this.context.host as virtualFs.Host<fs.Stats>);
 
-    options.fileReplacements.forEach(({ from, to }) => {
+    options.fileReplacements.forEach(({ src, replaceWith }) => {
       host.aliases.set(
-        join(root, normalize(from)),
-        join(root, normalize(to)),
+        join(root, normalize(src)),
+        join(root, normalize(replaceWith)),
       );
     });
 
-    const tsconfigPath = getSystemPath(resolve(root, normalize(options.tsConfig as string)));
-    const tsConfig = readTsconfig(tsconfigPath);
+    const tsConfigPath = getSystemPath(resolve(root, normalize(options.tsConfig as string)));
+    const tsConfig = readTsconfig(tsConfigPath);
 
     const projectTs = requireProjectModule(getSystemPath(projectRoot), 'typescript') as typeof ts;
 
     const supportES2015 = tsConfig.options.target !== projectTs.ScriptTarget.ES3
       && tsConfig.options.target !== projectTs.ScriptTarget.ES5;
 
-    const compatOptions = {
-      ...options,
-      // TODO: inside the configs, always use the project root and not the workspace root.
-      // Until then we have to pretend the app root is relative (``) but the same as `projectRoot`.
-      root: '',
+    const compatOptions: typeof wco['buildOptions'] = {
+      ...options as {} as typeof wco['buildOptions'],
       // Some asset logic inside getCommonConfig needs outputPath to be set.
       outputPath: '',
     };
@@ -159,8 +156,8 @@ export class KarmaBuilder implements Builder<KarmaBuilderOptions> {
       projectRoot: getSystemPath(projectRoot),
       // TODO: use only this.options, it contains all flags and configs items already.
       buildOptions: compatOptions,
-      appConfig: compatOptions,
       tsConfig,
+      tsConfigPath,
       supportES2015,
     };
 

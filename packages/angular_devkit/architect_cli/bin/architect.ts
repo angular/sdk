@@ -7,13 +7,16 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import 'symbol-observable';
+// symbol polyfill must go first
+// tslint:disable-next-line:ordered-imports import-groups
 import { Architect } from '@angular-devkit/architect';
 import { dirname, experimental, normalize, tags } from '@angular-devkit/core';
 import { NodeJsSyncHost, createConsoleLogger } from '@angular-devkit/core/node';
 import { existsSync, readFileSync } from 'fs';
 import * as minimist from 'minimist';
 import * as path from 'path';
-import { _throw } from 'rxjs/observable/throw';
+import { throwError } from 'rxjs';
 import { concatMap } from 'rxjs/operators';
 
 
@@ -124,7 +127,7 @@ workspace.loadWorkspaceFromJson(workspaceJson).pipe(
     // TODO: better logging of what's happening.
     if (argv.help) {
       // TODO: add target help
-      return _throw('Target help NYI.');
+      return throwError('Target help NYI.');
       // architect.help(targetOptions, logger);
     } else {
       const builderConfig = architect.getBuilderConfiguration(targetSpec);

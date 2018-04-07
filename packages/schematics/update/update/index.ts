@@ -6,11 +6,12 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import { logging } from '@angular-devkit/core';
-import { Rule, SchematicContext, SchematicsException, Tree } from '@angular-devkit/schematics';
+import {
+  Rule, SchematicContext, SchematicsException, TaskId,
+  Tree,
+} from '@angular-devkit/schematics';
 import { NodePackageInstallTask, RunSchematicTask } from '@angular-devkit/schematics/tasks';
-import { Observable } from 'rxjs/Observable';
-import { from as observableFrom } from 'rxjs/observable/from';
-import { of } from 'rxjs/observable/of';
+import { Observable, from as observableFrom, of } from 'rxjs';
 import { map, mergeMap, reduce, switchMap } from 'rxjs/operators';
 import * as semver from 'semver';
 import { getNpmPackageJson } from './npm';
@@ -151,6 +152,7 @@ function _performUpdate(
   context: SchematicContext,
   infoMap: Map<string, PackageInfo>,
   logger: logging.LoggerApi,
+  migrateOnly: boolean,
 ): Observable<void> {
   const packageJsonContent = tree.read('/package.json');
   if (!packageJsonContent) {
@@ -200,10 +202,13 @@ function _performUpdate(
   });
 
   const newContent = JSON.stringify(packageJson, null, 2);
-  if (packageJsonContent.toString() != newContent) {
-    // If something changed, also hook up the task.
-    tree.overwrite('/package.json', JSON.stringify(packageJson, null, 2));
-    const installTask = context.addTask(new NodePackageInstallTask());
+  if (packageJsonContent.toString() != newContent || migrateOnly) {
+    let installTask: TaskId[] = [];
+    if (!migrateOnly) {
+      // If something changed, also hook up the task.
+      tree.overwrite('/package.json', JSON.stringify(packageJson, null, 2));
+      installTask = [context.addTask(new NodePackageInstallTask())];
+    }
 
     // Run the migrate schematics with the list of packages to use. The collection contains
     // version information and we need to do this post installation. Please note that the
@@ -226,7 +231,7 @@ function _performUpdate(
           from: installed.version,
           to: target.version,
         }),
-        [installTask],
+        installTask,
       );
     });
   }
@@ -234,6 +239,37 @@ function _performUpdate(
   return of<void>(undefined);
 }
 
+function _migrateOnly(
+  info: PackageInfo | undefined,
+  context: SchematicContext,
+  from: string,
+  to?: string,
+) {
+  if (!info) {
+    return of<void>();
+  }
+
+  const target = info.installed;
+  if (!target || !target.updateMetadata.migrations) {
+    return of<void>(undefined);
+  }
+
+  const collection = (
+    target.updateMetadata.migrations.match(/^[./]/)
+      ? info.name + '/'
+      : ''
+  ) + target.updateMetadata.migrations;
+
+  context.addTask(new RunSchematicTask('@schematics/update', 'migrate', {
+      package: info.name,
+      collection,
+      from: from,
+      to: to || target.version,
+    }),
+  );
+
+  return of<void>(undefined);
+}
 
 function _getUpdateMetadata(
   packageJson: JsonSchemaForNpmPackageJsonFiles,
@@ -581,6 +617,12 @@ export default function(options: UpdateSchema): Rule {
     options.packages = options.packages.split(/,/g);
   }
 
+  if (options.migrateOnly && options.from) {
+    if (options.packages.length !== 1) {
+      throw new SchematicsException('--from requires that only a single package be passed.');
+    }
+  }
+
   return (tree: Tree, context: SchematicContext) => {
     const logger = context.logger;
     const allDependencies = _getAllDependencies(tree);
@@ -619,6 +661,15 @@ export default function(options: UpdateSchema): Rule {
       switchMap(infoMap => {
         // Now that we have all the information, check the flags.
         if (packages.size > 0) {
+          if (options.migrateOnly && options.from && options.packages) {
+            return _migrateOnly(
+              infoMap.get(options.packages[0]),
+              context,
+              options.from,
+              options.to,
+            );
+          }
+
           const sublog = new logging.LevelCapLogger(
             'validation',
             logger.createChild(''),
@@ -626,7 +677,7 @@ export default function(options: UpdateSchema): Rule {
           );
           _validateUpdatePackages(infoMap, options.force, sublog);
 
-          return _performUpdate(tree, context, infoMap, logger);
+          return _performUpdate(tree, context, infoMap, logger, options.migrateOnly);
         } else {
           return _usageMessage(options, infoMap, logger);
         }

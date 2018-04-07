@@ -36,7 +36,6 @@ describe('Directive Schematic', () => {
     name: 'bar',
     inlineStyle: false,
     inlineTemplate: false,
-    viewEncapsulation: 'Emulated',
     routing: false,
     style: 'css',
     skipTests: false,
@@ -121,5 +120,13 @@ describe('Directive Schematic', () => {
     const tree = schematicRunner.runSchematic('directive', options, appTree);
     const content = tree.readContent('/projects/bar/src/app/my-dir.directive.ts');
     expect(content).toMatch(/selector: '\[appMyDir\]'/);
+  });
+
+  it('should create the right selector with a path in the name', () => {
+    const options = { ...defaultOptions, name: 'sub/test' };
+    appTree = schematicRunner.runSchematic('directive', options, appTree);
+
+    const content = appTree.readContent('/projects/bar/src/app/sub/test.directive.ts');
+    expect(content).toMatch(/selector: '\[appTest\]'/);
   });
 });

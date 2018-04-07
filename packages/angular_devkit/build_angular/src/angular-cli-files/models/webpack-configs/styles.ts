@@ -4,10 +4,12 @@
 import * as webpack from 'webpack';
 import * as path from 'path';
 import { SuppressExtractedTextChunksWebpackPlugin } from '../../plugins/webpack';
-import { extraEntryParser, getOutputHashFormat } from './utils';
+import { getOutputHashFormat } from './utils';
 import { WebpackConfigOptions } from '../build-options';
 import { findUp } from '../../utilities/find-up';
 import { RawCssLoader } from '../../plugins/webpack';
+import { ExtraEntryPoint } from '../../../browser';
+import { computeBundleName } from './utils';
 
 const postcssUrl = require('postcss-url');
 const autoprefixer = require('autoprefixer');
@@ -19,10 +21,8 @@ const PostcssCliResources = require('../../plugins/webpack').PostcssCliResources
  * Enumerate loaders and their dependencies from this file to let the dependency validator
  * know they are used.
  *
- * require('exports-loader')
  * require('style-loader')
  * require('postcss-loader')
- * require('css-loader')
  * require('stylus')
  * require('stylus-loader')
  * require('less')
@@ -38,7 +38,7 @@ interface PostcssUrlAsset {
 }
 
 export function getStylesConfig(wco: WebpackConfigOptions) {
-  const { root, projectRoot, buildOptions, appConfig } = wco;
+  const { root, projectRoot, buildOptions } = wco;
 
   // const appRoot = path.resolve(projectRoot, appConfig.root);
   const entryPoints: { [key: string]: string[] } = {};
@@ -153,28 +153,33 @@ export function getStylesConfig(wco: WebpackConfigOptions) {
   const includePaths: string[] = [];
   let lessPathOptions: { paths: string[] } = { paths: [] };
 
-  if (appConfig.stylePreprocessorOptions
-    && appConfig.stylePreprocessorOptions.includePaths
-    && appConfig.stylePreprocessorOptions.includePaths.length > 0
+  if (buildOptions.stylePreprocessorOptions
+    && buildOptions.stylePreprocessorOptions.includePaths
+    && buildOptions.stylePreprocessorOptions.includePaths.length > 0
   ) {
-    appConfig.stylePreprocessorOptions.includePaths.forEach((includePath: string) =>
+    buildOptions.stylePreprocessorOptions.includePaths.forEach((includePath: string) =>
       includePaths.push(path.resolve(root, includePath)));
     lessPathOptions = {
       paths: includePaths,
     };
   }
 
-  // process global styles
-  if (appConfig.styles.length > 0) {
-    const globalStyles = extraEntryParser(appConfig.styles, root, 'styles');
-    // add style entry points
-    globalStyles.forEach(style =>
-      entryPoints[style.entry as any]
-        ? entryPoints[style.entry as any].push(style.path as string)
-        : entryPoints[style.entry as any] = [style.path as any]
-    );
-    // add global css paths
-    globalStylePaths.push(...globalStyles.map((style) => style.path as any));
+  // Process global styles.
+  if (buildOptions.styles.length > 0) {
+    (buildOptions.styles as ExtraEntryPoint[]).forEach(style => {
+      const bundleName = computeBundleName(style, 'styles');;
+      const resolvedPath = path.resolve(root, style.input);
+
+      // Add style entry points.
+      if (entryPoints[bundleName]) {
+        entryPoints[bundleName].push(resolvedPath)
+      } else {
+        entryPoints[bundleName] = [resolvedPath]
+      }
+
+      // Add global css paths.
+      globalStylePaths.push(resolvedPath);
+    });
   }
 
   // set base rules to derive final rules from
@@ -265,7 +270,7 @@ export function getStylesConfig(wco: WebpackConfigOptions) {
   if (buildOptions.extractCss) {
     // extract global css from js files into own css file
     extraPlugins.push(
-      new MiniCssExtractPlugin({ filename: `[name]${hashFormat.script}.css` }));
+      new MiniCssExtractPlugin({ filename: `[name]${hashFormat.extract}.css` }));
     // suppress empty .js files in css only entry points
     extraPlugins.push(new SuppressExtractedTextChunksWebpackPlugin());
   }

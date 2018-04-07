@@ -8,7 +8,7 @@
 
 import { normalize, virtualFs } from '@angular-devkit/core';
 import { tap } from 'rxjs/operators';
-import { browserTargetSpec, host, runTargetSpec } from '../utils';
+import { Timeout, browserTargetSpec, host, runTargetSpec } from '../utils';
 
 
 describe('Browser Builder assets', () => {
@@ -31,9 +31,9 @@ describe('Browser Builder assets', () => {
 
     const overrides = {
       assets: [
-        { glob: 'glob-asset.txt' },
-        { glob: 'output-asset.txt', output: 'output-folder' },
-        { glob: '**/*', input: 'src/folder', output: 'folder' },
+        { glob: 'glob-asset.txt', input: 'src/', output: '/' },
+        { glob: 'output-asset.txt', input: 'src/', output: '/output-folder' },
+        { glob: '**/*', input: 'src/folder', output: '/folder' },
       ],
     };
 
@@ -49,49 +49,19 @@ describe('Browser Builder assets', () => {
         expect(host.scopedSync().exists(normalize('./dist/folder/.gitkeep'))).toBe(false);
       }),
     ).subscribe(undefined, done.fail, done);
-  }, 30000);
+  }, Timeout.Basic);
 
-  // TODO: this test isn't working correctly, fix it.
-  // It throws a weird jasmine error:
-  // Error: Spies must be created in a before function or a spec
-  // it('allowOutsideOutDir false with outside throws error', (done) => {
-  //   const assets: { [path: string]: string } = {
-  //     './node_modules/some-package/node_modules-asset.txt': 'node_modules-asset.txt',
-  //   };
-  //   host.writeMultipleFiles(assets);
-
-  //   const overrides = {
-  //     assets: [
-  //       { glob: '**/*', input: '../node_modules/some-package/', output: '../temp' },
-  //     ],
-  //   };
-
-  //   architect.loadWorkspaceFromJson(makeWorkspace(browserTargetSpec)).pipe(
-  //     concatMap(() => architect.run(architect.getTarget({ overrides }))),
-  //   ).subscribe(undefined, (err) => {
-  //     expect(err.message)
-  //       .toContain('An asset cannot be written to a location outside of the output path');
-  //     expect(err.message).toContain('You can override this message by');
-  //     done();
-  //   }, done.fail);
-  // }, 30000);
-
-  it('allowOutsideOutDir true with outside does not throw error', (done) => {
+  it('fails with non-absolute output path', (done) => {
     const assets: { [path: string]: string } = {
       './node_modules/some-package/node_modules-asset.txt': 'node_modules-asset.txt',
     };
     host.writeMultipleFiles(assets);
     const overrides = {
-      assets: [
-        {
-          glob: '**/*', input: '../node_modules/some-package/', output: '../temp',
-          allowOutsideOutDir: true,
-        },
-      ],
+      assets: [{
+        glob: '**/*', input: '../node_modules/some-package/', output: '../temp',
+      }],
     };
 
-    runTargetSpec(host, browserTargetSpec, overrides).pipe(
-      tap((buildEvent) => expect(buildEvent.success).toBe(true)),
-    ).subscribe(undefined, done.fail, done);
-  }, 30000);
+    runTargetSpec(host, browserTargetSpec, overrides).subscribe(undefined, done, done.fail);
+  }, Timeout.Basic);
 });

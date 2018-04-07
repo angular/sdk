@@ -8,8 +8,9 @@ import { LicenseWebpackPlugin } from 'license-webpack-plugin';
 import { generateEntryPoints, packageChunkSort } from '../../utilities/package-chunk-sort';
 import { BaseHrefWebpackPlugin } from '../../lib/base-href-webpack';
 import { IndexHtmlWebpackPlugin } from '../../plugins/index-html-webpack-plugin';
-import { extraEntryParser, lazyChunksFilter } from './utils';
+import { ExtraEntryPoint } from '../../../browser';
 import { WebpackConfigOptions } from '../build-options';
+import { computeBundleName } from './utils';
 
 /**
 + * license-webpack-plugin has a peer dependency on webpack-sources, list it in a comment to
@@ -19,25 +20,24 @@ import { WebpackConfigOptions } from '../build-options';
 + */
 
 export function getBrowserConfig(wco: WebpackConfigOptions) {
-  const { root, projectRoot, buildOptions, appConfig } = wco;
+  const { root, projectRoot, buildOptions } = wco;
 
 
   let extraPlugins: any[] = [];
 
-  // figure out which are the lazy loaded entry points
-  const lazyChunks = lazyChunksFilter([
-    ...extraEntryParser(appConfig.scripts, root, 'scripts'),
-    ...extraEntryParser(appConfig.styles, root, 'styles')
-  ]);
+  // Figure out which are the lazy loaded bundle names.
+  const lazyChunkBundleNames = ([...buildOptions.styles, ...buildOptions.scripts] as ExtraEntryPoint[])
+    .filter(entry => entry.lazy)
+    // We don't really need a default name because we pre-filtered by lazy only entries.
+    .map(style => computeBundleName(style, 'not-lazy'));
 
-  // TODO: Enable this once HtmlWebpackPlugin supports Webpack 4
   const generateIndexHtml = false;
   if (generateIndexHtml) {
     extraPlugins.push(new HtmlWebpackPlugin({
-      template: path.resolve(root, appConfig.index),
-      filename: path.resolve(buildOptions.outputPath, appConfig.index),
-      chunksSortMode: packageChunkSort(appConfig),
-      excludeChunks: lazyChunks,
+      template: path.resolve(root, buildOptions.index),
+      filename: path.resolve(buildOptions.outputPath, buildOptions.index),
+      chunksSortMode: packageChunkSort(buildOptions),
+      excludeChunks: lazyChunkBundleNames,
       xhtml: true,
       minify: buildOptions.optimization ? {
         caseSensitive: true,
@@ -77,8 +77,8 @@ export function getBrowserConfig(wco: WebpackConfigOptions) {
     }));
   }
 
-  const globalStylesEntries = extraEntryParser(appConfig.styles, root, 'styles')
-    .map(style => style.entry);
+  const globalStylesBundleNames = (buildOptions.styles as ExtraEntryPoint[])
+    .map(style => computeBundleName(style, 'styles'));
 
   return {
     devtool: sourcemaps,
@@ -104,7 +104,7 @@ export function getBrowserConfig(wco: WebpackConfigOptions) {
               const moduleName = module.nameForCondition ? module.nameForCondition() : '';
               return /[\\/]node_modules[\\/]/.test(moduleName)
                 && !chunks.some(({ name }) => name === 'polyfills'
-                  || globalStylesEntries.includes(name));
+                  || globalStylesBundleNames.includes(name));
             },
           },
         }
@@ -112,10 +112,10 @@ export function getBrowserConfig(wco: WebpackConfigOptions) {
     },
     plugins: extraPlugins.concat([
       new IndexHtmlWebpackPlugin({
-        input: path.resolve(root, appConfig.index),
-        output: path.basename(appConfig.index),
+        input: path.resolve(root, buildOptions.index),
+        output: path.basename(buildOptions.index),
         baseHref: buildOptions.baseHref,
-        entrypoints: generateEntryPoints(appConfig),
+        entrypoints: generateEntryPoints(buildOptions),
         deployUrl: buildOptions.deployUrl,
       }),
     ]),

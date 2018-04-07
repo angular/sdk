@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { JsonObject, Path, join, normalize } from '@angular-devkit/core';
+import { JsonObject, Path, basename, join, normalize } from '@angular-devkit/core';
 import {
   Rule,
   SchematicContext,
@@ -13,6 +13,7 @@ import {
   Tree,
   chain,
 } from '@angular-devkit/schematics';
+import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks';
 import { AppConfig, CliConfig } from '../../utility/config';
 import { latestVersions } from '../../utility/latest-versions';
 
@@ -71,7 +72,7 @@ function migrateConfiguration(oldConfig: CliConfig): Rule {
     const config: JsonObject = {
       version: 1,
       newProjectRoot: 'projects',
-      projects: extractProjectsConfig(oldConfig),
+      projects: extractProjectsConfig(oldConfig, host),
     };
     const cliConfig = extractCliConfig(oldConfig);
     if (cliConfig !== null) {
@@ -160,12 +161,37 @@ function extractArchitectConfig(_config: CliConfig): JsonObject | null {
   return null;
 }
 
-function extractProjectsConfig(config: CliConfig): JsonObject {
+function extractProjectsConfig(config: CliConfig, tree: Tree): JsonObject {
   const builderPackage = '@angular-devkit/build-angular';
   let defaultAppNamePrefix = 'app';
   if (config.project && config.project.name) {
     defaultAppNamePrefix = config.project.name;
   }
+
+  const buildDefaults: JsonObject = config.defaults && config.defaults.build
+    ? {
+      sourceMap: config.defaults.build.sourcemaps,
+      progress: config.defaults.build.progress,
+      poll: config.defaults.build.poll,
+      deleteOutputPath: config.defaults.build.deleteOutputPath,
+      preserveSymlinks: config.defaults.build.preserveSymlinks,
+      showCircularDependencies: config.defaults.build.showCircularDependencies,
+      commonChunk: config.defaults.build.commonChunk,
+      namedChunks: config.defaults.build.namedChunks,
+    } as JsonObject
+    : {};
+
+  const serveDefaults: JsonObject = config.defaults && config.defaults.serve
+    ? {
+      port: config.defaults.serve.port,
+      host: config.defaults.serve.host,
+      ssl: config.defaults.serve.ssl,
+      sslKey: config.defaults.serve.sslKey,
+      sslCert: config.defaults.serve.sslCert,
+      proxyConfig: config.defaults.serve.proxyConfig,
+    } as JsonObject
+    : {};
+
 
   const apps = config.apps || [];
   // convert the apps to projects
@@ -176,23 +202,137 @@ function extractProjectsConfig(config: CliConfig): JsonObject {
       const outDir = app.outDir || defaults.outDir;
       const appRoot = app.root || defaults.appRoot;
 
+      function _mapAssets(asset: string | JsonObject) {
+        if (typeof asset === 'string') {
+          if (tree.exists(app.root + '/' + asset)) {
+            // If it exists in the tree, then it is a file.
+            return { glob: asset, input: normalize(appRoot + '/'), output: '/' };
+          } else {
+            // If it does not exist, it is either a folder or something we can't statically know.
+            // Folders must get a recursive star glob.
+            return { glob: '**/*', input: normalize(appRoot + '/' + asset), output: '/' + asset };
+          }
+        } else {
+          if (asset.output) {
+            return {
+              glob: asset.glob,
+              input: normalize(appRoot + '/' + asset.input),
+              output: normalize('/' + asset.output as string),
+            };
+          } else {
+            return {
+              glob: asset.glob,
+              input: normalize(appRoot + '/' + asset.input),
+              output: '/',
+            };
+          }
+        }
+      }
+
+      function _buildConfigurations(): JsonObject {
+        const source = app.environmentSource;
+        const environments = app.environments;
+        const serviceWorker = app.serviceWorker;
+
+        if (!environments) {
+          return {};
+        }
+
+        return Object.keys(environments).reduce((acc, environment) => {
+          if (source === environments[environment]) {
+            return acc;
+          }
+
+          let isProduction = false;
+
+          const environmentContent = tree.read(app.root + '/' + environments[environment]);
+          if (environmentContent) {
+            isProduction = !!environmentContent.toString('utf-8')
+              // Allow for `production: true` or `production = true`. Best we can do to guess.
+              .match(/production['"]?\s*[:=]\s*true/);
+          }
+
+          let configurationName;
+          // We used to use `prod` by default as the key, instead we now use the full word.
+          // Try not to override the production key if it's there.
+          if (environment == 'prod' && !environments['production'] && isProduction) {
+            configurationName = 'production';
+          } else {
+            configurationName = environment;
+          }
+
+          acc[configurationName] = {
+            ...(isProduction
+              ? {
+                optimization: true,
+                outputHashing: 'all',
+                sourceMap: false,
+                extractCss: true,
+                namedChunks: false,
+                aot: true,
+                extractLicenses: true,
+                vendorChunk: false,
+                buildOptimizer: true,
+              }
+              : {}
+            ),
+            ...(isProduction && serviceWorker ? { serviceWorker: true } : {}),
+            fileReplacements: [
+              {
+                src: `${app.root}/${source}`,
+                replaceWith: `${app.root}/${environments[environment]}`,
+              },
+            ],
+          };
+
+          return acc;
+        }, {} as JsonObject);
+      }
+
+      function _serveConfigurations(): JsonObject {
+        const environments = app.environments;
+
+        if (!environments) {
+          return {};
+        }
+        if (!architect) {
+          throw new Error();
+        }
+
+        const configurations = (architect.build as JsonObject).configurations as JsonObject;
+
+        return Object.keys(configurations).reduce((acc, environment) => {
+          acc[environment] = { browserTarget: `${name}:build:${environment}` };
+
+          return acc;
+        }, {} as JsonObject);
+      }
+
+      function _extraEntryMapper(extraEntry: string | JsonObject) {
+        let entry: JsonObject;
+        if (typeof extraEntry === 'string') {
+          entry = { input: join(app.root as Path, extraEntry) };
+        } else {
+          const input = join(app.root as Path, extraEntry.input as string || '');
+          const lazy = !!extraEntry.lazy;
+          entry = { input };
+
+          if (!extraEntry.output && lazy) {
+            entry.lazy = true;
+            entry.bundleName = basename(
+              normalize(input.replace(/\.(js|css|scss|sass|less|styl)$/i, '')),
+            );
+          } else if (extraEntry.output) {
+            entry.bundleName = extraEntry.output;
+          }
+        }
+
+        return entry;
+      }
+
       const project: JsonObject = {
         root: '',
         projectType: 'application',
-        cli: {},
-        schematics: {},
-      };
-
-      const extraEntryMapper = (extraEntry: string | JsonObject) => {
-        let entry: JsonObject;
-        if (typeof extraEntry === 'string') {
-          entry = { input: extraEntry };
-        } else {
-          entry = extraEntry;
-        }
-        entry.input = join(app.root as Path, <string> entry.input || '');
-
-        return entry;
       };
 
       const architect: JsonObject = {};
@@ -202,48 +342,34 @@ function extractProjectsConfig(config: CliConfig): JsonObject {
       const buildOptions: JsonObject = {
         // Make outputPath relative to root.
         outputPath: outDir,
-        index: appRoot + '/' + app.index || defaults.index,
-        main: appRoot + '/' + app.main || defaults.main,
-        polyfills: appRoot + '/' + app.polyfills || defaults.polyfills,
-        tsConfig: appRoot + '/' + app.tsconfig || defaults.tsConfig,
+        index: `${appRoot}/${app.index || defaults.index}`,
+        main: `${appRoot}/${app.main || defaults.main}`,
+        tsConfig: `${appRoot}/${app.tsconfig || defaults.tsConfig}`,
+        ...buildDefaults,
       };
 
-      buildOptions.assets = (app.assets || []).map((asset: string | JsonObject) =>
-        typeof asset === 'string'
-          ? { glob: appRoot + '/' + asset }
-          : appRoot + '/' + asset);
-      buildOptions.styles = (app.styles || []).map(extraEntryMapper);
-      buildOptions.scripts = (app.scripts || []).map(extraEntryMapper);
+      if (app.polyfills) {
+        buildOptions.polyfills = appRoot + '/' + app.polyfills;
+      }
+
+      buildOptions.assets = (app.assets || []).map(_mapAssets);
+      buildOptions.styles = (app.styles || []).map(_extraEntryMapper);
+      buildOptions.scripts = (app.scripts || []).map(_extraEntryMapper);
       architect.build = {
         builder: `${builderPackage}:browser`,
         options: buildOptions,
-        configurations: {
-          production: {
-            optimization: true,
-            outputHashing: 'all',
-            sourceMap: false,
-            extractCss: true,
-            namedChunks: false,
-            aot: true,
-            extractLicenses: true,
-            vendorChunk: false,
-            buildOptimizer: true,
-          },
-        },
+        configurations: _buildConfigurations(),
       };
 
       // Serve target
       const serveOptions: JsonObject = {
         browserTarget: `${name}:build`,
+        ...serveDefaults,
       };
       architect.serve = {
         builder: `${builderPackage}:dev-server`,
         options: serveOptions,
-        configurations: {
-          production: {
-            browserTarget: `${name}:build`,
-          },
-        },
+        configurations: _serveConfigurations(),
       };
 
       // Extract target
@@ -259,19 +385,20 @@ function extractProjectsConfig(config: CliConfig): JsonObject {
         // Test target
       const testOptions: JsonObject = {
           main: appRoot + '/' + app.test || defaults.test,
-          polyfills: appRoot + '/' + app.polyfills || defaults.polyfills,
           // Make karmaConfig relative to root.
           karmaConfig,
         };
+
+      if (app.polyfills) {
+        testOptions.polyfills = appRoot + '/' + app.polyfills;
+      }
+
       if (app.testTsconfig) {
           testOptions.tsConfig = appRoot + '/' + app.testTsconfig;
         }
-      testOptions.scripts = (app.scripts || []).map(extraEntryMapper);
-      testOptions.styles = (app.styles || []).map(extraEntryMapper);
-      testOptions.assets = (app.assets || []).map((asset: string | JsonObject) =>
-          typeof asset === 'string'
-          ? { glob: appRoot + '/' + asset }
-          : appRoot + '/' + asset);
+      testOptions.scripts = (app.scripts || []).map(_extraEntryMapper);
+      testOptions.styles = (app.styles || []).map(_extraEntryMapper);
+      testOptions.assets = (app.assets || []).map(_mapAssets);
 
       if (karmaConfig) {
         architect.test = {
@@ -386,7 +513,7 @@ function updateSpecTsConfig(config: CliConfig): Rule {
   };
 }
 
-function updatePackageJson() {
+function updatePackageJson(packageManager?: string) {
   return (host: Tree, context: SchematicContext) => {
     const pkgPath = '/package.json';
     const buffer = host.read(pkgPath);
@@ -403,9 +530,14 @@ function updatePackageJson() {
       pkg.devDependencies = {};
     }
 
-    pkg.devDependencies['@angular-devkit/build-angular'] = latestVersions.DevkitBuildWebpack;
+    pkg.devDependencies['@angular-devkit/build-angular'] = latestVersions.DevkitBuildAngular;
 
     host.overwrite(pkgPath, JSON.stringify(pkg, null, 2));
+
+    if (packageManager && !['npm', 'yarn', 'cnpm'].includes(packageManager)) {
+      packageManager = undefined;
+    }
+    context.addTask(new NodePackageInstallTask({ packageManager }));
 
     return host;
   };
@@ -424,7 +556,7 @@ export default function (): Rule {
       migrateKarmaConfiguration(config),
       migrateConfiguration(config),
       updateSpecTsConfig(config),
-      updatePackageJson(),
+      updatePackageJson(config.packageManager),
     ])(host, context);
   };
 }

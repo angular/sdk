@@ -13,9 +13,8 @@ import {
 } from '@angular-devkit/architect';
 import { Path, getSystemPath, join, normalize, resolve, virtualFs } from '@angular-devkit/core';
 import * as fs from 'fs';
-import { Observable } from 'rxjs/Observable';
-import { of } from 'rxjs/observable/of';
-import { concat, concatMap } from 'rxjs/operators';
+import { Observable, concat, of } from 'rxjs';
+import { concatMap, last } from 'rxjs/operators';
 import * as ts from 'typescript'; // tslint:disable-line:no-implicit-dependencies
 import * as webpack from 'webpack';
 import {
@@ -91,19 +90,18 @@ export interface BrowserBuilderOptions {
   styles: ExtraEntryPoint[];
   stylePreprocessorOptions: { includePaths: string[] };
 
-  fileReplacements: { from: string; to: string; }[];
+  fileReplacements: { src: string; replaceWith: string; }[];
 }
 
 export interface AssetPattern {
   glob: string;
   input: string;
   output: string;
-  allowOutsideOutDir: boolean;
 }
 
 export interface ExtraEntryPoint {
   input: string;
-  output?: string;
+  bundleName?: string;
   lazy: boolean;
 }
 
@@ -111,8 +109,8 @@ export interface WebpackConfigOptions {
   root: string;
   projectRoot: string;
   buildOptions: BrowserBuilderOptions;
-  appConfig: BrowserBuilderOptions;
   tsConfig: ts.ParsedCommandLine;
+  tsConfigPath: string;
   supportES2015: boolean;
 }
 
@@ -139,8 +137,6 @@ export class BrowserBuilder implements Builder<BrowserBuilderOptions> {
         try {
           webpackConfig = this.buildWebpackConfig(root, projectRoot, options);
         } catch (e) {
-          // TODO: why do I have to catch this error? I thought throwing inside an observable
-          // always got converted into an error.
           obs.error(e);
 
           return;
@@ -226,36 +222,31 @@ export class BrowserBuilder implements Builder<BrowserBuilderOptions> {
 
     const host = new virtualFs.AliasHost(this.context.host as virtualFs.Host<fs.Stats>);
 
-    options.fileReplacements.forEach(({ from, to }) => {
+    options.fileReplacements.forEach(({ src, replaceWith }) => {
       host.aliases.set(
-        join(root, normalize(from)),
-        join(root, normalize(to)),
+        join(root, normalize(src)),
+        join(root, normalize(replaceWith)),
       );
     });
 
     // TODO: make target defaults into configurations instead
     // options = this.addTargetDefaults(options);
 
-    const tsconfigPath = normalize(resolve(root, normalize(options.tsConfig as string)));
-    const tsConfig = readTsconfig(getSystemPath(tsconfigPath));
+    const tsConfigPath = getSystemPath(normalize(resolve(root, normalize(options.tsConfig))));
+    const tsConfig = readTsconfig(tsConfigPath);
 
     const projectTs = requireProjectModule(getSystemPath(projectRoot), 'typescript') as typeof ts;
 
     const supportES2015 = tsConfig.options.target !== projectTs.ScriptTarget.ES3
       && tsConfig.options.target !== projectTs.ScriptTarget.ES5;
 
-
-    // TODO: inside the configs, always use the project root and not the workspace root.
-    // Until then we have to pretend the app root is relative (``) but the same as `projectRoot`.
-    (options as any).root = ''; // tslint:disable-line:no-any
-
     wco = {
       root: getSystemPath(root),
       projectRoot: getSystemPath(projectRoot),
       // TODO: use only this.options, it contains all flags and configs items already.
       buildOptions: options,
-      appConfig: options,
       tsConfig,
+      tsConfigPath,
       supportES2015,
     };
 
@@ -289,7 +280,7 @@ export class BrowserBuilder implements Builder<BrowserBuilderOptions> {
       getStylesConfig(wco),
     ];
 
-    if (wco.appConfig.main || wco.appConfig.polyfills) {
+    if (wco.buildOptions.main || wco.buildOptions.polyfills) {
       const typescriptConfigPartial = wco.buildOptions.aot
         ? getAotConfig(wco, host)
         : getNonAotConfig(wco, host);
@@ -308,7 +299,7 @@ export class BrowserBuilder implements Builder<BrowserBuilderOptions> {
     return host.exists(resolvedOutputPath).pipe(
       concatMap(exists => exists
         // TODO: remove this concat once host ops emit an event.
-        ? host.delete(resolvedOutputPath).pipe(concat(of(null)))
+        ? concat(host.delete(resolvedOutputPath), of(null)).pipe(last())
         // ? of(null)
         : of(null)),
     );

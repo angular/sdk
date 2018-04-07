@@ -7,12 +7,9 @@
  */
 import * as ajv from 'ajv';
 import * as http from 'http';
-import { Observable } from 'rxjs/Observable';
-import { fromPromise } from 'rxjs/observable/fromPromise';
-import { of as observableOf } from 'rxjs/observable/of';
-import { concat, concatMap, ignoreElements, map, switchMap } from 'rxjs/operators';
-import { observable } from 'rxjs/symbol/observable';
-import { PartiallyOrderedSet } from '../../utils';
+import { Observable, from, of as observableOf } from 'rxjs';
+import { concatMap, map, switchMap, tap } from 'rxjs/operators';
+import { PartiallyOrderedSet, isObservable } from '../../utils';
 import { JsonObject, JsonValue } from '../interface';
 import {
   SchemaFormat,
@@ -25,6 +22,14 @@ import {
 import { addUndefinedDefaults } from './transforms';
 import { JsonVisitor, visitJson } from './visitor';
 
+
+// This interface should be exported from ajv, but they only export the class and not the type.
+interface AjvValidationError {
+  message: string;
+  errors: Array<ajv.ErrorObject>;
+  ajv: true;
+  validation: true;
+}
 
 export class CoreSchemaRegistry implements SchemaRegistry {
   private _ajv: ajv.Ajv;
@@ -165,44 +170,36 @@ export class CoreSchemaRegistry implements SchemaRegistry {
 
     return validator
       .pipe(
-        // tslint:disable-next-line:no-any
-        map(validate => (data: any): Observable<SchemaValidatorResult> => {
-          let dataObs = observableOf(data);
-          this._pre.forEach(visitor =>
-            dataObs = dataObs.pipe(
-              concatMap(data => {
-                return visitJson(data as JsonValue, visitor, schema, this._resolver, validate);
-              }),
-            ),
-          );
-
-          return dataObs.pipe(
+        map(validate => (data: JsonValue): Observable<SchemaValidatorResult> => {
+          return observableOf(data).pipe(
+            ...[...this._pre].map(visitor => concatMap((data: JsonValue) => {
+              return visitJson(data, visitor, schema, this._resolver, validate);
+            })),
+          ).pipe(
             switchMap(updatedData => {
               const result = validate(updatedData);
 
               return typeof result == 'boolean'
                 ? observableOf([updatedData, result])
-                : fromPromise((result as PromiseLike<boolean>)
-                  .then(result => [updatedData, result]));
+                : from((result as Promise<boolean>)
+                  .then(r => [updatedData, true])
+                  .catch((err: Error | AjvValidationError) => {
+                    if ((err as AjvValidationError).ajv) {
+                      validate.errors = (err as AjvValidationError).errors;
+
+                      return Promise.resolve([updatedData, false]);
+                    }
+
+                    return Promise.reject(err);
+                  }));
             }),
             switchMap(([data, valid]) => {
               if (valid) {
-                let dataObs = this._applySmartDefaults(data);
-                this._post.forEach(visitor =>
-                  dataObs = dataObs.pipe(
-                    concatMap(data => {
-                      return visitJson(
-                        data as JsonValue,
-                        visitor,
-                        schema,
-                        this._resolver,
-                        validate,
-                      );
-                    }),
-                  ),
-                );
-
-                return dataObs.pipe(
+                return this._applySmartDefaults(data).pipe(
+                  ...[...this._post].map(visitor => concatMap(data => {
+                    return visitJson(data as JsonValue, visitor, schema, this._resolver, validate);
+                  })),
+                ).pipe(
                   map(data => [data, valid]),
                 );
               } else {
@@ -211,10 +208,6 @@ export class CoreSchemaRegistry implements SchemaRegistry {
             }),
             map(([data, valid]) => {
               if (valid) {
-                // tslint:disable-next-line:no-any
-                const schemaDataMap = new WeakMap<object, any>();
-                schemaDataMap.set(schema, data);
-
                 return { data, success: true } as SchemaValidatorResult;
               }
 
@@ -351,27 +344,29 @@ export class CoreSchemaRegistry implements SchemaRegistry {
       }
     }
 
-    return [...this._smartDefaultRecord.entries()].reduce((acc, [pointer, schema]) => {
-      const fragments = JSON.parse(pointer);
-      const source = this._sourceMap.get((schema as JsonObject).$source as string);
+    return observableOf(data).pipe(
+      ...[...this._smartDefaultRecord.entries()].map(([pointer, schema]) => {
+        return concatMap(data => {
+          const fragments = JSON.parse(pointer);
+          const source = this._sourceMap.get((schema as JsonObject).$source as string);
 
-      if (!source) {
-        throw new Error('Invalid source.');
-      }
+          if (!source) {
+            throw new Error('Invalid source.');
+          }
 
-      let value = source(schema);
-      if (typeof value != 'object' || !(observable in value)) {
-        value = observableOf(value);
-      }
+          let value = source(schema);
+          if (!isObservable(value)) {
+            value = observableOf(value);
+          }
 
-      return acc.pipe(
-        concatMap(() => (value as Observable<{}>).pipe(
-          map(x => _set(data, fragments, x)),
-        )),
-      );
-    }, observableOf<void>(undefined)).pipe(
-      ignoreElements(),
-      concat(observableOf(data)),
+          return (value as Observable<{}>).pipe(
+            // Synchronously set the new data at the proper JsonSchema path.
+            tap(x => _set(data, fragments, x)),
+            // But return the data object.
+            map(() => data),
+          );
+        });
+      }),
     );
   }
 }

@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { logging, schema, virtualFs } from '@angular-devkit/core';
+import { Path, logging, schema, virtualFs } from '@angular-devkit/core';
 import {
   DryRunSink,
   HostSink,
@@ -16,12 +16,9 @@ import {
   formats,
   workflow,
 } from '@angular-devkit/schematics';  // tslint:disable-line:no-implicit-dependencies
-import { Observable } from 'rxjs/Observable';
-import { Subject } from 'rxjs/Subject';
-import { empty } from 'rxjs/observable/empty';
-import { of } from 'rxjs/observable/of';
-import { _throw } from 'rxjs/observable/throw';
-import { concat, concatMap, ignoreElements, map, reduce } from 'rxjs/operators';
+import { EMPTY, Observable, Subject, concat, of, throwError } from 'rxjs';
+import { reduce, tap } from 'rxjs/internal/operators';
+import { concatMap, ignoreElements, map } from 'rxjs/operators';
 import { NodeModulesEngineHost, validateOptionsWithSchema } from '..';
 import { DryRunEvent } from '../../src/sink/dryrun';
 import { BuiltinTaskExecutor } from '../../tasks/node';
@@ -32,6 +29,7 @@ export class NodeWorkflow implements workflow.Workflow {
   protected _registry: schema.CoreSchemaRegistry;
 
   protected _reporter: Subject<DryRunEvent> = new Subject();
+  protected _lifeCycle: Subject<workflow.LifeCycleEvent> = new Subject();
 
   protected _context: workflow.WorkflowExecutionContext[];
 
@@ -40,6 +38,8 @@ export class NodeWorkflow implements workflow.Workflow {
     protected _options: {
       force?: boolean;
       dryRun?: boolean;
+      root?: Path,
+      packageManager?: string;
     },
   ) {
     /**
@@ -53,9 +53,22 @@ export class NodeWorkflow implements workflow.Workflow {
     this._registry = new schema.CoreSchemaRegistry(formats.standardFormats);
     this._engineHost.registerOptionsTransform(validateOptionsWithSchema(this._registry));
 
-    this._engineHost.registerTaskExecutor(BuiltinTaskExecutor.NodePackage);
-    this._engineHost.registerTaskExecutor(BuiltinTaskExecutor.RepositoryInitializer);
+    this._engineHost.registerTaskExecutor(
+      BuiltinTaskExecutor.NodePackage,
+      {
+        allowPackageManagerOverride: true,
+        packageManager: this._options.packageManager,
+        rootDirectory: this._options.root,
+      },
+    );
+    this._engineHost.registerTaskExecutor(
+      BuiltinTaskExecutor.RepositoryInitializer,
+      {
+        rootDirectory: this._options.root,
+      },
+    );
     this._engineHost.registerTaskExecutor(BuiltinTaskExecutor.RunSchematic);
+    this._engineHost.registerTaskExecutor(BuiltinTaskExecutor.TslintFix);
 
     this._context = [];
   }
@@ -74,16 +87,24 @@ export class NodeWorkflow implements workflow.Workflow {
   get reporter(): Observable<DryRunEvent> {
     return this._reporter.asObservable();
   }
+  get lifeCycle(): Observable<workflow.LifeCycleEvent> {
+    return this._lifeCycle.asObservable();
+  }
 
   execute(
     options: Partial<workflow.WorkflowExecutionContext> & workflow.RequiredWorkflowExecutionContext,
   ): Observable<void> {
     const parentContext = this._context[this._context.length - 1];
 
+    if (!parentContext) {
+      this._lifeCycle.next({ kind: 'start' });
+    }
+
     /** Create the collection and the schematic. */
     const collection = this._engine.createCollection(options.collection);
     // Only allow private schematics if called from the same collection.
-    const allowPrivate = parentContext && parentContext.collection === options.collection;
+    const allowPrivate = options.allowPrivate
+                         || (parentContext && parentContext.collection === options.collection);
     const schematic = collection.createSchematic(options.schematic, allowPrivate);
 
     // We need two sinks if we want to output what will happen, and actually do the work.
@@ -98,6 +119,8 @@ export class NodeWorkflow implements workflow.Workflow {
       error = error || (event.kind == 'error');
     });
 
+    this._lifeCycle.next({ kind: 'workflow-start' });
+
     const context = {
       ...options,
       debug: options.debug || false,
@@ -106,36 +129,52 @@ export class NodeWorkflow implements workflow.Workflow {
     };
     this._context.push(context);
 
-    return schematic.call(options.options, of(new HostTree(this._host)), {
-      logger: context.logger,
-    }).pipe(
-      map(tree => Tree.optimize(tree)),
-      concatMap((tree: Tree) => {
-        return dryRunSink.commit(tree).pipe(
-          ignoreElements(),
-          concat(of(tree)),
-        );
-      }),
-      concatMap((tree: Tree) => {
-        dryRunSubscriber.unsubscribe();
-        if (error) {
-          return _throw(new UnsuccessfulWorkflowExecution());
-        }
-        if (this._options.dryRun) {
-          return empty<void>();
-        }
+    return concat(
+      schematic.call(options.options, of(new HostTree(this._host)), {
+        logger: context.logger,
+      }).pipe(
+        map(tree => Tree.optimize(tree)),
+        concatMap((tree: Tree) => {
+          return concat(
+            dryRunSink.commit(tree).pipe(
+              ignoreElements(),
+            ),
+            of(tree),
+          );
+        }),
+        concatMap((tree: Tree) => {
+          dryRunSubscriber.unsubscribe();
+          if (error) {
+            return throwError(new UnsuccessfulWorkflowExecution());
+          }
+          if (this._options.dryRun) {
+            return EMPTY;
+          }
 
-        return fsSink.commit(tree);
-      }),
+          return fsSink.commit(tree);
+        }),
+      ),
       concat(new Observable<void>(obs => {
         if (!this._options.dryRun) {
-          this._engine.executePostTasks().subscribe(obs);
+          this._lifeCycle.next({ kind: 'post-tasks-start' });
+          this._engine.executePostTasks()
+            .pipe(
+              reduce(() => {}),
+              tap(() => this._lifeCycle.next({ kind: 'post-tasks-end' })),
+            )
+            .subscribe(obs);
         } else {
           obs.complete();
         }
       })),
       concat(new Observable(obs => {
+        this._lifeCycle.next({ kind: 'workflow-end' });
         this._context.pop();
+
+        if (this._context.length == 0) {
+          this._lifeCycle.next({ kind: 'end' });
+        }
+
         obs.complete();
       })),
       reduce(() => {}),

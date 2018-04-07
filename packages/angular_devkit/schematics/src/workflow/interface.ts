@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 import { logging } from '@angular-devkit/core';
-import { Observable } from 'rxjs/Observable';
+import { Observable } from 'rxjs';
 
 export interface RequiredWorkflowExecutionContext {
   collection: string;
@@ -18,6 +18,13 @@ export interface WorkflowExecutionContext extends RequiredWorkflowExecutionConte
   debug: boolean;
   logger: logging.Logger;
   parentContext?: Readonly<WorkflowExecutionContext>;
+  allowPrivate?: boolean;
+}
+
+export interface LifeCycleEvent {
+  kind: 'start' | 'end'  // Start and end of the full workflow execution.
+    | 'workflow-start' | 'workflow-end'  // Start and end of a workflow execution. Can be more.
+    | 'post-tasks-start' | 'post-tasks-end';  // Start and end of the post tasks execution.
 }
 
 export interface Workflow {

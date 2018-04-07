@@ -1,28 +1,25 @@
 // tslint:disable
 // TODO: cleanup this file, it's copied as is from Angular CLI.
 
-import { ExtraEntry, extraEntryParser } from '../models/webpack-configs/utils';
+import { ExtraEntryPoint } from '../../browser';
+import { computeBundleName } from '../models/webpack-configs/utils';
 
 export function generateEntryPoints(appConfig: any) {
   let entryPoints = ['polyfills', 'sw-register'];
 
-  const pushExtraEntries = (extraEntry: ExtraEntry) => {
-    if (entryPoints.indexOf(extraEntry.entry as string) === -1) {
-      entryPoints.push(extraEntry.entry as string);
+  // Add all styles/scripts, except lazy-loaded ones.
+  [
+    ...(appConfig.styles as ExtraEntryPoint[])
+      .filter(entry => !entry.lazy)
+      .map(entry => computeBundleName(entry, 'styles')),
+    ...(appConfig.scripts as ExtraEntryPoint[])
+      .filter(entry => !entry.lazy)
+      .map(entry => computeBundleName(entry, 'scripts')),
+  ].forEach(bundleName => {
+    if (entryPoints.indexOf(bundleName) === -1) {
+      entryPoints.push(bundleName);
     }
-  };
-
-  if (appConfig.styles) {
-    extraEntryParser(appConfig.styles, './', 'styles')
-      .filter(entry => !entry.lazy)
-      .forEach(pushExtraEntries);
-  }
-
-  if (appConfig.scripts) {
-    extraEntryParser(appConfig.scripts, './', 'scripts')
-      .filter(entry => !entry.lazy)
-      .forEach(pushExtraEntries);
-  }
+  });
 
   entryPoints.push('main');
 

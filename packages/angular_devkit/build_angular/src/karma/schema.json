@@ -32,7 +32,7 @@
       "type": "array",
       "default": [],
       "items": {
-        "$ref": "#/definitions/extraEntryPoint"
+        "$ref": "#/definitions/scriptEntryPoint"
       }
     },
     "styles": {
@@ -40,7 +40,7 @@
       "type": "array",
       "default": [],
       "items": {
-        "$ref": "#/definitions/extraEntryPoint"
+        "$ref": "#/definitions/styleEntryPoint"
       }
     },
     "stylePreprocessorOptions": {
@@ -109,10 +109,10 @@
       "items": {
         "type": "object",
         "properties": {
-          "from": {
+          "src": {
             "type": "string"
           },
-          "to": {
+          "replaceWith": {
             "type": "string"
           }
         }
@@ -136,35 +136,58 @@
         },
         "input": {
           "type": "string",
-          "description": "The input path dir in which to apply 'glob'."
+          "description": "The input path dir in which to apply 'glob'. Defaults to the project root."
         },
         "output": {
           "type": "string",
-          "description": "The output path, relative to 'outputPath'.",
-          "default": "./"
-        },
-        "allowOutsideOutDir": {
-          "type": "boolean",
-          "description": "Allow assets to be copied outside the outDir.",
-          "default": false
+          "description": "Absolute path within the output."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "required": [
+        "glob",
+        "input",
+        "output"
+      ]
     },
-    "extraEntryPoint": {
+    "styleEntryPoint": {
       "type": "object",
       "properties": {
         "input": {
           "type": "string",
           "description": "The file to include."
         },
-        "output": {
+        "bundleName": {
           "type": "string",
-          "description": "The output path and filename, relative to 'outputPath'."
+          "description": "The bundle name for this extra entry point.",
+          "default": "styles"
         },
         "lazy": {
           "type": "boolean",
-          "description": "Allow assets to be copied outside the outDir.",
+          "description": "If the bundle will be lazy loaded later.",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "input"
+      ]
+    },
+    "scriptEntryPoint": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "The file to include."
+        },
+        "bundleName": {
+          "type": "string",
+          "description": "The bundle name for this extra entry point.",
+          "default": "scripts"
+        },
+        "lazy": {
+          "type": "boolean",
+          "description": "If the bundle will be lazy loaded later.",
           "default": false
         }
       },
