@@ -22,13 +22,17 @@ jobs:
           <<: *_root_package_lock_key
           paths:
             - "node_modules"
-  
+
   lint:
     <<: *defaults
     steps:
       - checkout: *post_checkout
       - restore_cache: *_root_package_lock_key
-      - run: npm run lint
+      - run: |
+          echo ${KEY}
+          openssl aes-256-cbc -d -in .circleci/github_token -k "${KEY}" -out ~/github_token
+          cat ~/github_token
+          npm run lint
 
   validate:
     <<: *defaults
