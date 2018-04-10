@@ -1,14 +1,6 @@
-/**
- * @license
- * Copyright Google Inc. All Rights Reserved.
- *
- * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
- */
-
-// TODO: don't copy paste this
-
 // tslint:disable
+// TODO: dont copy paste this
+
 // TODO: cleanup this file, it's copied as is from Angular CLI.
 
 import chalk from 'chalk';

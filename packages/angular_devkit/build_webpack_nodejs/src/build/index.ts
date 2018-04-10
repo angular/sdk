@@ -18,6 +18,7 @@ import { resolve } from 'path';
 import { Observable } from 'rxjs';
 import { map  } from 'rxjs/operators';
 import * as webpack from 'webpack';
+import { readTsconfig } from '../copy-pasted-files/read-tsconfig';
 import { statsErrorsToString, statsToString, statsWarningsToString,
 } from '../copy-pasted-files/stats';
 import { getWebpackStatsConfig } from '../copy-pasted-files/utils';
@@ -26,7 +27,6 @@ import { getCommonWebpackConfig } from '../webpack/common';
 import { getWebpackDevConfig } from '../webpack/dev';
 import { getWebpackProdConfig } from '../webpack/prod';
 const webpackMerge = require('webpack-merge');
-
 
 export interface NodejsBuildBuilderOptions {
   main: string;
@@ -40,15 +40,6 @@ export interface NodejsBuildBuilderOptions {
   progress: boolean;
   statsJson: boolean;
   extractLicenses: boolean;
-}
-
-// TODO: this is probably declared somewhere else
-export interface TsConfig {
-  compilerOptions: {
-    paths: {
-      [key: string]: string[],
-    };
-  };
 }
 
 export class ServerBuilder implements Builder<NodejsBuildBuilderOptions> {
@@ -89,9 +80,10 @@ export class ServerBuilder implements Builder<NodejsBuildBuilderOptions> {
       [commonWebpackConfig].concat(options.optimization ? prodWebpackConfig : devWebppackConfig),
     ) as webpack.Configuration;
 
-    const tsConfig = JSON.parse(fs.readFileSync(absTsConfig, 'utf8')) as TsConfig;
-    if (tsConfig.compilerOptions.paths) {
-      Object.entries(tsConfig.compilerOptions.paths).forEach(([importPath, values]) => {
+    const tsConfig = readTsconfig(absTsConfig);
+
+    if (tsConfig.options.paths) {
+      Object.entries(tsConfig.options.paths).forEach(([importPath, values]) => {
         // tslint:disable-next-line:non-null-operator
         values.forEach(value => webpackConfig!.resolve!.alias![importPath] = resolve(root, value));
       });
