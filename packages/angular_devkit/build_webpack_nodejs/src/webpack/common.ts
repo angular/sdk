@@ -13,13 +13,13 @@ import { RealWebpackConfig } from './config';
 const CircularDependencyPlugin = require('circular-dependency-plugin');
 const ProgressPlugin = require('webpack/lib/ProgressPlugin');
 const StatsPlugin = require('stats-webpack-plugin');
+const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
 /**
  * Enumerate loaders and their dependencies from this file to let the dependency validator
  * know they are used.
  *
  * require('ts-loader')
- * require('cache-loader')
  */
 
 // TODO use angular-build ones
@@ -44,6 +44,12 @@ export function getCommonWebpackConfig(entry: string, outDir: string, tsconfigPa
         {
           test: /\.ts$/,
           loader: `ts-loader?configFile=${tsconfigPath}`,
+          options: {
+            configFile: tsconfigPath,
+            transpileOnly: true,
+            // https://github.com/TypeStrong/ts-loader/pull/685
+            experimentalWatchApi: true,
+          },
         },
       ],
     },
@@ -64,6 +70,10 @@ export function getCommonWebpackConfig(entry: string, outDir: string, tsconfigPa
       hints: false,
     },
     plugins: [
+      new ForkTsCheckerWebpackPlugin({
+        tsconfig: tsconfigPath,
+        workers: ForkTsCheckerWebpackPlugin.TWO_CPUS_FREE,
+      }),
     ],
   };
 
