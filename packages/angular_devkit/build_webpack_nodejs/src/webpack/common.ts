@@ -44,7 +44,7 @@ export function getCommonWebpackConfig(entry: string, outDir: string, tsconfigPa
       rules: [
         {
           test: /\.ts$/,
-          loader: `ts-loader?configFile=${tsconfigPath}`,
+          loader: `ts-loader`,
           options: {
             configFile: tsconfigPath,
             transpileOnly: true,
@@ -52,6 +52,7 @@ export function getCommonWebpackConfig(entry: string, outDir: string, tsconfigPa
             experimentalWatchApi: true,
           },
         },
+        { test: /\.txt$/, loader: 'raw-loader' },
       ],
     },
     resolve: {
