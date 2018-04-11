@@ -28,6 +28,7 @@ export interface BuildOptions {
   statsJson: boolean;
   verbose: boolean;
   extractLicenses: boolean;
+  showCircularDependencies: boolean;
 }
 
 export function getCommonWebpackConfig(entry: string, outDir: string, tsconfigPath: string,
@@ -97,7 +98,7 @@ export function getCommonWebpackConfig(entry: string, outDir: string, tsconfigPa
     }));
   }
 
-  if (buildOptions.extractLicenses) {
+  if (buildOptions.showCircularDependencies) {
     extraPlugins.push(new CircularDependencyPlugin({
       exclude: /[\\\/]node_modules[\\\/]/,
     }));

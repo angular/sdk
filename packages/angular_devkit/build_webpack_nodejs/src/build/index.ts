@@ -40,6 +40,7 @@ export interface NodejsBuildBuilderOptions {
   progress: boolean;
   statsJson: boolean;
   extractLicenses: boolean;
+  showCircularDependencies: boolean;
 }
 
 export class ServerBuilder implements Builder<NodejsBuildBuilderOptions> {
