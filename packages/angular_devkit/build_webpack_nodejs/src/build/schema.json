@@ -58,6 +58,22 @@
       "items": {
         "type": "string"
       }
+    },
+    "pathReplacements": {
+      "description": "Paths that will override what is configured in the tsConfig",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "replaceWith": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
     }
   },
   "additionalProperties": false,

@@ -37,6 +37,8 @@ export interface NodejsBuildBuilderOptions {
   externals: string[];
   verbose: boolean;
 
+  pathReplacements: {path: string, replaceWith: string}[];
+
   progress: boolean;
   statsJson: boolean;
   extractLicenses: boolean;
@@ -88,6 +90,13 @@ export class ServerBuilder implements Builder<NodejsBuildBuilderOptions> {
         // tslint:disable-next-line:non-null-operator
         values.forEach(value => webpackConfig!.resolve!.alias![importPath] = resolve(root, value));
       });
+    }
+
+    if (options.pathReplacements) {
+      options.pathReplacements
+        // tslint:disable-next-line:non-null-operator
+        .forEach(alias => webpackConfig!.resolve!.alias![alias.path] =
+          resolve(root, alias.replaceWith));
     }
 
     const compiler = webpack(webpackConfig);
