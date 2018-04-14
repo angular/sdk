@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { normalize, relative, strings, tags } from '@angular-devkit/core';
+import { JsonObject, normalize, relative, strings, tags } from '@angular-devkit/core';
 import { experimental } from '@angular-devkit/core';
 import {
   MergeStrategy,
@@ -110,6 +110,7 @@ function addAppToWorkspaceFile(options: ApplicationOptions, workspace: Workspace
     const project: any = {
       root: projectRoot,
       projectType: 'application',
+      prefix: options.prefix || 'app',
       architect: {
         build: {
           builder: '@angular-devkit/build-angular:browser',
@@ -141,8 +142,8 @@ function addAppToWorkspaceFile(options: ApplicationOptions, workspace: Workspace
           configurations: {
             production: {
               fileReplacements: [{
-                src: `${projectRoot}src/environments/environment.ts`,
-                replaceWith: `${projectRoot}src/environments/environment.prod.ts`,
+                replace: `${projectRoot}src/environments/environment.ts`,
+                with: `${projectRoot}src/environments/environment.prod.ts`,
               }],
               optimization: true,
               outputHashing: 'all',
@@ -223,6 +224,35 @@ function addAppToWorkspaceFile(options: ApplicationOptions, workspace: Workspace
     // }
 
     workspace.projects[options.name] = project;
+
+    const schematics: JsonObject = {};
+
+    if (options.inlineTemplate === true
+        || options.inlineStyle === true
+        || options.style !== undefined) {
+      schematics['@schematics/angular:component'] = {};
+      if (options.inlineTemplate === true) {
+        (schematics['@schematics/angular:component'] as JsonObject).inlineTemplate = true;
+      }
+      if (options.inlineStyle === true) {
+        (schematics['@schematics/angular:component'] as JsonObject).inlineStyle = true;
+      }
+      if (options.style !== undefined) {
+        (schematics['@schematics/angular:component'] as JsonObject).styleext = options.style;
+      }
+    }
+
+    if (options.skipTests === true) {
+      ['class', 'component', 'directive', 'guard', 'module', 'pipe', 'service'].forEach((type) => {
+        if (!(`@schematics/angular:${type}` in schematics)) {
+          schematics[`@schematics/angular:${type}`] = {};
+        }
+        (schematics[`@schematics/angular:${type}`] as JsonObject).spec = false;
+      });
+    }
+
+    workspace.schematics = schematics;
+
     host.overwrite(getWorkspacePath(host), JSON.stringify(workspace, null, 2));
   };
 }
@@ -270,7 +300,8 @@ export default function (options: ApplicationOptions): Rule {
       throw new SchematicsException(`Invalid options, "name" is required.`);
     }
     validateProjectName(options.name);
-    const appRootSelector = `${options.prefix || 'app'}-root`;
+    const prefix = options.prefix || 'app';
+    const appRootSelector = `${prefix}-root`;
     const componentOptions = {
       inlineStyle: options.inlineStyle,
       inlineTemplate: options.inlineTemplate,
@@ -285,6 +316,7 @@ export default function (options: ApplicationOptions): Rule {
     let sourceRoot = `${appDir}/src`;
     let sourceDir = `${sourceRoot}/app`;
     let relativeTsConfigPath = appDir.split('/').map(x => '..').join('/');
+    let relativeTsLintPath = appDir.split('/').map(x => '..').join('/');
     const rootInSrc = options.projectRoot !== undefined;
     if (options.projectRoot !== undefined) {
       newProjectRoot = options.projectRoot;
@@ -295,7 +327,12 @@ export default function (options: ApplicationOptions): Rule {
       if (relativeTsConfigPath === '') {
         relativeTsConfigPath = '.';
       }
+      relativeTsLintPath = relative(normalize('/' + sourceRoot), normalize('/'));
+      if (relativeTsLintPath === '') {
+        relativeTsLintPath = '.';
+      }
     }
+    const tsLintRoot = appDir;
 
     const e2eOptions: E2eOptions = {
       name: `${options.name}-e2e`,
@@ -329,6 +366,20 @@ export default function (options: ApplicationOptions): Rule {
             rootInSrc,
           }),
           move(appDir),
+        ])),
+      mergeWith(
+        apply(url('./files/lint'), [
+          template({
+            utils: strings,
+            ...options,
+            tsLintRoot,
+            relativeTsLintPath,
+            prefix,
+          }),
+          // TODO: Moving should work but is bugged right now.
+          // The __tsLintRoot__ is being used meanwhile.
+          // Otherwise the tslint.json file could be inside of the root folder and
+          // this block and the lint folder could be removed.
         ])),
       schematic('module', {
         name: 'app',

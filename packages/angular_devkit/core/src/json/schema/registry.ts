@@ -9,6 +9,7 @@ import * as ajv from 'ajv';
 import * as http from 'http';
 import { Observable, from, of as observableOf } from 'rxjs';
 import { concatMap, map, switchMap, tap } from 'rxjs/operators';
+import { BaseException } from '../../exception/exception';
 import { PartiallyOrderedSet, isObservable } from '../../utils';
 import { JsonObject, JsonValue } from '../interface';
 import {
@@ -16,12 +17,57 @@ import {
   SchemaFormatter,
   SchemaRegistry,
   SchemaValidator,
+  SchemaValidatorError,
   SchemaValidatorResult,
   SmartDefaultProvider,
 } from './interface';
 import { addUndefinedDefaults } from './transforms';
 import { JsonVisitor, visitJson } from './visitor';
 
+
+// This interface should be exported from ajv, but they only export the class and not the type.
+interface AjvValidationError {
+  message: string;
+  errors: Array<ajv.ErrorObject>;
+  ajv: true;
+  validation: true;
+}
+
+export class SchemaValidationException extends BaseException {
+  public readonly errors: SchemaValidatorError[];
+
+  constructor(
+    errors?: SchemaValidatorError[],
+    baseMessage = 'Schema validation failed with the following errors:',
+  ) {
+    if (!errors || errors.length === 0) {
+      super('Schema validation failed.');
+
+      return;
+    }
+
+    const messages = SchemaValidationException.createMessages(errors);
+    super(`${baseMessage}\n  ${messages.join('\n  ')}`);
+    this.errors = errors;
+  }
+
+  public static createMessages(errors?: SchemaValidatorError[]): string[] {
+    if (!errors || errors.length === 0) {
+      return [];
+    }
+
+    const messages = errors.map((err) => {
+      let message = `Data path ${JSON.stringify(err.dataPath)} ${err.message}`;
+      if (err.keyword === 'additionalProperties') {
+        message += `(${err.params.additionalProperty})`;
+      }
+
+      return message + '.';
+    });
+
+    return messages;
+  }
+}
 
 export class CoreSchemaRegistry implements SchemaRegistry {
   private _ajv: ajv.Ajv;
@@ -173,8 +219,17 @@ export class CoreSchemaRegistry implements SchemaRegistry {
 
               return typeof result == 'boolean'
                 ? observableOf([updatedData, result])
-                : from((result as PromiseLike<boolean>)
-                  .then(r => [updatedData, r]));
+                : from((result as Promise<boolean>)
+                  .then(r => [updatedData, true])
+                  .catch((err: Error | AjvValidationError) => {
+                    if ((err as AjvValidationError).ajv) {
+                      validate.errors = (err as AjvValidationError).errors;
+
+                      return Promise.resolve([updatedData, false]);
+                    }
+
+                    return Promise.reject(err);
+                  }));
             }),
             switchMap(([data, valid]) => {
               if (valid) {
@@ -197,13 +252,7 @@ export class CoreSchemaRegistry implements SchemaRegistry {
               return {
                 data,
                 success: false,
-                errors: (validate.errors || [])
-                  .map((err) => `Data path ${JSON.stringify(err.dataPath)} ${err.message}${
-                    err.keyword === 'additionalProperties' && err.params
-                      // tslint:disable-next-line:no-any
-                      ? ` (${(err.params as any)['additionalProperty']}).`
-                      : '.'
-                    }`),
+                errors: (validate.errors || []),
               } as SchemaValidatorResult;
             }),
           );

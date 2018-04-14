@@ -121,12 +121,36 @@ describe('CoreSchemaRegistry', () => {
         mergeMap(validator => validator(data)),
         map(result => {
           expect(result.success).toBe(false);
-          expect(result.errors).toContain(
-            'Data path "" should NOT have additional properties (notNum).');
+          expect(result.errors && result.errors[0].message).toContain(
+            'should NOT have additional properties');
         }),
     )
       .subscribe(done, done.fail);
   });
+
+  it('fails on invalid additionalProperties async', done => {
+    const registry = new CoreSchemaRegistry();
+    const data = { notNum: 'foo' };
+
+    registry
+      .compile({
+        $async: true,
+        properties: {
+          num: { type: 'number' },
+        },
+        additionalProperties: false,
+      }).pipe(
+        mergeMap(validator => validator(data)),
+        map(result => {
+          expect(result.success).toBe(false);
+          expect(result.errors && result.errors[0].message).toContain(
+            'should NOT have additional properties');
+          expect(result.errors && result.errors[0].keyword).toBe('additionalProperties');
+        }),
+      )
+      .subscribe(done, done.fail);
+  });
+
 
   // Synchronous failure is only used internally.
   // If it's meant to be used externally then this test should change to truly be synchronous
@@ -245,8 +269,10 @@ describe('CoreSchemaRegistry', () => {
         mergeMap(validator => validator(data)),
         map(result => {
           expect(result.success).toBe(false);
-          expect(result.errors && result.errors[0]).toBe(
-            'Data path ".banana" should match format "is-hotdog".');
+          expect(result.errors && result.errors[0]).toBeTruthy();
+          expect(result.errors && result.errors[0].keyword).toBe('format');
+          expect(result.errors && result.errors[0].dataPath).toBe('.banana');
+          expect(result.errors && (result.errors[0].params as any).format).toBe('is-hotdog');
         }),
       )
       .subscribe(done, done.fail);

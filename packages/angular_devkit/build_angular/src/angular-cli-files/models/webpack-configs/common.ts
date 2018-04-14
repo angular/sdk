@@ -12,8 +12,8 @@ import { BundleBudgetPlugin } from '../../plugins/bundle-budget';
 import { CleanCssWebpackPlugin } from '../../plugins/cleancss-webpack-plugin';
 import { ScriptsWebpackPlugin } from '../../plugins/scripts-webpack-plugin';
 import { findUp } from '../../utilities/find-up';
-import { AssetPattern, ExtraEntryPoint } from '../../../browser';
-import { computeBundleName } from './utils';
+import { AssetPattern, ExtraEntryPoint } from '../../../browser/schema';
+import { normalizeExtraEntryPoints } from './utils';
 
 const ProgressPlugin = require('webpack/lib/ProgressPlugin');
 const CircularDependencyPlugin = require('circular-dependency-plugin');
@@ -33,6 +33,11 @@ const resolve = require('resolve');
  * require('cache-loader')
  * require('@angular-devkit/build-optimizer')
  */
+
+const g: any = typeof global !== 'undefined' ? global : {};
+export const buildOptimizerLoader: string = g['_DevKitIsLocal']
+  ? require.resolve('@angular-devkit/build-optimizer/src/build-optimizer/webpack-loader')
+  : '@angular-devkit/build-optimizer/webpack-loader';
 
 export function getCommonConfig(wco: WebpackConfigOptions) {
   const { root, projectRoot, buildOptions } = wco;
@@ -58,9 +63,9 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
 
   // process global scripts
   if (buildOptions.scripts.length > 0) {
-    const globalScriptsByBundleName = (buildOptions.scripts as ExtraEntryPoint[])
+    const globalScriptsByBundleName = normalizeExtraEntryPoints(buildOptions.scripts, 'scripts')
       .reduce((prev: { bundleName: string, paths: string[], lazy: boolean }[], curr) => {
-        const bundleName = computeBundleName(curr, 'scripts');
+        const bundleName = curr.bundleName;
         const resolvedPath = path.resolve(root, curr.input);
         let existingEntry = prev.find((el) => el.bundleName === bundleName);
         if (existingEntry) {
@@ -158,8 +163,9 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
   let buildOptimizerUseRule;
   if (buildOptions.buildOptimizer) {
     // Set the cache directory to the Build Optimizer dir, so that package updates will delete it.
-    const buildOptimizerDir = path.dirname(
-      resolve.sync('@angular-devkit/build-optimizer', { basedir: projectRoot }));
+    const buildOptimizerDir = g['_DevKitIsLocal']
+     ? nodeModules
+     : path.dirname(resolve.sync('@angular-devkit/build-optimizer', { basedir: projectRoot }));
     const cacheDirectory = path.resolve(buildOptimizerDir, './.cache/');
 
     buildOptimizerUseRule = {
@@ -169,18 +175,24 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
           options: { cacheDirectory }
         },
         {
-          loader: '@angular-devkit/build-optimizer/webpack-loader',
+          loader: buildOptimizerLoader,
           options: { sourceMap: buildOptions.sourceMap }
         },
       ],
     };
   }
 
-  // Allow loaders to be in a node_modules nested inside the CLI package
+  // Allow loaders to be in a node_modules nested inside the devkit/build-angular package.
+  // This is important in case loaders do not get hoisted.
+  // If this file moves to another location, alter potentialNodeModules as well.
   const loaderNodeModules = ['node_modules'];
-  const potentialNodeModules = path.join(__dirname, '..', '..', 'node_modules');
-  if (isDirectory(potentialNodeModules)) {
-    loaderNodeModules.push(potentialNodeModules);
+  const buildAngularNodeModules = findUp('node_modules', __dirname);
+  if (buildAngularNodeModules
+    && isDirectory(buildAngularNodeModules)
+    && buildAngularNodeModules !== nodeModules
+    && buildAngularNodeModules.startsWith(nodeModules)
+  ) {
+    loaderNodeModules.push(buildAngularNodeModules);
   }
 
   // Load rxjs path aliases.
@@ -239,10 +251,10 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
           }
         },
         {
-          test: /[\/\\]@angular[\/\\].+\.js$/,
-          sideEffects: false,
+          // Mark files inside `@angular/core` as using SystemJS style dynamic imports.
+          // Removing this will cause deprecation warnings to appear.
+          test: /[\/\\]@angular[\/\\]core[\/\\].+\.js$/,
           parser: { system: true },
-          ...buildOptimizerUseRule,
         },
         {
           test: /\.js$/,

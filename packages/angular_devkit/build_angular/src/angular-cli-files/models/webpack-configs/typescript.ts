@@ -8,6 +8,7 @@ import {
   AngularCompilerPluginOptions,
   PLATFORM
 } from '@ngtools/webpack';
+import { buildOptimizerLoader } from './common';
 import { WebpackConfigOptions } from '../build-options';
 
 const SilentError = require('silent-error');
@@ -24,6 +25,7 @@ function _createAotPlugin(
   options: any,
   host: virtualFs.Host<Stats>,
   useMain = true,
+  extract = false
 ) {
   const { root, buildOptions } = wco;
   options.compilerOptions = options.compilerOptions || {};
@@ -35,6 +37,15 @@ function _createAotPlugin(
   let i18nInFile = buildOptions.i18nFile
     ? path.resolve(root, buildOptions.i18nFile)
     : undefined;
+
+  const i18nFileAndFormat = extract
+    ? {
+      i18nOutFile: buildOptions.i18nFile,
+      i18nOutFormat: buildOptions.i18nFormat,
+    } : {
+      i18nInFile: i18nInFile,
+      i18nInFormat: buildOptions.i18nFormat,
+    };
 
   const additionalLazyModules: { [module: string]: string } = {};
   if (buildOptions.lazyModules) {
@@ -48,10 +59,7 @@ function _createAotPlugin(
 
   const pluginOptions: AngularCompilerPluginOptions = {
     mainPath: useMain ? path.join(root, buildOptions.main) : undefined,
-    i18nInFile: i18nInFile,
-    i18nInFormat: buildOptions.i18nFormat,
-    i18nOutFile: buildOptions.i18nOutFile,
-    i18nOutFormat: buildOptions.i18nOutFormat,
+    ...i18nFileAndFormat,
     locale: buildOptions.i18nLocale,
     platform: buildOptions.platform === 'server' ? PLATFORM.Server : PLATFORM.Browser,
     missingTranslation: buildOptions.i18nMissingTranslation,
@@ -74,13 +82,17 @@ export function getNonAotConfig(wco: WebpackConfigOptions, host: virtualFs.Host<
   };
 }
 
-export function getAotConfig(wco: WebpackConfigOptions, host: virtualFs.Host<Stats>) {
+export function getAotConfig(
+  wco: WebpackConfigOptions,
+  host: virtualFs.Host<Stats>,
+  extract = false
+) {
   const { tsConfigPath, buildOptions } = wco;
 
   const loaders: any[] = [webpackLoader];
   if (buildOptions.buildOptimizer) {
     loaders.unshift({
-      loader: '@angular-devkit/build-optimizer/webpack-loader',
+      loader: buildOptimizerLoader,
       options: { sourceMap: buildOptions.sourceMap }
     });
   }
@@ -89,7 +101,7 @@ export function getAotConfig(wco: WebpackConfigOptions, host: virtualFs.Host<Sta
 
   return {
     module: { rules: [{ test, use: loaders }] },
-    plugins: [_createAotPlugin(wco, { tsConfigPath }, host)]
+    plugins: [_createAotPlugin(wco, { tsConfigPath }, host, true, extract)]
   };
 }
 
