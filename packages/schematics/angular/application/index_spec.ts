@@ -32,7 +32,6 @@ describe('Application Schematic', () => {
     style: 'css',
     skipTests: false,
     skipPackageJson: false,
-    strict: true,
   };
 
   let workspaceTree: UnitTestTree;

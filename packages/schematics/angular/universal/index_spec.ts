@@ -34,7 +34,6 @@ describe('Universal Schematic', () => {
     style: 'css',
     skipTests: false,
     skipPackageJson: false,
-    strict: true,
   };
 
   let appTree: UnitTestTree;

@@ -62,11 +62,6 @@
       "type": "boolean",
       "default": false,
       "description": "Do not add dependencies to package.json."
-    },
-    "strict": {
-      "description": "Configure TypeScript in strict mode.",
-      "type": "boolean",
-      "default": false
     }
   },
   "required": []

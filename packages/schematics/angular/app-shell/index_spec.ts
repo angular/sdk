@@ -37,7 +37,6 @@ describe('App Shell Schematic', () => {
     style: 'css',
     skipTests: false,
     skipPackageJson: false,
-    strict: true,
   };
   let appTree: UnitTestTree;
 
