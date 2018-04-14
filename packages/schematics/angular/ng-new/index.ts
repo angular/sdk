@@ -40,6 +40,7 @@ export default function (options: NgNewOptions): Rule {
     name: options.name,
     version: options.version,
     newProjectRoot: options.newProjectRoot || 'projects',
+    strict: options.strict,
   };
   const applicationOptions: ApplicationOptions = {
     projectRoot: '',

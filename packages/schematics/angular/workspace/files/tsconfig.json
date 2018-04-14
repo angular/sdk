@@ -15,6 +15,11 @@
     "lib": [
       "es2017",
       "dom"
-    ]
+    ]<% if (strict) { %>,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "strictFunctionTypes": true<% } %>
   }
 }

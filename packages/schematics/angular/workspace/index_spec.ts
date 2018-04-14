@@ -55,4 +55,16 @@ describe('Workspace Schematic', () => {
     expect(pkg.dependencies['zone.js']).toEqual(latestVersions.ZoneJs);
     expect(pkg.devDependencies['typescript']).toEqual(latestVersions.TypeScript);
   });
+
+  it('should set strict options in tsconfig.json', () => {
+    const options = { ...defaultOptions, strict: true };
+    const tree = schematicRunner.runSchematic('workspace', options);
+    const tsconfig = JSON.parse(tree.readContent('/tsconfig.json'));
+
+    expect(tsconfig.compilerOptions.noImplicitAny).toBe(true);
+    expect(tsconfig.compilerOptions.strictNullChecks).toBe(true);
+    expect(tsconfig.compilerOptions.noImplicitThis).toBe(true);
+    expect(tsconfig.compilerOptions.alwaysStrict).toBe(true);
+    expect(tsconfig.compilerOptions.strictFunctionTypes).toBe(true);
+  });
 });
