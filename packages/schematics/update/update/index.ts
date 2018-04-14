@@ -331,6 +331,60 @@ function _usageMessage(
   infoMap: Map<string, PackageInfo>,
   logger: logging.LoggerApi,
 ) {
+  const packageGroups = new Map<string, string>();
+  const packagesToUpdate = [...infoMap.entries()]
+    .map(([name, info]) => {
+      const tag = options.next ? 'next' : 'latest';
+      const version = info.npmPackageJson['dist-tags'][tag];
+      const target = info.npmPackageJson.versions[version];
+
+      return {
+        name,
+        info,
+        version,
+        tag,
+        target,
+      };
+    })
+    .filter(({ name, info, version, target }) => {
+      return (target && semver.compare(info.installed.version, version) < 0);
+    })
+    .filter(({ target }) => {
+      return target['ng-update'];
+    })
+    .map(({ name, info, version, tag, target }) => {
+      // Look for packageGroup.
+      if (target['ng-update'] && target['ng-update']['packageGroup']) {
+        const packageGroup = target['ng-update']['packageGroup'];
+        const packageGroupName = target['ng-update']['packageGroupName']
+                              || target['ng-update']['packageGroup'][0];
+        if (packageGroupName) {
+          if (packageGroups.has(name)) {
+            return null;
+          }
+
+          packageGroup.forEach((x: string) => packageGroups.set(x, packageGroupName));
+          packageGroups.set(packageGroupName, packageGroupName);
+          name = packageGroupName;
+        }
+      }
+
+      let command = `ng update ${name}`;
+      if (tag == 'next') {
+        command += ' --next';
+      }
+
+      return [name, `${info.installed.version} -> ${version}`, command];
+    })
+    .filter(x => x !== null)
+    .sort((a, b) => a && b ? a[0].localeCompare(b[0]) : 0);
+
+  if (packagesToUpdate.length == 0) {
+    logger.info('We analyzed your package.json and everything seems to be in order. Good work!');
+
+    return of<void>(undefined);
+  }
+
   logger.info(
     'We analyzed your package.json, there are some packages to update:\n',
   );
@@ -340,35 +394,20 @@ function _usageMessage(
   if (!Number.isFinite(namePad)) {
     namePad = 30;
   }
+  const pads = [namePad, 25, 0];
 
   logger.info(
     '  '
-    + 'Name'.padEnd(namePad)
-    + 'Version'.padEnd(25)
-    + '  Command to update',
+    + ['Name', 'Version', 'Command to update'].map((x, i) => x.padEnd(pads[i])).join(''),
   );
-  logger.info(' ' + '-'.repeat(namePad * 2 + 35));
+  logger.info(' ' + '-'.repeat(pads.reduce((s, x) => s += x, 0) + 20));
 
-  [...infoMap.entries()].sort().forEach(([name, info]) => {
-    const tag = options.next ? 'next' : 'latest';
-    const version = info.npmPackageJson['dist-tags'][tag];
-    const target = info.npmPackageJson.versions[version];
-
-    if (target && semver.compare(info.installed.version, version) < 0) {
-      let command = `npm install ${name}`;
-      if (target && target['ng-update']) {
-        // Show the ng command only when migrations are supported, otherwise it's a fancy
-        // npm install, really.
-        command = `ng update ${name}`;
-      }
-
-      logger.info(
-        '  '
-        + name.padEnd(namePad)
-        + `${info.installed.version} -> ${version}`.padEnd(25)
-        + '  ' + command,
-      );
+  packagesToUpdate.forEach(fields => {
+    if (!fields) {
+      return;
     }
+
+    logger.info('  ' + fields.map((x, i) => x.padEnd(pads[i])).join(''));
   });
 
   logger.info('\n');
@@ -607,6 +646,25 @@ function _getAllDependencies(tree: Tree): Map<string, VersionRange> {
   ] as [string, VersionRange][]);
 }
 
+function _formatVersion(version: string | undefined) {
+  if (version === undefined) {
+    return undefined;
+  }
+
+  if (!version.match(/^\d{1,30}\.\d{1,30}\.\d{1,30}/)) {
+    version += '.0';
+  }
+  if (!version.match(/^\d{1,30}\.\d{1,30}\.\d{1,30}/)) {
+    version += '.0';
+  }
+  if (!semver.valid(version)) {
+    throw new SchematicsException(`Invalid migration version: ${JSON.stringify(version)}`);
+  }
+
+  return version;
+}
+
+
 export default function(options: UpdateSchema): Rule {
   if (!options.packages) {
     // We cannot just return this because we need to fetch the packages from NPM still for the
@@ -623,6 +681,9 @@ export default function(options: UpdateSchema): Rule {
     }
   }
 
+  options.from = _formatVersion(options.from);
+  options.to = _formatVersion(options.to);
+
   return (tree: Tree, context: SchematicContext) => {
     const logger = context.logger;
     const allDependencies = _getAllDependencies(tree);
@@ -631,11 +692,33 @@ export default function(options: UpdateSchema): Rule {
     return observableFrom([...allDependencies.keys()]).pipe(
       // Grab all package.json from the npm repository. This requires a lot of HTTP calls so we
       // try to parallelize as many as possible.
-      mergeMap(depName => getNpmPackageJson(depName, logger)),
+      mergeMap(depName => getNpmPackageJson(depName, options.registry, logger)),
 
       // Build a map of all dependencies and their packageJson.
       reduce<NpmRepositoryPackageJson, Map<string, NpmRepositoryPackageJson>>(
-        (acc, npmPackageJson) => acc.set(npmPackageJson.name, npmPackageJson),
+        (acc, npmPackageJson) => {
+          // If the package was not found on the registry. It could be private, so we will just
+          // ignore. If the package was part of the list, we will error out, but will simply ignore
+          // if it's either not requested (so just part of package.json. silently) or if it's a
+          // `--all` situation. There is an edge case here where a public package peer depends on a
+          // private one, but it's rare enough.
+          if (!npmPackageJson.name) {
+            if (packages.has(npmPackageJson.requestedName)) {
+              if (options.all) {
+                logger.warn(`Package ${JSON.stringify(npmPackageJson.requestedName)} was not `
+                  + 'found on the registry. Skipping.');
+              } else {
+                throw new SchematicsException(
+                  `Package ${JSON.stringify(npmPackageJson.requestedName)} was not found on the `
+                  + 'registry. Cannot continue as this may be an error.');
+              }
+            }
+          } else {
+            acc.set(npmPackageJson.name, npmPackageJson);
+          }
+
+          return acc;
+        },
         new Map<string, NpmRepositoryPackageJson>(),
       ),
 

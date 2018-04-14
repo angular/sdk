@@ -32,7 +32,7 @@ describe('Browser Builder styles', () => {
       'src/pre-rename-lazy-style.css': '.pre-rename-lazy-style { color: red }',
     };
     const getStylesOption = () => [
-      { input: 'src/input-style.css' },
+      'src/input-style.css',
       { input: 'src/lazy-style.css', bundleName: 'lazy-style', lazy: true },
       { input: 'src/pre-rename-style.css', bundleName: 'renamed-style' },
       { input: 'src/pre-rename-lazy-style.css', bundleName: 'renamed-lazy-style', lazy: true },
@@ -166,7 +166,7 @@ describe('Browser Builder styles', () => {
       const overrides = {
         extractCss: true,
         sourceMap: true,
-        styles: [{ input: `src/styles.${ext}` }],
+        styles: [`src/styles.${ext}`],
       };
 
       host.replaceInFile('src/app/app.component.ts', './app.component.css',
@@ -260,7 +260,7 @@ describe('Browser Builder styles', () => {
 
       const overrides = {
         extractCss: true,
-        styles: [{ input: `src/styles.${ext}` }],
+        styles: [`src/styles.${ext}`],
         stylePreprocessorOptions: {
           includePaths: ['src/style-paths'],
         },
@@ -296,7 +296,7 @@ describe('Browser Builder styles', () => {
     const overrides = {
       aot: true,
       extractCss: true,
-      styles: [{ input: `src/styles.scss` }],
+      styles: [`src/styles.scss`],
     };
 
     runTargetSpec(host, browserTargetSpec, overrides).pipe(
@@ -332,8 +332,7 @@ describe('Browser Builder styles', () => {
     ).subscribe(undefined, done.fail, done);
   }, Timeout.Basic);
 
-  // Disables a test that relies on node_modules.
-  xit(`supports font-awesome imports`, (done) => {
+  it(`supports font-awesome imports`, (done) => {
     host.writeMultipleFiles({
       'src/styles.scss': `
         $fa-font-path: "~font-awesome/fonts";
@@ -341,14 +340,10 @@ describe('Browser Builder styles', () => {
       `,
     });
 
-    const overrides = { extractCss: true, styles: [{ input: `src/styles.scss` }] };
+    const overrides = { extractCss: true, styles: [`src/styles.scss`] };
 
     runTargetSpec(host, browserTargetSpec, overrides).pipe(
       tap((buildEvent) => expect(buildEvent.success).toBe(true)),
-      // TODO: find a way to check logger/output for warnings.
-      // if (stdout.match(/postcss-url: \.+: Can't read file '\.+', ignoring/)) {
-      //   throw new Error('Expected no postcss-url file read warnings.');
-      // }
     ).subscribe(undefined, done.fail, done);
   }, 30000);
 
@@ -524,8 +519,8 @@ describe('Browser Builder styles', () => {
   it(`supports bootstrap@4`, (done) => {
     const overrides = {
       extractCss: true,
-      styles: [{ input: '../../../../node_modules/bootstrap/dist/css/bootstrap.css' }],
-      scripts: [{ input: '../../../../node_modules/bootstrap/dist/js/bootstrap.js' }],
+      styles: ['../../../../node_modules/bootstrap/dist/css/bootstrap.css'],
+      scripts: ['../../../../node_modules/bootstrap/dist/js/bootstrap.js'],
     };
 
     runTargetSpec(host, browserTargetSpec, overrides).pipe(

@@ -36,6 +36,8 @@ function usage(exitCode = 0): never {
     Options:
         --debug             Debug mode. This is true by default if the collection is a relative
                             path (in that case, turn off with --debug=false).
+        --allowPrivate      Allow private schematics to be run from the command line. Default to
+                            false.
         --dry-run           Do not output anything, but instead just show what actions would be
                             performed. Default to true if debug is also true.
         --force             Force overwriting files that would otherwise be an error.
@@ -87,7 +89,15 @@ function parseSchematicName(str: string | null): { collection: string, schematic
 
 
 /** Parse the command line. */
-const booleanArgs = [ 'debug', 'dry-run', 'force', 'help', 'list-schematics', 'verbose' ];
+const booleanArgs = [
+  'allowPrivate',
+  'debug',
+  'dry-run',
+  'force',
+  'help',
+  'list-schematics',
+  'verbose',
+];
 const argv = minimist(process.argv.slice(2), {
   boolean: booleanArgs,
   default: {
@@ -124,6 +134,7 @@ if (argv['list-schematics']) {
 const debug: boolean = argv.debug === null ? isLocalCollection : argv.debug;
 const dryRun: boolean = argv['dry-run'] === null ? debug : argv['dry-run'];
 const force = argv['force'];
+const allowPrivate = argv['allowPrivate'];
 
 /** Create a Virtual FS Host scoped to where the process is being run. **/
 const fsHost = new virtualFs.ScopedHost(new NodeJsSyncHost(), normalize(process.cwd()));
@@ -137,7 +148,8 @@ let nothingDone = true;
 
 // Logging queue that receives all the messages to show the users. This only get shown when no
 // errors happened.
-const loggingQueue: string[] = [];
+let loggingQueue: string[] = [];
+let error = false;
 
 /**
  * Logs out dry run events.
@@ -154,6 +166,8 @@ workflow.reporter.subscribe((event: DryRunEvent) => {
 
   switch (event.kind) {
     case 'error':
+      error = true;
+
       const desc = event.description == 'alreadyExist' ? 'already exists' : 'does not exist.';
       logger.warn(`ERROR! ${event.path} ${desc}.`);
       break;
@@ -173,6 +187,22 @@ workflow.reporter.subscribe((event: DryRunEvent) => {
     case 'rename':
       loggingQueue.push(`${terminal.blue('RENAME')} ${event.path} => ${event.to}`);
       break;
+  }
+});
+
+
+/**
+ * Listen to lifecycle events of the workflow to flush the logs between each phases.
+ */
+workflow.lifeCycle.subscribe(event => {
+  if (event.kind == 'workflow-end' || event.kind == 'post-tasks-start') {
+    if (!error) {
+      // Flush the log queue and clean the error state.
+      loggingQueue.forEach(log => logger.info(log));
+    }
+
+    loggingQueue = [];
+    error = false;
   }
 });
 
@@ -217,6 +247,7 @@ workflow.execute({
   collection: collectionName,
   schematic: schematicName,
   options: args,
+  allowPrivate: allowPrivate,
   debug: debug,
   logger: logger,
 })
@@ -235,9 +266,6 @@ workflow.execute({
     process.exit(1);
   },
   complete() {
-    // Output the logging queue, no error happened.
-    loggingQueue.forEach(log => logger.info(log));
-
     if (nothingDone) {
       logger.info('Nothing to be done.');
     }

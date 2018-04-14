@@ -33,12 +33,6 @@
       "default": true,
       "description": "Specifies if a spec file is generated."
     },
-    "module": {
-      "type": "string",
-      "default": "",
-      "description": "Allows specification of the providing module.",
-      "alias": "m"
-    },
     "http": {
       "type": "boolean",
       "default": false,
