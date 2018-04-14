@@ -111,6 +111,11 @@
       "type": "boolean",
       "default": false,
       "alias": "S"
+    },
+    "strict": {
+      "description": "Configure TypeScript in strict mode.",
+      "type": "boolean",
+      "default": false
     }
   },
   "required": [

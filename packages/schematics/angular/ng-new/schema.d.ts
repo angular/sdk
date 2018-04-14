@@ -67,4 +67,8 @@ export interface Schema {
    * Skip creating spec files.
    */
   skipTests?: boolean;
+  /**
+   * Configure TypeScript in strict mode.
+   */
+  strict?: boolean;
 }
