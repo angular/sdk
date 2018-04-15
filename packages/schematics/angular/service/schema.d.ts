@@ -27,4 +27,8 @@ export interface Schema {
      * Specifies if a spec file is generated.
      */
     spec?: boolean;
+    /**
+     * Specifies if HttpClient is injected.
+     */
+    http?: boolean;
 }

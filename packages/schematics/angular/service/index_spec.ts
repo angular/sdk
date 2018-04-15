@@ -21,6 +21,7 @@ describe('Service Schematic', () => {
     name: 'foo',
     spec: true,
     flat: false,
+    http: false,
   };
 
   const workspaceOptions: WorkspaceOptions = {

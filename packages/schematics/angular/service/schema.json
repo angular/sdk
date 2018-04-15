@@ -32,6 +32,11 @@
       "type": "boolean",
       "default": true,
       "description": "Specifies if a spec file is generated."
+    },
+    "http": {
+      "type": "boolean",
+      "default": false,
+      "description": "Specifies if HttpClient is injected."
     }
   },
   "required": []
