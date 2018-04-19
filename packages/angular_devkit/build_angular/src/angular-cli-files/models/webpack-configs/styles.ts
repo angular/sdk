@@ -158,7 +158,7 @@ export function getStylesConfig(wco: WebpackConfigOptions) {
     && buildOptions.stylePreprocessorOptions.includePaths.length > 0
   ) {
     buildOptions.stylePreprocessorOptions.includePaths.forEach((includePath: string) =>
-      includePaths.push(path.resolve(root, includePath)));
+      includePaths.push(path.resolve(projectRoot, includePath)));
     lessPathOptions = {
       paths: includePaths,
     };
