@@ -16,6 +16,7 @@ function getJsonFileContent(tree: UnitTestTree, path: string) {
   return JSON.parse(tree.readContent(path));
 }
 
+// tslint:disable:max-line-length
 describe('Library Schematic', () => {
   const schematicRunner = new SchematicTestRunner(
     '@schematics/ng_packagr',
@@ -44,6 +45,7 @@ describe('Library Schematic', () => {
     expect(files.indexOf('/projects/foo/karma.conf.js')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/ng-package.json')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/package.json')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/tslint.json')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/src/test.ts')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/src/my_index.ts')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/src/lib/foo.module.ts')).toBeGreaterThanOrEqual(0);
@@ -82,10 +84,45 @@ describe('Library Schematic', () => {
     expect(workspace.projects.foo).toBeDefined();
   });
 
+  it('should set the prefix to lib if none is set', () => {
+    const tree = schematicRunner.runSchematic('library', defaultOptions, workspaceTree);
+
+    const workspace = JSON.parse(tree.readContent('/angular.json'));
+    expect(workspace.projects.foo.prefix).toEqual('lib');
+  });
+
+  it('should set the prefix correctly', () => {
+    const options = { ...defaultOptions, prefix: 'pre' };
+    const tree = schematicRunner.runSchematic('application', options, workspaceTree);
+
+    const workspace = JSON.parse(tree.readContent('/angular.json'));
+    expect(workspace.projects.foo.prefix).toEqual('pre');
+  });
+
+  it('should handle a pascalCasedName', () => {
+    const options = {...defaultOptions, name: 'pascalCasedName'};
+    const tree = schematicRunner.runSchematic('library', options, workspaceTree);
+    const config = getJsonFileContent(tree, '/angular.json');
+    const project = config.projects.pascalCasedName;
+    expect(project).toBeDefined();
+    expect(project.root).toEqual('projects/pascal-cased-name');
+    const svcContent = tree.readContent('/projects/pascal-cased-name/src/lib/pascal-cased-name.service.ts');
+    expect(svcContent).toMatch(/providedIn: 'root'/);
+  });
+
   it('should export the component in the NgModule', () => {
     const tree = schematicRunner.runSchematic('library', defaultOptions, workspaceTree);
     const fileContent = getFileContent(tree, '/projects/foo/src/lib/foo.module.ts');
     expect(fileContent).toContain('exports: [FooComponent]');
+  });
+
+  it('should set the right path and prefix in the tslint file', () => {
+    const tree = schematicRunner.runSchematic('library', defaultOptions, workspaceTree);
+    const path = '/projects/foo/tslint.json';
+    const content = JSON.parse(tree.readContent(path));
+    expect(content.extends).toMatch('../../tslint.json');
+    expect(content.rules['directive-selector'][2]).toMatch('lib');
+    expect(content.rules['component-selector'][2]).toMatch('lib');
   });
 
   describe(`update package.json`, () => {

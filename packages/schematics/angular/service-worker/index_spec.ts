@@ -68,7 +68,7 @@ describe('Service Worker Schematic', () => {
     const pkgText = tree.readContent('/package.json');
     const pkg = JSON.parse(pkgText);
     const version = pkg.dependencies['@angular/core'];
-    expect(pkg.dependencies['@angular/platform-server']).toEqual(version);
+    expect(pkg.dependencies['@angular/service-worker']).toEqual(version);
   });
 
   it('should import ServiceWorkerModule', () => {
@@ -95,5 +95,14 @@ describe('Service Worker Schematic', () => {
     const tree = schematicRunner.runSchematic('service-worker', defaultOptions, appTree);
     const path = '/projects/bar/ngsw-config.json';
     expect(tree.exists(path)).toEqual(true);
+  });
+
+  it('should update the index file', () => {
+    const tree = schematicRunner.runSchematic('service-worker', defaultOptions, appTree);
+    const content = tree.readContent('projects/bar/src/index.html');
+
+    expect(content).toMatch(/<link rel="manifest" href="\.\/manifest.json">/);
+    expect(content).toMatch(/<meta name="Description" content="Angular Application">/);
+    expect(content).toMatch(/<meta name="theme-color" content="#FFFFFF">/);
   });
 });

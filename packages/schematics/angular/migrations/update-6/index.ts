@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { JsonObject, Path, basename, join, normalize } from '@angular-devkit/core';
+import { JsonObject, Path, join, normalize } from '@angular-devkit/core';
 import {
   Rule,
   SchematicContext,
@@ -28,6 +28,9 @@ const defaults = {
   karma: 'karma.conf.js',
   protractor: 'protractor.conf.js',
   testTsConfig: 'tsconfig.spec.json',
+  serverOutDir: 'dist-server',
+  serverMain: 'main.server.ts',
+  serverTsConfig: 'tsconfig.server.json',
 };
 
 function getConfigPath(tree: Tree): Path {
@@ -70,6 +73,7 @@ function migrateConfiguration(oldConfig: CliConfig): Rule {
     const configPath = normalize('angular.json');
     context.logger.info(`Updating configuration`);
     const config: JsonObject = {
+      '$schema': './node_modules/@angular-devkit/core/src/workspace/workspace-schema.json',
       version: 1,
       newProjectRoot: 'projects',
       projects: extractProjectsConfig(oldConfig, host),
@@ -96,8 +100,13 @@ function migrateConfiguration(oldConfig: CliConfig): Rule {
   };
 }
 
-function extractCliConfig(_config: CliConfig): JsonObject | null {
-  return null;
+function extractCliConfig(config: CliConfig): JsonObject | null {
+  const newConfig: JsonObject = {};
+  if (config.packageManager && config.packageManager !== 'default') {
+    newConfig['packageManager'] = config.packageManager;
+  }
+
+  return newConfig;
 }
 
 function extractSchematicsConfig(config: CliConfig): JsonObject | null {
@@ -195,8 +204,11 @@ function extractProjectsConfig(config: CliConfig, tree: Tree): JsonObject {
 
   const apps = config.apps || [];
   // convert the apps to projects
-  const projectMap = apps
-    .map((app: AppConfig, idx: number) => {
+  const browserApps = apps.filter(app => app.platform !== 'server');
+  const serverApps = apps.filter(app => app.platform === 'server');
+
+  const projectMap = browserApps
+    .map((app, idx) => {
       const defaultAppName = idx === 0 ? defaultAppNamePrefix : `${defaultAppNamePrefix}${idx}`;
       const name = app.name || defaultAppName;
       const outDir = app.outDir || defaults.outDir;
@@ -279,8 +291,8 @@ function extractProjectsConfig(config: CliConfig, tree: Tree): JsonObject {
             ...(isProduction && serviceWorker ? { serviceWorker: true } : {}),
             fileReplacements: [
               {
-                src: `${app.root}/${source}`,
-                replaceWith: `${app.root}/${environments[environment]}`,
+                replace: `${app.root}/${source}`,
+                with: `${app.root}/${environments[environment]}`,
               },
             ],
           };
@@ -309,20 +321,14 @@ function extractProjectsConfig(config: CliConfig, tree: Tree): JsonObject {
       }
 
       function _extraEntryMapper(extraEntry: string | JsonObject) {
-        let entry: JsonObject;
+        let entry: string | JsonObject;
         if (typeof extraEntry === 'string') {
-          entry = { input: join(app.root as Path, extraEntry) };
+          entry = join(app.root as Path, extraEntry);
         } else {
           const input = join(app.root as Path, extraEntry.input as string || '');
-          const lazy = !!extraEntry.lazy;
-          entry = { input };
+          entry = { input, lazy: extraEntry.lazy };
 
-          if (!extraEntry.output && lazy) {
-            entry.lazy = true;
-            entry.bundleName = basename(
-              normalize(input.replace(/\.(js|css|scss|sass|less|styl)$/i, '')),
-            );
-          } else if (extraEntry.output) {
+          if (extraEntry.output) {
             entry.bundleName = extraEntry.output;
           }
         }
@@ -440,6 +446,22 @@ function extractProjectsConfig(config: CliConfig, tree: Tree): JsonObject {
           options: lintOptions,
         };
 
+      // server target
+      const serverApp = serverApps
+        .filter(serverApp => app.root === serverApp.root && app.index === serverApp.index)[0];
+
+      if (serverApp) {
+        const serverOptions: JsonObject = {
+          outputPath: serverApp.outDir || defaults.serverOutDir,
+          main: serverApp.main || defaults.serverMain,
+          tsConfig: serverApp.tsconfig || defaults.serverTsConfig,
+        };
+        const serverTarget: JsonObject = {
+          builder: '@angular-devkit/build-angular:server',
+          options: serverOptions,
+        };
+        architect.server = serverTarget;
+      }
       const e2eProject: JsonObject = {
         root: project.root,
         projectType: 'application',
@@ -543,8 +565,36 @@ function updatePackageJson(packageManager?: string) {
   };
 }
 
+function updateTsLintConfig(): Rule {
+  return (host: Tree, context: SchematicContext) => {
+    const tsLintPath = '/tslint.json';
+    const buffer = host.read(tsLintPath);
+    if (!buffer) {
+      return;
+    }
+    const tsCfg = JSON.parse(buffer.toString());
+
+    if (tsCfg.rules && tsCfg.rules['import-blacklist'] &&
+        tsCfg.rules['import-blacklist'].indexOf('rxjs') !== -1) {
+
+      tsCfg.rules['import-blacklist'] = tsCfg.rules['import-blacklist']
+        .filter((rule: string | boolean) => rule !== 'rxjs');
+
+      host.overwrite(tsLintPath, JSON.stringify(tsCfg, null, 2));
+    }
+
+    return host;
+  };
+}
+
 export default function (): Rule {
   return (host: Tree, context: SchematicContext) => {
+    if (host.exists('/.angular.json') || host.exists('/angular.json')) {
+      context.logger.info('Found a modern configuration file. Nothing to be done.');
+
+      return host;
+    }
+
     const configPath = getConfigPath(host);
     const configBuffer = host.read(normalize(configPath));
     if (configBuffer == null) {
@@ -557,6 +607,7 @@ export default function (): Rule {
       migrateConfiguration(config),
       updateSpecTsConfig(config),
       updatePackageJson(config.packageManager),
+      updateTsLintConfig(),
     ])(host, context);
   };
 }

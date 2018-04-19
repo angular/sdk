@@ -20,6 +20,7 @@ import {
   template,
   url,
 } from '@angular-devkit/schematics';
+import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks';
 import { WorkspaceSchema, getWorkspace, getWorkspacePath } from '../utility/config';
 import { latestVersions } from '../utility/latest-versions';
 import { Schema as LibraryOptions } from './schema';
@@ -118,14 +119,15 @@ function addDependenciesToPackageJson() {
   };
 }
 
-function addAppToWorkspaceFile(options: LibraryOptions, workspace: WorkspaceSchema): Rule {
+function addAppToWorkspaceFile(options: LibraryOptions, workspace: WorkspaceSchema,
+                               projectRoot: string): Rule {
   return (host: Tree, context: SchematicContext) => {
 
-    const projectRoot = `${workspace.newProjectRoot}/${options.name}`;
     // tslint:disable-next-line:no-any
     const project: any = {
       root: `${projectRoot}`,
       projectType: 'library',
+      prefix: options.prefix || 'lib',
       architect: {
         build: {
           builder: '@angular-devkit/build-ng-packagr:build',
@@ -172,17 +174,21 @@ export default function (options: LibraryOptions): Rule {
       throw new SchematicsException(`Invalid options, "name" is required.`);
     }
     const name = options.name;
+    const prefix = options.prefix || 'lib';
 
     const workspace = getWorkspace(host);
     const newProjectRoot = workspace.newProjectRoot;
-    const projectRoot = `${newProjectRoot}/${options.name}`;
+    const projectRoot = `${newProjectRoot}/${strings.dasherize(options.name)}`;
     const sourceDir = `${projectRoot}/src/lib`;
+    const relativeTsLintPath = projectRoot.split('/').map(x => '..').join('/');
 
     const templateSource = apply(url('./files'), [
       template({
         ...strings,
         ...options,
         projectRoot,
+        relativeTsLintPath,
+        prefix,
       }),
       // TODO: Moving inside `branchAndMerge` should work but is bugged right now.
       // The __projectRoot__ is being used meanwhile.
@@ -191,7 +197,7 @@ export default function (options: LibraryOptions): Rule {
 
     return chain([
       branchAndMerge(mergeWith(templateSource)),
-      addAppToWorkspaceFile(options, workspace),
+      addAppToWorkspaceFile(options, workspace, projectRoot),
       options.skipPackageJson ? noop() : addDependenciesToPackageJson(),
       options.skipTsConfig ? noop() : updateTsConfig(name),
       schematic('module', {
@@ -203,6 +209,7 @@ export default function (options: LibraryOptions): Rule {
       }),
       schematic('component', {
         name: name,
+        selector: `${prefix}-${name}`,
         inlineStyle: true,
         inlineTemplate: true,
         flat: true,
@@ -213,8 +220,10 @@ export default function (options: LibraryOptions): Rule {
         name: name,
         flat: true,
         path: sourceDir,
-        module: `${name}.module.ts`,
       }),
+      (_tree: Tree, context: SchematicContext) => {
+        context.addTask(new NodePackageInstallTask());
+      },
     ])(host, context);
   };
 }

@@ -107,6 +107,11 @@ describe('Migration to v6', () => {
     tree.create('/src/favicon.ico', '');
   });
 
+  // tslint:disable-next-line:no-any
+  function getConfig(tree: UnitTestTree): any {
+    return JSON.parse(tree.readContent(configPath));
+  }
+
   describe('file creation/deletion', () => {
     it('should delete the old config file', () => {
       tree.create(oldConfigPath, JSON.stringify(baseConfig, null, 2));
@@ -123,11 +128,6 @@ describe('Migration to v6', () => {
   });
 
   describe('config file contents', () => {
-    // tslint:disable-next-line:no-any
-    function getConfig(tree: UnitTestTree): any {
-      return JSON.parse(tree.readContent(configPath));
-    }
-
     it('should set root values', () => {
       tree.create(oldConfigPath, JSON.stringify(baseConfig, null, 2));
       tree = schematicRunner.runSchematic('migration-01', defaultOptions, tree);
@@ -505,7 +505,7 @@ describe('Migration to v6', () => {
         const build = getConfig(tree).projects.foo.architect.build;
         expect(build.builder).toEqual('@angular-devkit/build-angular:browser');
         expect(build.options.scripts).toEqual([]);
-        expect(build.options.styles).toEqual([{ input: 'src/styles.css' }]);
+        expect(build.options.styles).toEqual(['src/styles.css']);
         expect(build.options.assets).toEqual([
           { glob: '**/*', input: 'src/assets', output: '/assets' },
           { glob: 'favicon.ico', input: 'src', output: '/' },
@@ -525,8 +525,8 @@ describe('Migration to v6', () => {
             vendorChunk: false,
             buildOptimizer: true,
             fileReplacements: [{
-              src: 'src/environments/environment.ts',
-              replaceWith: 'src/environments/environment.prod.ts',
+              replace: 'src/environments/environment.ts',
+              with: 'src/environments/environment.prod.ts',
             }],
           },
         });
@@ -566,7 +566,7 @@ describe('Migration to v6', () => {
         expect(test.options.tsConfig).toEqual('src/tsconfig.spec.json');
         expect(test.options.karmaConfig).toEqual('./karma.conf.js');
         expect(test.options.scripts).toEqual([]);
-        expect(test.options.styles).toEqual([{ input: 'src/styles.css' }]);
+        expect(test.options.styles).toEqual(['src/styles.css']);
         expect(test.options.assets).toEqual([
           { glob: '**/*', input: 'src/assets', output: '/assets' },
           { glob: 'favicon.ico', input: 'src', output: '/' },
@@ -686,6 +686,89 @@ describe('Migration to v6', () => {
       const content = tree.readContent('/package.json');
       const pkg = JSON.parse(content);
       expect(pkg.devDependencies['@angular-devkit/build-angular']).toBeDefined();
+    });
+  });
+
+  describe('tslint.json', () => {
+    const tslintPath = '/tslint.json';
+    // tslint:disable-next-line:no-any
+    let tslintConfig: any;
+    beforeEach(() => {
+      tslintConfig = {
+        rules: {
+          'import-blacklist': ['rxjs'],
+        },
+      };
+    });
+
+    it('should remove "rxjs" from the "import-blacklist" rule', () => {
+      tree.create(oldConfigPath, JSON.stringify(baseConfig, null, 2));
+      tree.create(tslintPath, JSON.stringify(tslintConfig, null, 2));
+      tree = schematicRunner.runSchematic('migration-01', defaultOptions, tree);
+      const tslint = JSON.parse(tree.readContent(tslintPath));
+      const blacklist = tslint.rules['import-blacklist'];
+      expect(blacklist).toEqual([]);
+    });
+
+    it('should work if "rxjs" is not in the "import-blacklist" rule', () => {
+      tree.create(oldConfigPath, JSON.stringify(baseConfig, null, 2));
+      tslintConfig.rules['import-blacklist'] = [];
+      tree.create(tslintPath, JSON.stringify(tslintConfig, null, 2));
+      tree = schematicRunner.runSchematic('migration-01', defaultOptions, tree);
+      const tslint = JSON.parse(tree.readContent(tslintPath));
+      const blacklist = tslint.rules['import-blacklist'];
+      expect(blacklist).toEqual([]);
+    });
+  });
+
+  describe('server/universal apps', () => {
+    let serverApp;
+    beforeEach(() => {
+      serverApp = {
+        platform: 'server',
+        root: 'src',
+        outDir: 'dist/server',
+        assets: [
+          'assets',
+          'favicon.ico',
+        ],
+        index: 'index.html',
+        main: 'main.server.ts',
+        test: 'test.ts',
+        tsconfig: 'tsconfig.server.json',
+        testTsconfig: 'tsconfig.spec.json',
+        prefix: 'app',
+        styles: [
+          'styles.css',
+        ],
+        scripts: [],
+        environmentSource: 'environments/environment.ts',
+        environments: {
+          dev: 'environments/environment.ts',
+          prod: 'environments/environment.prod.ts',
+        },
+      };
+      baseConfig.apps.push(serverApp);
+    });
+
+    it('should not create a separate app for server apps', () => {
+      tree.create(oldConfigPath, JSON.stringify(baseConfig, null, 2));
+      tree = schematicRunner.runSchematic('migration-01', defaultOptions, tree);
+      const config = getConfig(tree);
+      const appCount = Object.keys(config.projects).length;
+      expect(appCount).toEqual(2);
+    });
+
+    it('should create a server target', () => {
+      tree.create(oldConfigPath, JSON.stringify(baseConfig, null, 2));
+      tree = schematicRunner.runSchematic('migration-01', defaultOptions, tree);
+      const config = getConfig(tree);
+      const target = config.projects.foo.architect.server;
+      expect(target).toBeDefined();
+      expect(target.builder).toEqual('@angular-devkit/build-angular:server');
+      expect(target.options.outputPath).toEqual('dist/server');
+      expect(target.options.main).toEqual('main.server.ts');
+      expect(target.options.tsConfig).toEqual('tsconfig.server.json');
     });
   });
 });

@@ -9,6 +9,7 @@ import * as ajv from 'ajv';
 import * as http from 'http';
 import { Observable, from, of as observableOf } from 'rxjs';
 import { concatMap, map, switchMap, tap } from 'rxjs/operators';
+import { BaseException } from '../../exception/exception';
 import { PartiallyOrderedSet, isObservable } from '../../utils';
 import { JsonObject, JsonValue } from '../interface';
 import {
@@ -16,6 +17,7 @@ import {
   SchemaFormatter,
   SchemaRegistry,
   SchemaValidator,
+  SchemaValidatorError,
   SchemaValidatorResult,
   SmartDefaultProvider,
 } from './interface';
@@ -29,6 +31,42 @@ interface AjvValidationError {
   errors: Array<ajv.ErrorObject>;
   ajv: true;
   validation: true;
+}
+
+export class SchemaValidationException extends BaseException {
+  public readonly errors: SchemaValidatorError[];
+
+  constructor(
+    errors?: SchemaValidatorError[],
+    baseMessage = 'Schema validation failed with the following errors:',
+  ) {
+    if (!errors || errors.length === 0) {
+      super('Schema validation failed.');
+
+      return;
+    }
+
+    const messages = SchemaValidationException.createMessages(errors);
+    super(`${baseMessage}\n  ${messages.join('\n  ')}`);
+    this.errors = errors;
+  }
+
+  public static createMessages(errors?: SchemaValidatorError[]): string[] {
+    if (!errors || errors.length === 0) {
+      return [];
+    }
+
+    const messages = errors.map((err) => {
+      let message = `Data path ${JSON.stringify(err.dataPath)} ${err.message}`;
+      if (err.keyword === 'additionalProperties') {
+        message += `(${err.params.additionalProperty})`;
+      }
+
+      return message + '.';
+    });
+
+    return messages;
+  }
 }
 
 export class CoreSchemaRegistry implements SchemaRegistry {
@@ -55,10 +93,12 @@ export class CoreSchemaRegistry implements SchemaRegistry {
     this._ajv = ajv({
       useDefaults: true,
       formats: formatsObj,
-      loadSchema: (uri: string) => this._fetch(uri) as ajv.Thenable<object>,
+      loadSchema: (uri: string) => this._fetch(uri),
+      schemaId: 'auto',
     });
 
     this._ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
+    this._ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
 
     this.addPostTransform(addUndefinedDefaults);
   }
@@ -214,13 +254,7 @@ export class CoreSchemaRegistry implements SchemaRegistry {
               return {
                 data,
                 success: false,
-                errors: (validate.errors || [])
-                  .map((err) => `Data path ${JSON.stringify(err.dataPath)} ${err.message}${
-                    err.keyword === 'additionalProperties' && err.params
-                      // tslint:disable-next-line:no-any
-                      ? ` (${(err.params as any)['additionalProperty']}).`
-                      : '.'
-                    }`),
+                errors: (validate.errors || []),
               } as SchemaValidatorResult;
             }),
           );
@@ -276,7 +310,7 @@ export class CoreSchemaRegistry implements SchemaRegistry {
           );
 
           return function() {
-            return <ajv.Thenable<boolean>> Promise.resolve(true);
+            return Promise.resolve(true);
           };
         },
       });

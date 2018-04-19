@@ -47,6 +47,7 @@ describe('Application Schematic', () => {
     expect(files.indexOf('/projects/foo/karma.conf.js')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/tsconfig.app.json')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/tsconfig.spec.json')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/tslint.json')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/src/environments/environment.ts')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/src/environments/environment.prod.ts')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/src/favicon.ico')).toBeGreaterThanOrEqual(0);
@@ -68,6 +69,22 @@ describe('Application Schematic', () => {
     const tree = schematicRunner.runSchematic('application', options, workspaceTree);
     const workspace = JSON.parse(tree.readContent('/angular.json'));
     expect(workspace.projects.foo).toBeDefined();
+  });
+
+  it('should set the prefix to app if none is set', () => {
+    const options = { ...defaultOptions };
+
+    const tree = schematicRunner.runSchematic('application', options, workspaceTree);
+    const workspace = JSON.parse(tree.readContent('/angular.json'));
+    expect(workspace.projects.foo.prefix).toEqual('app');
+  });
+
+  it('should set the prefix correctly', () => {
+    const options = { ...defaultOptions, prefix: 'pre' };
+
+    const tree = schematicRunner.runSchematic('application', options, workspaceTree);
+    const workspace = JSON.parse(tree.readContent('/angular.json'));
+    expect(workspace.projects.foo.prefix).toEqual('pre');
   });
 
   it('should handle the routing flag', () => {
@@ -107,6 +124,15 @@ describe('Application Schematic', () => {
     expect(content).toMatch('../../tsconfig.json');
     const specTsConfig = JSON.parse(content);
     expect(specTsConfig.files).toEqual(['src/test.ts', 'src/polyfills.ts']);
+  });
+
+  it('should set the right path and prefix in the tslint file', () => {
+    const tree = schematicRunner.runSchematic('application', defaultOptions, workspaceTree);
+    const path = '/projects/foo/tslint.json';
+    const content = JSON.parse(tree.readContent(path));
+    expect(content.extends).toMatch('../../tslint.json');
+    expect(content.rules['directive-selector'][2]).toMatch('app');
+    expect(content.rules['component-selector'][2]).toMatch('app');
   });
 
   describe(`update package.json`, () => {
@@ -157,6 +183,7 @@ describe('Application Schematic', () => {
       expect(files.indexOf('/src/karma.conf.js')).toBeGreaterThanOrEqual(0);
       expect(files.indexOf('/src/tsconfig.app.json')).toBeGreaterThanOrEqual(0);
       expect(files.indexOf('/src/tsconfig.spec.json')).toBeGreaterThanOrEqual(0);
+      expect(files.indexOf('/src/tslint.json')).toBeGreaterThanOrEqual(0);
       expect(files.indexOf('/src/environments/environment.ts')).toBeGreaterThanOrEqual(0);
       expect(files.indexOf('/src/environments/environment.prod.ts')).toBeGreaterThanOrEqual(0);
       expect(files.indexOf('/src/favicon.ico')).toBeGreaterThanOrEqual(0);
@@ -195,6 +222,16 @@ describe('Application Schematic', () => {
       const specTsConfig = JSON.parse(tree.readContent('/src/tsconfig.spec.json'));
       expect(specTsConfig.extends).toEqual('../tsconfig.json');
       expect(specTsConfig.files).toEqual(['test.ts', 'polyfills.ts']);
+    });
+
+    it('should set the relative path and prefix in the tslint file', () => {
+      const options = { ...defaultOptions, projectRoot: '' };
+
+      const tree = schematicRunner.runSchematic('application', options, workspaceTree);
+      const content = JSON.parse(tree.readContent('/src/tslint.json'));
+      expect(content.extends).toMatch('../tslint.json');
+      expect(content.rules['directive-selector'][2]).toMatch('app');
+      expect(content.rules['component-selector'][2]).toMatch('app');
     });
   });
 });
