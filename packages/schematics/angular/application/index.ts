@@ -127,6 +127,11 @@ function addAppToWorkspaceFile(options: ApplicationOptions, workspace: Workspace
                 output: '/',
               },
               {
+                glob: 'manifest.webmanifest',
+                input: `${projectRoot}src`,
+                output: '/',
+              },
+              {
                 glob: '**/*',
                 input: `${projectRoot}src/assets`,
                 output: '/assets',

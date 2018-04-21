@@ -52,6 +52,13 @@ describe('Application Schematic', () => {
     expect(files.indexOf('/projects/foo/src/environments/environment.prod.ts')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/src/favicon.ico')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/src/index.html')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/manifest.webmanifest')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/assets/icon-128x128.png')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/assets/icon-144x144.png')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/assets/icon-152x152.png')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/assets/icon-192x192.png')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/assets/icon-256x256.png')).toBeGreaterThanOrEqual(0);
+    expect(files.indexOf('/projects/foo/src/assets/icon-512x512.png')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/src/main.ts')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/src/polyfills.ts')).toBeGreaterThanOrEqual(0);
     expect(files.indexOf('/projects/foo/src/styles.css')).toBeGreaterThanOrEqual(0);

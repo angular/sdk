@@ -1,0 +1,42 @@
+{
+  "name": "AngularApp",
+  "short_name": "AngularApp",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#dd0031",
+  "theme_color": "#ffffff",
+  "orientation": "portrait",
+  "description": "An Angular application created with the Angular CLI.",
+  "icons": [
+    {
+      "src":"assets/icon-128x128.png",
+      "sizes": "128x182",
+      "type": "image/png"
+    },
+    {
+      "src":"assets/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src":"assets/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src":"assets/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src":"assets/icon-256x256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src":"assets/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
