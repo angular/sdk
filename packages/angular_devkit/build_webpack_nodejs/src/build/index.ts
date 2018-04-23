@@ -28,6 +28,11 @@ import { getWebpackDevConfig } from '../webpack/dev';
 import { getWebpackProdConfig } from '../webpack/prod';
 const webpackMerge = require('webpack-merge');
 
+const WELL_KNOWN_NON_BUNDLEABLE_MODULES = [
+  'pg',
+  'optional',
+];
+
 export interface NodejsBuildBuilderOptions {
   main: string;
   outputPath: string;
@@ -49,7 +54,7 @@ export class ServerBuilder implements Builder<NodejsBuildBuilderOptions> {
   constructor(public context: BuilderContext) {}
 
   run(target: BuilderConfiguration<NodejsBuildBuilderOptions>): Observable<BuildEvent> {
-    const root = getSystemPath(this.context.workspace.root);
+    const root = this.context.workspace.root;
     const options = target.options;
     const outfileName = makeOutfileName(resolve(root, options.main));
 
@@ -76,7 +81,7 @@ export class ServerBuilder implements Builder<NodejsBuildBuilderOptions> {
 
     const commonWebpackConfig = getCommonWebpackConfig(
       absMain, absOutDir, absTsConfig, outfileName, options);
-    const prodWebpackConfig = getWebpackProdConfig(options.externals);
+    const prodWebpackConfig = getWebpackProdConfig();
     const devWebppackConfig = getWebpackDevConfig();
 
     const webpackConfig = webpackMerge(
@@ -99,23 +104,36 @@ export class ServerBuilder implements Builder<NodejsBuildBuilderOptions> {
           resolve(root, alias.replaceWith));
     }
 
+    const unbundledModules: string[] = [];
+
+    if (options.optimization) {
+      const externals = WELL_KNOWN_NON_BUNDLEABLE_MODULES.concat(options.externals);
+      webpackConfig.externals = [
+        function(context, request, callback: Function) {
+          if (externals.includes(request)) {
+            unbundledModules.push(request);
+
+            // not bundled
+            return callback(null, 'commonjs ' + request);
+          }
+          // bundled
+          callback();
+        },
+      ];
+    }
+
+
     const compiler = webpack(webpackConfig);
 
-    return this.startWebpack(options.watch, compiler, options.verbose).pipe(
-      map(success => ({success})),
-    );
-  }
-
-  private startWebpack(watch: boolean, compiler: webpack.Compiler, verbose: boolean) {
     return new Observable<boolean>(obs => {
       const handler = (err: Error, stats: webpack.Stats) => {
         if (err) {
           return obs.error(err);
         }
 
-        const statsConfig = getWebpackStatsConfig(verbose);
+        const statsConfig = getWebpackStatsConfig(options.verbose);
         const json = stats.toJson(statsConfig);
-        if (verbose) {
+        if (options.verbose) {
           this.context.logger.info(stats.toString(statsConfig));
         } else {
           this.context.logger.info(statsToString(json, statsConfig));
@@ -127,11 +145,19 @@ export class ServerBuilder implements Builder<NodejsBuildBuilderOptions> {
         if (stats.hasErrors()) {
           this.context.logger.error(statsErrorsToString(json, statsConfig));
         }
+        if (unbundledModules.length > 0) {
+          // TODO: generate package.json to match?
+          this.context.logger
+          .info(`The following modules have been excluded from the bundle.
+          Ensure they are avilable at runtime`);
+          this.context.logger.info(`${unbundledModules}`);
+        }
+
 
         obs.next(!stats.hasErrors());
       };
 
-      if (watch) {
+      if (options.watch) {
         const watching = compiler.watch({}, handler);
 
         return () => watching.close(() => {});
@@ -141,7 +167,9 @@ export class ServerBuilder implements Builder<NodejsBuildBuilderOptions> {
           obs.complete();
         });
       }
-    });
+    }).pipe(
+      map(success => ({success})),
+    );
   }
 }
 

@@ -9,26 +9,10 @@
 import * as webpack from 'webpack';
 import { RealWebpackConfig } from './config';
 
-
-const WELL_KNOWN_NON_BUNDLEABLE_MODULES = [
-  'pg',
-];
-
-export function getWebpackProdConfig(extraExternals: string[]) {
-  const externals = WELL_KNOWN_NON_BUNDLEABLE_MODULES.concat(extraExternals);
+export function getWebpackProdConfig() {
 
   const webpackConfig: RealWebpackConfig = {
     devtool: 'source-map',
-    externals: [
-      function(context, request, callback: Function) {
-        if (externals.includes(request)) {
-          // not bundled
-          return callback(null, 'commonjs ' + request);
-        }
-        // bundled
-        callback();
-      },
-    ],
     plugins: [
       new webpack.NoEmitOnErrorsPlugin(),
     ],
