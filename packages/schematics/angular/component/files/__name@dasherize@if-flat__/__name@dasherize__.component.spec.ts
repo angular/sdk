@@ -10,7 +10,7 @@ import { <%= classify(name) %>Component } from './<%= dasherize(name) %>.compone
   `,
 })
 class HostComponent {
-  @ViewChild(SimplePlaylistVideoComponent) componentUnderTest: SimplePlaylistVideoComponent;
+  @ViewChild(<%= classify(name) %>Component) componentUnderTest: <%= classify(name) %>Component;
 }
 
 describe('<%= classify(name) %>Component', () => {
