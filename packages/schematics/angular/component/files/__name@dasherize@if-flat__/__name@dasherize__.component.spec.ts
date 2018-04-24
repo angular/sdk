@@ -29,7 +29,7 @@ describe('<%= classify(name) %>Component', () => {
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(<%= classify(name) %>Component);
+    fixture = TestBed.createComponent(HostComponent);
     host = fixture.componentInstance;
     fixture.detectChanges();
     component = host.componentUnderTest;
