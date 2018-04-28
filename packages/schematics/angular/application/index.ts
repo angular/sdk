@@ -5,7 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { JsonObject, normalize, relative, strings } from '@angular-devkit/core';
+import { JsonObject, join, normalize, relative, strings } from '@angular-devkit/core';
 import {
   MergeStrategy,
   Rule,
@@ -137,7 +137,7 @@ function addAppToWorkspaceFile(options: ApplicationOptions, workspace: Workspace
 
   const project: WorkspaceProject = {
     root: projectRoot,
-    sourceRoot: `${projectRoot}/src`,
+    sourceRoot: join(normalize(projectRoot), 'src'),
     projectType: 'application',
     prefix: options.prefix || 'app',
     schematics,
