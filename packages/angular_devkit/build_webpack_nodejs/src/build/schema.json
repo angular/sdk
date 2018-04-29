@@ -59,6 +59,16 @@
         "type": "string"
       }
     },
+    "hmr": {
+      "type": "boolean",
+      "description": "Enable hot module replacement.",
+      "default": false
+    },
+    "hmrPollInterval": {
+      "type": "number",
+      "description": "The interval at which webpack will poll your filesystem",
+      "default": 1000
+    },
     "pathReplacements": {
       "description": "Paths that will override what is configured in the tsConfig",
       "type": "array",

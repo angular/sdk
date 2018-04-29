@@ -12,7 +12,6 @@ import {
   BuilderConfiguration,
   BuilderContext,
 } from '@angular-devkit/architect';
-import { getSystemPath } from '@angular-devkit/core';
 import * as fs from 'fs';
 import { resolve } from 'path';
 import { Observable } from 'rxjs';
@@ -48,6 +47,8 @@ export interface NodejsBuildBuilderOptions {
   statsJson: boolean;
   extractLicenses: boolean;
   showCircularDependencies: boolean;
+  hmr: boolean;
+  hmrPollInterval: number;
 }
 
 export class ServerBuilder implements Builder<NodejsBuildBuilderOptions> {
@@ -82,7 +83,7 @@ export class ServerBuilder implements Builder<NodejsBuildBuilderOptions> {
     const commonWebpackConfig = getCommonWebpackConfig(
       absMain, absOutDir, absTsConfig, outfileName, options);
     const prodWebpackConfig = getWebpackProdConfig();
-    const devWebppackConfig = getWebpackDevConfig();
+    const devWebppackConfig = getWebpackDevConfig(options);
 
     const webpackConfig = webpackMerge(
       [commonWebpackConfig].concat(options.optimization ? prodWebpackConfig : devWebppackConfig),
@@ -148,9 +149,9 @@ export class ServerBuilder implements Builder<NodejsBuildBuilderOptions> {
         if (unbundledModules.length > 0) {
           // TODO: generate package.json to match?
           this.context.logger
-          .info(`The following modules have been excluded from the bundle.
-          Ensure they are avilable at runtime`);
-          this.context.logger.info(`${unbundledModules}`);
+          .info(`The following modules have been excluded from the bundle.` +
+                ` Ensure they are avilable at runtime`);
+          this.context.logger.info(`    ${unbundledModules}`);
         }
 
 

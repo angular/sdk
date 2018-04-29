@@ -11,8 +11,8 @@ import { BuildEvent, Builder, BuilderConfiguration,
 import { getSystemPath } from '@angular-devkit/core';
 import { ChildProcess, fork } from 'child_process';
 import { resolve } from 'path';
-import { Observable } from 'rxjs';
-import { concatMap, map, switchMap, tap } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { catchError, concatMap, map, switchMap, tap } from 'rxjs/operators';
 import * as treeKill from 'tree-kill';
 import { NodejsBuildBuilderOptions } from '../build';
 import { makeOutfileName } from '../utils/make-outfile-name';
@@ -63,17 +63,42 @@ export class BinaryBuilder implements Builder<BinaryBuilderOptions> {
       });
     };
 
+    const restart = () => killProcess().pipe(switchMap(() => runProcess(outfile)));
+
     const builderConfig = this._getBuildBuilderConfig(options);
     const outFileName = makeOutfileName(builderConfig.options.main);
     const outfile = resolve(root, builderConfig.options.outputPath, outFileName);
 
-    return this._startBuild(builderConfig).pipe(
-      // should always ensure the process is killed
-      concatMap(() => killProcess()),
-      // can switch off the last without waiting for complete if need be
-      switchMap(() => runProcess(outfile)),
-      map(() => ({success: true})),
-    );
+    if (builderConfig.options.hmr) {
+      // in HMR mode the users handles restarting the process
+      // we should only do that on an error
+      return this._startBuild(builderConfig).pipe(
+        switchMap(() => {
+          // only start it if it's never been run
+          if (!subProcess) {
+            return runProcess(outfile);
+          } else {
+            return Observable.of(null);
+          }
+        }),
+        // if something happens we'll restart it for the user
+        catchError(err => {
+          // this.context.logger.error('An error occured, restarting process');
+          // this.context.logger.error(err);
+
+          return restart();
+        }),
+        map(() => ({success: true})),
+      );
+    } else {
+      return this._startBuild(builderConfig).pipe(
+        // should always ensure the process is killed
+        concatMap(() => restart()),
+        map(() => ({success: true})),
+      );
+    }
+
+
   }
 
   private _startBuild(builderConfig: BuilderConfiguration<NodejsBuildBuilderOptions>) {

@@ -8,13 +8,16 @@
 
 import * as webpack from 'webpack';
 import * as nodeExterals from 'webpack-node-externals';
+import { BuildOptions } from './common';
 import { RealWebpackConfig } from './config';
 
-export function getWebpackDevConfig() {
+export function getWebpackDevConfig(options: BuildOptions) {
   const webpackConfig: RealWebpackConfig = {
     devtool: 'eval-source-map',
     externals: [
-      nodeExterals(),
+      nodeExterals({
+        whitelist: options.hmr ? [`webpack/hot/poll?${options.hmrPollInterval}`] : [],
+      }),
     ],
     plugins: [
       new webpack.NamedModulesPlugin(),

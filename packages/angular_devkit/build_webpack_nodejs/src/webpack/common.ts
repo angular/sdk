@@ -8,12 +8,14 @@
 
 
 import { LicenseWebpackPlugin } from 'license-webpack-plugin';
+import * as webpack from 'webpack';
 import { RealWebpackConfig } from './config';
 
 const CircularDependencyPlugin = require('circular-dependency-plugin');
 const ProgressPlugin = require('webpack/lib/ProgressPlugin');
 const StatsPlugin = require('stats-webpack-plugin');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
+
 
 /**
  * Enumerate loaders and their dependencies from this file to let the dependency validator
@@ -29,12 +31,14 @@ export interface BuildOptions {
   verbose: boolean;
   extractLicenses: boolean;
   showCircularDependencies: boolean;
+  hmr: boolean;
+  hmrPollInterval: number;
 }
 
 export function getCommonWebpackConfig(entry: string, outDir: string, tsconfigPath: string,
                                        outfileName: string, buildOptions: BuildOptions) {
   const webpackConfig: RealWebpackConfig = {
-    entry: entry,
+    entry: [entry],
     mode: 'none',
     output: {
       path: outDir,
@@ -103,6 +107,12 @@ export function getCommonWebpackConfig(entry: string, outDir: string, tsconfigPa
     extraPlugins.push(new CircularDependencyPlugin({
       exclude: /[\\\/]node_modules[\\\/]/,
     }));
+  }
+
+  if (buildOptions.hmr) {
+    extraPlugins.push(new webpack.HotModuleReplacementPlugin());
+    // tslint:disable-next-line:non-null-operator
+    (webpackConfig.entry! as string[]).push(`webpack/hot/poll?${buildOptions.hmrPollInterval}`);
   }
 
   webpackConfig.plugins = extraPlugins.concat(webpackConfig.plugins || []);
