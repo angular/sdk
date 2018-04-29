@@ -78,7 +78,7 @@ export class BinaryBuilder implements Builder<BinaryBuilderOptions> {
           if (!subProcess) {
             return runProcess(outfile);
           } else {
-            return Observable.of(null);
+            return new Observable(obs => obs.next());
           }
         }),
         // if something happens we'll restart it for the user
