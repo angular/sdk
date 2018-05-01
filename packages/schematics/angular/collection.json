@@ -99,6 +99,12 @@
       "factory": "./library",
       "schema": "./library/schema.json",
       "description": "Generate a library project for Angular."
+    },
+    "pwa": {
+      "factory": "./pwa",
+      "schema": "./pwa/schema.json",
+      "description": "Add PWA logic to an Angular project.",
+      "hidden": true
     }
   }
 }

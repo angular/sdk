@@ -1,9 +1,7 @@
 {
   "schematics": {
     "ng-add": {
-      "factory": "./pwa",
-      "description": "Update an application with PWA defaults.",
-      "schema": "./pwa/schema.json",
+      "extends": "@schematics/angular:pwa",
       "private": true,
       "hidden": true
     }
