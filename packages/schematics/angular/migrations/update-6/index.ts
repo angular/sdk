@@ -10,6 +10,7 @@ import {
   JsonParseMode,
   Path,
   join,
+  logging,
   normalize,
   parseJson,
   parseJsonAst,
@@ -89,7 +90,7 @@ function migrateKarmaConfiguration(config: CliConfig): Rule {
   };
 }
 
-function migrateConfiguration(oldConfig: CliConfig): Rule {
+function migrateConfiguration(oldConfig: CliConfig, logger: logging.LoggerApi): Rule {
   return (host: Tree, context: SchematicContext) => {
     const oldConfigPath = getConfigPath(host);
     const configPath = normalize('angular.json');
@@ -98,7 +99,7 @@ function migrateConfiguration(oldConfig: CliConfig): Rule {
       '$schema': './node_modules/@angular/cli/lib/config/schema.json',
       version: 1,
       newProjectRoot: 'projects',
-      projects: extractProjectsConfig(oldConfig, host),
+      projects: extractProjectsConfig(oldConfig, host, logger),
     };
     const defaultProject = extractDefaultProject(oldConfig);
     if (defaultProject !== null) {
@@ -210,7 +211,9 @@ function extractArchitectConfig(_config: CliConfig): JsonObject | null {
   return null;
 }
 
-function extractProjectsConfig(config: CliConfig, tree: Tree): JsonObject {
+function extractProjectsConfig(
+  config: CliConfig, tree: Tree, logger: logging.LoggerApi,
+): JsonObject {
   const builderPackage = '@angular-devkit/build-angular';
   const defaultAppNamePrefix = getDefaultAppNamePrefix(config);
 
@@ -255,7 +258,14 @@ function extractProjectsConfig(config: CliConfig, tree: Tree): JsonObject {
         if (typeof asset === 'string') {
           return normalize(appRoot + '/' + asset);
         } else {
-          if (asset.output) {
+          if (asset.allowOutsideOutDir) {
+            logger.warn(tags.oneLine`
+              Asset with input '${asset.input}' was not migrated because it
+              uses the 'allowOutsideOutDir' option which is not supported in Angular CLI 6.
+            `);
+
+            return null;
+          } else if (asset.output) {
             return {
               glob: asset.glob,
               input: normalize(appRoot + '/' + asset.input),
@@ -407,7 +417,7 @@ function extractProjectsConfig(config: CliConfig, tree: Tree): JsonObject {
         };
       }
 
-      buildOptions.assets = (app.assets || []).map(_mapAssets);
+      buildOptions.assets = (app.assets || []).map(_mapAssets).filter(x => !!x);
       buildOptions.styles = (app.styles || []).map(_extraEntryMapper);
       buildOptions.scripts = (app.scripts || []).map(_extraEntryMapper);
       architect.build = {
@@ -453,7 +463,7 @@ function extractProjectsConfig(config: CliConfig, tree: Tree): JsonObject {
         }
       testOptions.scripts = (app.scripts || []).map(_extraEntryMapper);
       testOptions.styles = (app.styles || []).map(_extraEntryMapper);
-      testOptions.assets = (app.assets || []).map(_mapAssets);
+      testOptions.assets = (app.assets || []).map(_mapAssets).filter(x => !!x);
 
       if (karmaConfig) {
         architect.test = {
@@ -750,7 +760,7 @@ export default function (): Rule {
 
     return chain([
       migrateKarmaConfiguration(config),
-      migrateConfiguration(config),
+      migrateConfiguration(config, context.logger),
       updateSpecTsConfig(config),
       updatePackageJson(config),
       updateTsLintConfig(),
