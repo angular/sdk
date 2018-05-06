@@ -62,6 +62,7 @@ export interface DevServerBuilderOptions {
   baseHref?: string;
   progress?: boolean;
   poll?: number;
+  verbose?: boolean;
 }
 
 interface WebpackDevServerConfigurationOptions {
@@ -453,6 +454,7 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
       ...(options.baseHref !== undefined ? { baseHref: options.baseHref } : {}),
       ...(options.progress !== undefined ? { progress: options.progress } : {}),
       ...(options.poll !== undefined ? { poll: options.poll } : {}),
+      ...(options.verbose !== undefined ? { verbose: options.verbose } : {}),
 
       ...builderConfig.options,
     };
