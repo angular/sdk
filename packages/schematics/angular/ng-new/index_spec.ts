@@ -46,4 +46,12 @@ describe('Ng New Schematic', () => {
     const content = tree.readContent('/bar/angular.json');
     expect(content).toMatch(/"prefix": "pre"/);
   });
+
+  it('should create VS Code settings', () => {
+    const options: NgNewOptions = { ...defaultOptions, editor: 'vscode' };
+
+    const tree = schematicRunner.runSchematic('ng-new', options);
+    const files = tree.files;
+    expect(files.indexOf('/bar/.vscode/settings.json')).toBeGreaterThanOrEqual(0);
+  });
 });

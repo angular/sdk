@@ -65,6 +65,11 @@
       "type": "string",
       "description": "The version of the Angular CLI to use.",
       "visible": false
+    },
+    "editor": {
+      "description": "Specifies the editor used, for specific configuration.",
+      "enum": ["vscode"],
+      "type": "string"
     }
   },
   "required": [
