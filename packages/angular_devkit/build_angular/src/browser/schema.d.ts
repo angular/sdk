@@ -219,9 +219,9 @@ export interface BrowserBuilderSchema {
   budgets: Budget[];
 
   /**
-   * Script path containing a method to modify the webpack config with customizations
+   * Script path(s) containing a method to modify the webpack config with customizations
    */
-  webpackConfig: string;
+  webpackConfig: string[] | string;
 }
 
 export type AssetPattern = string | AssetPatternObject;

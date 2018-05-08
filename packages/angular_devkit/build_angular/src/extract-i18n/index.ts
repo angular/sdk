@@ -151,9 +151,11 @@ export class ExtractI18nBuilder implements Builder<ExtractI18nBuilderOptions> {
 
     let mergedConfig = webpackMerge(webpackConfigs);
 
-    if ('string' === typeof options.webpackConfig) {
-      const webpackConfigPath = getSystemPath(normalize(resolve(root,
-        normalize(options.webpackConfig))));
+    const customWebpackConfigs: string[] = Array.isArray(options.webpackConfig) ?
+      options.webpackConfig : ('string' === typeof options.webpackConfig ?
+        [options.webpackConfig] : []);
+    customWebpackConfigs.forEach((webpackConfig: string): void => {
+      const webpackConfigPath = getSystemPath(normalize(resolve(root, normalize(webpackConfig))));
       if (fs.existsSync(webpackConfigPath)) {
         try {
           const callback: (config: Object, target: string) => Object = require(webpackConfigPath);
@@ -161,10 +163,11 @@ export class ExtractI18nBuilder implements Builder<ExtractI18nBuilderOptions> {
             mergedConfig = callback(mergedConfig, target);
           }
         } catch (error) {
-          throw new Error('Failed to merge custom webpack configuration: ' + error);
+          throw new Error(`Failed to merge custom webpack configuration by script ` +
+            `"${webpackConfig}": ${error}`);
         }
       }
-    }
+    });
 
     return mergedConfig;
   }
