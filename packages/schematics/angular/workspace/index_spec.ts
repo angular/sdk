@@ -55,4 +55,12 @@ describe('Workspace Schematic', () => {
     expect(pkg.dependencies['zone.js']).toEqual(latestVersions.ZoneJs);
     expect(pkg.devDependencies['typescript']).toEqual(latestVersions.TypeScript);
   });
+
+  it('should create VS Code settings', () => {
+    const options = { ...defaultOptions, editor: 'vscode' };
+
+    const tree = schematicRunner.runSchematic('workspace', options);
+    const files = tree.files;
+    expect(files.indexOf('/.vscode/settings.json')).toBeGreaterThanOrEqual(0);
+  });
 });

@@ -11,7 +11,9 @@ import {
   SchematicContext,
   Tree,
   apply,
+  filter,
   mergeWith,
+  noop,
   template,
   url,
 } from '@angular-devkit/schematics';
@@ -22,6 +24,7 @@ export default function (options: WorkspaceOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
 
     return mergeWith(apply(url('./files'), [
+      options.editor === 'vscode' ? noop() : filter(path => path.indexOf('vscode') === -1),
       template({
         utils: strings,
         ...options,
