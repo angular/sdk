@@ -12,6 +12,7 @@ import {
   BuilderConfiguration,
   BuilderContext,
 } from '@angular-devkit/architect';
+import * as fs from 'fs';
 import { Path, getSystemPath, normalize, resolve, virtualFs } from '@angular-devkit/core';
 import { Stats } from 'fs';
 import { Observable, concat, of } from 'rxjs';
@@ -59,7 +60,7 @@ export class ServerBuilder implements Builder<BuildWebpackServerSchema> {
         // Ensure Build Optimizer is only used with AOT.
         let webpackConfig;
         try {
-          webpackConfig = this.buildWebpackConfig(root, projectRoot, host, options);
+          webpackConfig = this.buildWebpackConfig(root, projectRoot, host, builderConfig.target, options);
         } catch (e) {
           // TODO: why do I have to catch this error? I thought throwing inside an observable
           // always got converted into an error.
@@ -108,6 +109,7 @@ export class ServerBuilder implements Builder<BuildWebpackServerSchema> {
 
   buildWebpackConfig(root: Path, projectRoot: Path,
                      host: virtualFs.Host<Stats>,
+                     target: string,
                      options: BuildWebpackServerSchema) {
     let wco: WebpackConfigOptions;
 
@@ -155,7 +157,24 @@ export class ServerBuilder implements Builder<BuildWebpackServerSchema> {
       webpackConfigs.push(typescriptConfigPartial);
     }
 
-    return webpackMerge(webpackConfigs);
+    let mergedConfig: any = webpackMerge(webpackConfigs);
+
+    if ('string' === typeof options.webpackConfig) {
+      const webpackConfigPath = getSystemPath(normalize(resolve(root, normalize(options.webpackConfig))));
+      if(fs.existsSync(webpackConfigPath)) {
+        try {
+          const callback: (config: {[key: string]: any}, target: string) => {[key: string]: any} = require(webpackConfigPath);
+          if ('function' === typeof callback) {
+            mergedConfig = callback(mergedConfig, target);
+          }
+        }
+        catch(error) {
+          throw new Error('Failed to merge custom webpack configuration: ' + error);
+        }
+      }
+    }
+
+    return mergedConfig;
   }
 
   private _deleteOutputDir(root: Path, outputPath: Path, host: virtualFs.Host) {

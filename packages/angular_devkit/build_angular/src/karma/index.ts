@@ -74,7 +74,7 @@ export class KarmaBuilder implements Builder<KarmaBuilderSchema> {
           root: getSystemPath(root),
           projectRoot: getSystemPath(projectRoot),
           options: options as NormalizedKarmaBuilderSchema,
-          webpackConfig: this._buildWebpackConfig(root, projectRoot, host,
+          webpackConfig: this._buildWebpackConfig(root, projectRoot, host, builderConfig.target,
             options as NormalizedKarmaBuilderSchema),
           // Pass onto Karma to emit BuildEvents.
           successCb: () => obs.next({ success: true }),
@@ -108,6 +108,7 @@ export class KarmaBuilder implements Builder<KarmaBuilderSchema> {
     root: Path,
     projectRoot: Path,
     host: virtualFs.Host<fs.Stats>,
+    target: string,
     options: NormalizedKarmaBuilderSchema,
   ) {
     let wco: WebpackConfigOptions;
@@ -143,7 +144,24 @@ export class KarmaBuilder implements Builder<KarmaBuilderSchema> {
       getTestConfig(wco),
     ];
 
-    return webpackMerge(webpackConfigs);
+    let mergedConfig: any = webpackMerge(webpackConfigs);
+
+    if ('string' === typeof options.webpackConfig) {
+      const webpackConfigPath = getSystemPath(normalize(resolve(root, normalize(options.webpackConfig))));
+      if(fs.existsSync(webpackConfigPath)) {
+        try {
+          const callback: (config: {[key: string]: any}, target: string) => {[key: string]: any} = require(webpackConfigPath);
+          if ('function' === typeof callback) {
+            mergedConfig = callback(mergedConfig, target);
+          }
+        }
+        catch(error) {
+          throw new Error('Failed to merge custom webpack configuration: ' + error);
+        }
+      }
+    }
+
+    return mergedConfig;
   }
 }
 

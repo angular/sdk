@@ -142,6 +142,10 @@
         ]
       },
       "default": []
+    },
+    "webpackConfig": {
+      "type": "string",
+      "description": "Script path containing custom webpack config"
     }
   },
   "additionalProperties": false,

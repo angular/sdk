@@ -217,6 +217,11 @@ export interface BrowserBuilderSchema {
    * Budget thresholds to ensure parts of your application stay within boundaries which you set.
    */
   budgets: Budget[];
+
+  /**
+   * Script path containing a method to modify the webpack config with customizations
+   */
+  webpackConfig: string;
 }
 
 export type AssetPattern = string | AssetPatternObject;

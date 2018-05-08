@@ -72,7 +72,7 @@ export class ExtractI18nBuilder implements Builder<ExtractI18nBuilderOptions> {
         }
 
         // Extracting i18n uses the browser target webpack config with some specific options.
-        const webpackConfig = this.buildWebpackConfig(root, projectRoot, {
+        const webpackConfig = this.buildWebpackConfig(root, projectRoot, builderConfig.target, {
           ...browserOptions,
           optimization: false,
           i18nLocale: options.i18nLocale,
@@ -123,6 +123,7 @@ export class ExtractI18nBuilder implements Builder<ExtractI18nBuilderOptions> {
   buildWebpackConfig(
     root: Path,
     projectRoot: Path,
+    target: string,
     options: NormalizedBrowserBuilderSchema,
   ) {
     let wco: WebpackConfigOptions;
@@ -148,7 +149,24 @@ export class ExtractI18nBuilder implements Builder<ExtractI18nBuilderOptions> {
       getStylesConfig(wco),
     ];
 
-    return webpackMerge(webpackConfigs);
+    let mergedConfig: any = webpackMerge(webpackConfigs);
+
+    if ('string' === typeof options.webpackConfig) {
+      const webpackConfigPath = getSystemPath(normalize(resolve(root, normalize(options.webpackConfig))));
+      if(fs.existsSync(webpackConfigPath)) {
+        try {
+          const callback: (config: {[key: string]: any}, target: string) => {[key: string]: any} = require(webpackConfigPath);
+          if ('function' === typeof callback) {
+            mergedConfig = callback(mergedConfig, target);
+          }
+        }
+        catch(error) {
+          throw new Error('Failed to merge custom webpack configuration: ' + error);
+        }
+      }
+    }
+
+    return mergedConfig;
   }
 }
 

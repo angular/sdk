@@ -31,6 +31,10 @@
     "outFile": {
       "type": "string",
       "description": "Name of the file to output."
+    },
+    "webpackConfig": {
+      "type": "string",
+      "description": "Script path containing custom webpack config"
     }
   },
   "additionalProperties": false,

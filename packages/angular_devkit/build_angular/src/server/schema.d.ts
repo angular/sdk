@@ -113,6 +113,10 @@ export interface BuildWebpackServerSchema {
    * Use file name for lazy loaded chunks.
    */
   namedChunks?: boolean;
+  /**
+   * Script path containing a method to modify the webpack config with customizations
+   */
+  webpackConfig: string;
 }
 
 /**
