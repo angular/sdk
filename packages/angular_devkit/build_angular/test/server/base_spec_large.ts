@@ -30,4 +30,18 @@ describe('Server Builder', () => {
       }),
     ).subscribe(undefined, done.fail, done);
   }, Timeout.Standard);
+
+  it('runs watch mode', (done) => {
+    const overrides = { watch: true };
+
+    runTargetSpec(host, { project: 'app', target: 'server' }, overrides).pipe(
+      tap((buildEvent) => {
+        expect(buildEvent.success).toBe(true);
+
+        const fileName = join(outputPath, 'main.js');
+        const content = virtualFs.fileBufferToString(host.scopedSync().read(normalize(fileName)));
+        expect(content).toMatch(/AppServerModuleNgFactory/);
+      }),
+    ).subscribe(undefined, done.fail, done);
+  }, Timeout.Standard);
 });
