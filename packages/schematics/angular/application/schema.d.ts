@@ -47,8 +47,4 @@ export interface Schema {
     * Do not add dependencies to package.json (e.g., --skipPackageJson)
     */
     skipPackageJson: boolean;
-    /**
-     * Specifies the editor used, for specific configuration.
-     */
-    editor?: ('vscode');
 }

@@ -111,6 +111,11 @@
       "type": "boolean",
       "default": false,
       "alias": "S"
+    },
+    "editor": {
+      "description": "Specifies the editor used, for specific configuration.",
+      "enum": ["vscode"],
+      "type": "string"
     }
   },
   "required": [

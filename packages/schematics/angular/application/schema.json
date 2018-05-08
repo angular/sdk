@@ -62,11 +62,6 @@
       "type": "boolean",
       "default": false,
       "description": "Do not add dependencies to package.json."
-    },
-    "editor": {
-      "description": "Specifies the editor used, for specific configuration.",
-      "enum": ["vscode"],
-      "type": "string"
     }
   },
   "required": []

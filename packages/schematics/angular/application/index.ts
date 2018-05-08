@@ -321,7 +321,6 @@ export default function (options: ApplicationOptions): Rule {
         ])),
       mergeWith(
         apply(url('./files/root'), [
-          options.editor === 'vscode' ? noop() : filter(path => path.indexOf('vscode') === -1),
           template({
             utils: strings,
             ...options,
