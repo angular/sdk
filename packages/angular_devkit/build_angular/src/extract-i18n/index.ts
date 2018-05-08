@@ -149,18 +149,18 @@ export class ExtractI18nBuilder implements Builder<ExtractI18nBuilderOptions> {
       getStylesConfig(wco),
     ];
 
-    let mergedConfig: any = webpackMerge(webpackConfigs);
+    let mergedConfig = webpackMerge(webpackConfigs);
 
     if ('string' === typeof options.webpackConfig) {
-      const webpackConfigPath = getSystemPath(normalize(resolve(root, normalize(options.webpackConfig))));
-      if(fs.existsSync(webpackConfigPath)) {
+      const webpackConfigPath = getSystemPath(normalize(resolve(root,
+        normalize(options.webpackConfig))));
+      if (fs.existsSync(webpackConfigPath)) {
         try {
-          const callback: (config: {[key: string]: any}, target: string) => {[key: string]: any} = require(webpackConfigPath);
+          const callback: (config, target: string) = require(webpackConfigPath);
           if ('function' === typeof callback) {
             mergedConfig = callback(mergedConfig, target);
           }
-        }
-        catch(error) {
+        } catch (error) {
           throw new Error('Failed to merge custom webpack configuration: ' + error);
         }
       }

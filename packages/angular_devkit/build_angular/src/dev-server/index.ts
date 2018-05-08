@@ -103,17 +103,18 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
     let browserOptions: BrowserBuilderSchema;
 
     return checkPort(options.port, options.host).pipe(
-      tap((port: any) => options.port = port),
+      tap(port => options.port = port),
       concatMap(() => this._getBrowserOptions(options)),
-      tap((opts: any) => browserOptions = opts),
+      tap(opts => browserOptions = opts),
       concatMap(() => addFileReplacements(root, host, browserOptions.fileReplacements)),
       concatMap(() => normalizeAssetPatterns(
         browserOptions.assets, host, root, projectRoot, builderConfig.sourceRoot)),
       // Replace the assets in options with the normalized version.
-      tap(((assetPatternObjects: any) => browserOptions.assets = assetPatternObjects)),
-      concatMap(() => new Observable((obs: any) => {
+      tap((assetPatternObjects => browserOptions.assets = assetPatternObjects)),
+      concatMap(() => new Observable(obs => {
         const browserBuilder = new BrowserBuilder(this.context);
-        const webpackConfig = browserBuilder.buildWebpackConfig(root, projectRoot, host, builderConfig.target, browserOptions as NormalizedBrowserBuilderSchema);
+        const webpackConfig = browserBuilder.buildWebpackConfig(root, projectRoot, host,
+          builderConfig.target, browserOptions as NormalizedBrowserBuilderSchema);
         const statsConfig = getWebpackStatsConfig(browserOptions.verbose);
 
         let webpackDevServerConfig: WebpackDevServerConfigurationOptions;
@@ -296,8 +297,7 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
     let webpackDevServerPath;
     try {
       webpackDevServerPath = require.resolve('webpack-dev-server/client');
-    }
-    catch(error) {
+    } catch (error) {
       throw new Error('The "webpack-dev-server" package could not be found.');
     }
     const entryPoints = [`${webpackDevServerPath}?${clientAddress}`];
@@ -461,9 +461,9 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
     };
 
     return architect.getBuilderDescription(builderConfig).pipe(
-      concatMap((browserDescription: any) =>
+      concatMap(browserDescription =>
         architect.validateBuilderOptions(builderConfig, browserDescription)),
-      map((browserConfig: any) => browserConfig.options),
+      map(browserConfig => browserConfig.options),
     );
   }
 }
