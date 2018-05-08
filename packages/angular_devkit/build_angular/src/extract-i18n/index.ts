@@ -156,7 +156,7 @@ export class ExtractI18nBuilder implements Builder<ExtractI18nBuilderOptions> {
         normalize(options.webpackConfig))));
       if (fs.existsSync(webpackConfigPath)) {
         try {
-          const callback: (config, target: string) = require(webpackConfigPath);
+          const callback: (config: Object, target: string) => Object = require(webpackConfigPath);
           if ('function' === typeof callback) {
             mergedConfig = callback(mergedConfig, target);
           }

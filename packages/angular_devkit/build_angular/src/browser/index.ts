@@ -202,7 +202,7 @@ export class BrowserBuilder implements Builder<BrowserBuilderSchema> {
         normalize(options.webpackConfig))));
       if (fs.existsSync(webpackConfigPath)) {
         try {
-          const callback: (config, target: string) = require(webpackConfigPath);
+          const callback: (config: Object, target: string) => Object = require(webpackConfigPath);
           if ('function' === typeof callback) {
             mergedConfig = callback(mergedConfig, target);
           }
