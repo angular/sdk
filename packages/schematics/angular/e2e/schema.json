@@ -23,6 +23,12 @@
       "type": "string",
       "default": "app-root"
     },
+    "prefix": {
+      "type": "string",
+      "format": "html-selector",
+      "description": "The prefix to apply to generated selectors.",
+      "default": "app"
+    },
     "relatedAppName": {
       "description": "The name of the app being tested.",
       "type": "string"
