@@ -3,7 +3,7 @@ version: 2
 _defaults: &defaults
   working_directory: ~/ng
   docker:
-    - image: angular/ngcontainer:0.1.0
+    - image: angular/ngcontainer:0.2.0
 
 _post_checkout: &post_checkout
   post: git pull --ff-only origin "refs/pull/${CI_PULL_REQUEST//*pull\//}/merge"
@@ -51,6 +51,48 @@ jobs:
       - restore_cache: *_root_package_lock_key
       - run: npm run webdriver-update-circleci
       - run: npm run test-large -- --code-coverage --full
+
+  cli-e2e-0:
+    <<: *defaults
+    steps:
+      - checkout: *post_checkout
+      - restore_cache: *_root_package_lock_key
+      - run: npm run admin -- cli-e2e --nb-shards=6 --shard=0 --ng-version="6.0.0-rc.2"
+
+  cli-e2e-1:
+    <<: *defaults
+    steps:
+      - checkout: *post_checkout
+      - restore_cache: *_root_package_lock_key
+      - run: npm run admin -- cli-e2e --nb-shards=6 --shard=1 --ng-version="6.0.0-rc.2"
+
+  cli-e2e-2:
+    <<: *defaults
+    steps:
+      - checkout: *post_checkout
+      - restore_cache: *_root_package_lock_key
+      - run: npm run admin -- cli-e2e --nb-shards=6 --shard=2 --ng-version="6.0.0-rc.2"
+
+  cli-e2e-3:
+    <<: *defaults
+    steps:
+      - checkout: *post_checkout
+      - restore_cache: *_root_package_lock_key
+      - run: npm run admin -- cli-e2e --nb-shards=6 --shard=3 --ng-version="6.0.0-rc.2"
+
+  cli-e2e-4:
+    <<: *defaults
+    steps:
+      - checkout: *post_checkout
+      - restore_cache: *_root_package_lock_key
+      - run: npm run admin -- cli-e2e --nb-shards=6 --shard=4 --ng-version="6.0.0-rc.2"
+
+  cli-e2e-5:
+    <<: *defaults
+    steps:
+      - checkout: *post_checkout
+      - restore_cache: *_root_package_lock_key
+      - run: npm run admin -- --nb-shards=6 --shard=5 --ng-version="6.0.0-rc.2"
 
   integration:
     <<: *defaults
@@ -144,6 +186,24 @@ workflows:
       - test-large:
           requires:
             - build
+      - cli-e2e-0:
+          requires:
+            - test
+      - cli-e2e-1:
+          requires:
+            - test
+      - cli-e2e-2:
+          requires:
+            - test
+      - cli-e2e-3:
+          requires:
+            - test
+      - cli-e2e-4:
+          requires:
+            - test
+      - cli-e2e-5:
+          requires:
+            - test
       - integration:
           requires:
             - build

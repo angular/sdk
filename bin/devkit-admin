@@ -63,9 +63,10 @@ try {
 }
 
 
-try {
-  require(scriptPath).default(args, logger);
-} catch (err) {
-  logger.fatal(err.stack);
-}
-
+Promise.resolve()
+  .then(() => require(scriptPath).default(args, logger))
+  .then(() => process.exit(0))
+  .catch(err => {
+    logger.fatal(err.stack);
+    process.exit(1);
+  });
