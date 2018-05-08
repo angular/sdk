@@ -7,6 +7,7 @@
  */
 import * as experimental from './experimental';
 import * as logging from './logger';
+import * as predicate from './predicate/predicate';
 import * as terminal from './terminal';
 
 export * from './exception/exception';
@@ -17,5 +18,6 @@ export * from './virtual-fs';
 export {
   experimental,
   logging,
+  predicate,
   terminal,
 };

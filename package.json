@@ -4,11 +4,13 @@
   "description": "Software Development Kit for Angular",
   "bin": {
     "architect": "./bin/architect",
+    "arborist": "./bin/arborist",
     "build-optimizer": "./bin/build-optimizer",
     "devkit-admin": "./bin/devkit-admin",
     "purify": "./bin/purify",
     "schematics": "./bin/schematics"
   },
+  "main": "./lib/index.js",
   "keywords": [
     "angular",
     "devkit",
