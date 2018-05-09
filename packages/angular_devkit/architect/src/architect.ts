@@ -72,6 +72,7 @@ export interface BuilderConfiguration<OptionsT = {}> {
   root: Path;
   sourceRoot?: Path;
   projectType: string;
+  target: string;
   builder: string;
   options: OptionsT;
 }
@@ -192,6 +193,7 @@ export class Architect {
       root: project.root as Path,
       sourceRoot: project.sourceRoot as Path | undefined,
       projectType: project.projectType,
+      target: targetName,
       builder: target.builder,
       options: {
         ...options,

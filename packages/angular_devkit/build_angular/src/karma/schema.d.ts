@@ -32,4 +32,9 @@ export interface KarmaBuilderSchema extends Pick<BrowserBuilderSchema,
    * Globs to exclude from code coverage.
    */
   codeCoverageExclude: string[];
+
+  /**
+   * Script path(s) containing a method to modify the webpack config with customizations
+   */
+  webpackConfig: string[] | string;
 }

@@ -76,7 +76,7 @@ export class BrowserBuilder implements Builder<BrowserBuilderSchema> {
 
         let webpackConfig;
         try {
-          webpackConfig = this.buildWebpackConfig(root, projectRoot, host,
+          webpackConfig = this.buildWebpackConfig(root, projectRoot, host, builderConfig.target,
             options as NormalizedBrowserBuilderSchema);
         } catch (e) {
           obs.error(e);
@@ -160,6 +160,7 @@ export class BrowserBuilder implements Builder<BrowserBuilderSchema> {
     root: Path,
     projectRoot: Path,
     host: virtualFs.Host<fs.Stats>,
+    target: string,
     options: NormalizedBrowserBuilderSchema,
   ) {
     let wco: WebpackConfigOptions<NormalizedBrowserBuilderSchema>;
@@ -194,7 +195,27 @@ export class BrowserBuilder implements Builder<BrowserBuilderSchema> {
       webpackConfigs.push(typescriptConfigPartial);
     }
 
-    return webpackMerge(webpackConfigs);
+    let mergedConfig = webpackMerge(webpackConfigs);
+
+    const customWebpackConfigs: string[] = Array.isArray(options.webpackConfig) ?
+      options.webpackConfig : ('string' === typeof options.webpackConfig ?
+        [options.webpackConfig] : []);
+    customWebpackConfigs.forEach((webpackConfig: string): void => {
+      const webpackConfigPath = getSystemPath(normalize(resolve(root, normalize(webpackConfig))));
+      if (fs.existsSync(webpackConfigPath)) {
+        try {
+          const callback: (config: Object, target: string) => Object = require(webpackConfigPath);
+          if ('function' === typeof callback) {
+            mergedConfig = callback(mergedConfig, target);
+          }
+        } catch (error) {
+          throw new Error(`Failed to merge custom webpack configuration by script ` +
+            `"${webpackConfig}": ${error}`);
+        }
+      }
+    });
+
+    return mergedConfig;
   }
 
   private _deleteOutputDir(root: Path, outputPath: Path, host: virtualFs.Host) {

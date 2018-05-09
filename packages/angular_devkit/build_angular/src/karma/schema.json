@@ -142,6 +142,21 @@
         ]
       },
       "default": []
+    },
+    "webpackConfig": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "default": [],
+      "description": "Script path(s) containing a method to modify the webpack config with customizations"
     }
   },
   "additionalProperties": false,

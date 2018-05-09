@@ -74,7 +74,7 @@ export class KarmaBuilder implements Builder<KarmaBuilderSchema> {
           root: getSystemPath(root),
           projectRoot: getSystemPath(projectRoot),
           options: options as NormalizedKarmaBuilderSchema,
-          webpackConfig: this._buildWebpackConfig(root, projectRoot, host,
+          webpackConfig: this._buildWebpackConfig(root, projectRoot, host, builderConfig.target,
             options as NormalizedKarmaBuilderSchema),
           // Pass onto Karma to emit BuildEvents.
           successCb: () => obs.next({ success: true }),
@@ -108,6 +108,7 @@ export class KarmaBuilder implements Builder<KarmaBuilderSchema> {
     root: Path,
     projectRoot: Path,
     host: virtualFs.Host<fs.Stats>,
+    target: string,
     options: NormalizedKarmaBuilderSchema,
   ) {
     let wco: WebpackConfigOptions;
@@ -143,7 +144,27 @@ export class KarmaBuilder implements Builder<KarmaBuilderSchema> {
       getTestConfig(wco),
     ];
 
-    return webpackMerge(webpackConfigs);
+    let mergedConfig = webpackMerge(webpackConfigs);
+
+    const customWebpackConfigs: string[] = Array.isArray(options.webpackConfig) ?
+      options.webpackConfig : ('string' === typeof options.webpackConfig ?
+        [options.webpackConfig] : []);
+    customWebpackConfigs.forEach((webpackConfig: string): void => {
+      const webpackConfigPath = getSystemPath(normalize(resolve(root, normalize(webpackConfig))));
+      if (fs.existsSync(webpackConfigPath)) {
+        try {
+          const callback: (config: Object, target: string) => Object = require(webpackConfigPath);
+          if ('function' === typeof callback) {
+            mergedConfig = callback(mergedConfig, target);
+          }
+        } catch (error) {
+          throw new Error(`Failed to merge custom webpack configuration by script ` +
+            `"${webpackConfig}": ${error}`);
+        }
+      }
+    });
+
+    return mergedConfig;
   }
 }
 

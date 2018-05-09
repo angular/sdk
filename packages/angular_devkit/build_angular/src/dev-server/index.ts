@@ -62,6 +62,7 @@ export interface DevServerBuilderOptions {
   baseHref?: string;
   progress?: boolean;
   poll?: number;
+  webpackConfig?: string;
 }
 
 interface WebpackDevServerConfigurationOptions {
@@ -102,9 +103,9 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
     let browserOptions: BrowserBuilderSchema;
 
     return checkPort(options.port, options.host).pipe(
-      tap((port) => options.port = port),
+      tap(port => options.port = port),
       concatMap(() => this._getBrowserOptions(options)),
-      tap((opts) => browserOptions = opts),
+      tap(opts => browserOptions = opts),
       concatMap(() => addFileReplacements(root, host, browserOptions.fileReplacements)),
       concatMap(() => normalizeAssetPatterns(
         browserOptions.assets, host, root, projectRoot, builderConfig.sourceRoot)),
@@ -112,8 +113,8 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
       tap((assetPatternObjects => browserOptions.assets = assetPatternObjects)),
       concatMap(() => new Observable(obs => {
         const browserBuilder = new BrowserBuilder(this.context);
-        const webpackConfig = browserBuilder.buildWebpackConfig(
-          root, projectRoot, host, browserOptions as NormalizedBrowserBuilderSchema);
+        const webpackConfig = browserBuilder.buildWebpackConfig(root, projectRoot, host,
+          builderConfig.target, browserOptions as NormalizedBrowserBuilderSchema);
         const statsConfig = getWebpackStatsConfig(browserOptions.verbose);
 
         let webpackDevServerConfig: WebpackDevServerConfigurationOptions;
@@ -296,7 +297,7 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
     let webpackDevServerPath;
     try {
       webpackDevServerPath = require.resolve('webpack-dev-server/client');
-    } catch {
+    } catch (error) {
       throw new Error('The "webpack-dev-server" package could not be found.');
     }
     const entryPoints = [`${webpackDevServerPath}?${clientAddress}`];
@@ -455,6 +456,8 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
       ...(options.poll !== undefined ? { poll: options.poll } : {}),
 
       ...builderConfig.options,
+
+      ...(options.webpackConfig !== undefined ? { webpackConfig: options.webpackConfig } : {}),
     };
 
     return architect.getBuilderDescription(builderConfig).pipe(

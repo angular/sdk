@@ -13,6 +13,7 @@ import {
   BuilderContext,
 } from '@angular-devkit/architect';
 import { Path, getSystemPath, normalize, resolve, virtualFs } from '@angular-devkit/core';
+import * as fs from 'fs';
 import { Stats } from 'fs';
 import { Observable, concat, of } from 'rxjs';
 import { concatMap, last } from 'rxjs/operators';
@@ -59,7 +60,8 @@ export class ServerBuilder implements Builder<BuildWebpackServerSchema> {
         // Ensure Build Optimizer is only used with AOT.
         let webpackConfig;
         try {
-          webpackConfig = this.buildWebpackConfig(root, projectRoot, host, options);
+          webpackConfig = this.buildWebpackConfig(root, projectRoot, host,
+            builderConfig.target, options);
         } catch (e) {
           // TODO: why do I have to catch this error? I thought throwing inside an observable
           // always got converted into an error.
@@ -108,6 +110,7 @@ export class ServerBuilder implements Builder<BuildWebpackServerSchema> {
 
   buildWebpackConfig(root: Path, projectRoot: Path,
                      host: virtualFs.Host<Stats>,
+                     target: string,
                      options: BuildWebpackServerSchema) {
     let wco: WebpackConfigOptions;
 
@@ -155,7 +158,27 @@ export class ServerBuilder implements Builder<BuildWebpackServerSchema> {
       webpackConfigs.push(typescriptConfigPartial);
     }
 
-    return webpackMerge(webpackConfigs);
+    let mergedConfig = webpackMerge(webpackConfigs);
+
+    const customWebpackConfigs: string[] = Array.isArray(options.webpackConfig) ?
+      options.webpackConfig : ('string' === typeof options.webpackConfig ?
+        [options.webpackConfig] : []);
+    customWebpackConfigs.forEach((webpackConfig: string): void => {
+      const webpackConfigPath = getSystemPath(normalize(resolve(root, normalize(webpackConfig))));
+      if (fs.existsSync(webpackConfigPath)) {
+        try {
+          const callback: (config: Object, target: string) => Object = require(webpackConfigPath);
+          if ('function' === typeof callback) {
+            mergedConfig = callback(mergedConfig, target);
+          }
+        } catch (error) {
+          throw new Error(`Failed to merge custom webpack configuration by script ` +
+            `"${webpackConfig}": ${error}`);
+        }
+      }
+    });
+
+    return mergedConfig;
   }
 
   private _deleteOutputDir(root: Path, outputPath: Path, host: virtualFs.Host) {

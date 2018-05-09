@@ -121,6 +121,21 @@
     "poll": {
       "type": "number",
       "description": "Enable and define the file watching poll time period in milliseconds."
+    },
+    "webpackConfig": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "default": [],
+      "description": "Script path(s) containing custom webpack config"
     }
   },
   "additionalProperties": false,

@@ -72,7 +72,7 @@ export class ExtractI18nBuilder implements Builder<ExtractI18nBuilderOptions> {
         }
 
         // Extracting i18n uses the browser target webpack config with some specific options.
-        const webpackConfig = this.buildWebpackConfig(root, projectRoot, {
+        const webpackConfig = this.buildWebpackConfig(root, projectRoot, builderConfig.target, {
           ...browserOptions,
           optimization: false,
           i18nLocale: options.i18nLocale,
@@ -123,6 +123,7 @@ export class ExtractI18nBuilder implements Builder<ExtractI18nBuilderOptions> {
   buildWebpackConfig(
     root: Path,
     projectRoot: Path,
+    target: string,
     options: NormalizedBrowserBuilderSchema,
   ) {
     let wco: WebpackConfigOptions;
@@ -148,7 +149,27 @@ export class ExtractI18nBuilder implements Builder<ExtractI18nBuilderOptions> {
       getStylesConfig(wco),
     ];
 
-    return webpackMerge(webpackConfigs);
+    let mergedConfig = webpackMerge(webpackConfigs);
+
+    const customWebpackConfigs: string[] = Array.isArray(options.webpackConfig) ?
+      options.webpackConfig : ('string' === typeof options.webpackConfig ?
+        [options.webpackConfig] : []);
+    customWebpackConfigs.forEach((webpackConfig: string): void => {
+      const webpackConfigPath = getSystemPath(normalize(resolve(root, normalize(webpackConfig))));
+      if (fs.existsSync(webpackConfigPath)) {
+        try {
+          const callback: (config: Object, target: string) => Object = require(webpackConfigPath);
+          if ('function' === typeof callback) {
+            mergedConfig = callback(mergedConfig, target);
+          }
+        } catch (error) {
+          throw new Error(`Failed to merge custom webpack configuration by script ` +
+            `"${webpackConfig}": ${error}`);
+        }
+      }
+    });
+
+    return mergedConfig;
   }
 }
 
