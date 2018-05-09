@@ -140,6 +140,13 @@ export class Workspace {
     } else if (this.listProjectNames().length === 1) {
       // If there is only one project, return that one.
       return this.listProjectNames()[0];
+    } else {
+      const rootProjectEntry = Object.entries(this._workspace.projects).find(([name, project]) => {
+        return project.root.length === 0;
+      });
+      if (rootProjectEntry) {
+        return rootProjectEntry[0];
+      }
     }
 
     // Otherwise return null.
