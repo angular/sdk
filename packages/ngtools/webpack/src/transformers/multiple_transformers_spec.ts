@@ -67,14 +67,14 @@ describe('@ngtools/webpack transformers', () => {
       const { program, compilerHost } = createTypescriptContext(input);
 
       const shouldTransform = () => true;
-      const getEntryModule = () =>
-        ({ path: '/project/src/app/app.module', className: 'AppModule' });
+      const getEntryModules = () =>
+        ([{ path: '/project/src/app/app.module', className: 'AppModule' }]);
       const getTypeChecker = () => program.getTypeChecker();
 
 
       const transformers = [
-        replaceBootstrap(shouldTransform, getEntryModule, getTypeChecker),
-        exportNgFactory(shouldTransform, getEntryModule),
+        replaceBootstrap(shouldTransform, getEntryModules, getTypeChecker),
+        exportNgFactory(shouldTransform, getEntryModules),
         exportLazyModuleMap(shouldTransform,
           () => ({
             './lazy/lazy.module.ngfactory#LazyModuleNgFactory':
