@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../../packages/angular_devkit/core/src/workspace/workspace-schema.json",
+  "version": 1,
+  "projects": {
+    "app1": {
+      "root": "projects/app1",
+      "projectType": "application",
+      "architect": {
+        "binary": {
+          "builder": "../../../../packages/angular_devkit/build_webpack_nodejs:binary",
+          "options": {
+            "buildTarget": "app1:build",
+            "inspect": false
+          }
+        },
+        "build": {
+          "builder": "../../../../packages/angular_devkit/build_webpack_nodejs:build",
+          "options": {
+            "main": "projects/app1/src/main.ts",
+            "outputPath": "dist/projects/app1"
+          }
+        }
+      }
+    }
+  }
+}

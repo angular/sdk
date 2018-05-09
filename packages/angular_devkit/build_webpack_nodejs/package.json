@@ -1,0 +1,29 @@
+{
+  "name": "@angular-devkit/build-webpack-nodejs",
+  "version": "0.0.0",
+  "description": "Server Webpack build facaded",
+  "main": "src/index.js",
+  "typings": "src/index.d.ts",
+  "builders": "builders.json",
+  "scripts": {
+    "preinstall": "echo DO NOT INSTALL THIS PROJECT, ONLY THE ROOT PROJECT. && exit 1"
+  },
+  "dependencies": {
+    "@angular-devkit/architect": "0.0.0",
+    "@angular-devkit/core": "0.0.0",
+    "tree-kill": "^1.2.0",
+    "circular-dependency-plugin": "^5.0.0",
+    "license-webpack-plugin": "^1.2.3",
+    "chalk": "~2.2.2",
+    "stats-webpack-plugin": "^0.6.2",
+    "ts-loader": "^4.1.0",    
+    "webpack-node-externals": "^1.7.2",
+    "rxjs": "^5.5.8",
+    "fork-ts-checker-webpack-plugin": "^0.4.1",
+    "webpack-merge": "^4.1.2",    
+    "webpack": "4.1.0"
+  },
+  "peerDependencies": {
+    "typescript": "~2.7.2"    
+  }
+}

@@ -19,7 +19,7 @@ export class PurifyPlugin {
   constructor() { }
   public apply(compiler: webpack.Compiler): void {
     // tslint:disable-next-line:no-any
-    compiler.plugin('compilation', (compilation: any) => {
+    (compiler as any).plugin('compilation', (compilation: any) => {
       compilation.plugin('optimize-chunk-assets', (chunks: Chunk[], callback: () => void) => {
         chunks.forEach((chunk: Chunk) => {
           chunk.files

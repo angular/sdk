@@ -85,7 +85,7 @@ export default postcss.plugin('postcss-cli-resources', (options: PostcssCliResou
         }
 
         const outputPath = interpolateName(
-          { resourcePath: result } as webpack.loader.LoaderContext,
+          { resourcePath: result } as webpack.loader.LoaderContext as any,
           filename,
           { content },
         );

@@ -1,0 +1,15 @@
+{
+  "$schema": "../architect/src/builders-schema.json",
+  "builders": {
+    "build": {
+      "class": "./src/build",
+      "schema": "./src/build/schema.json",
+      "description": "Build a Nodejs app"
+    },
+    "binary": {
+      "class": "./src/binary",
+      "schema": "./src/binary/schema.json",
+      "description": "Starts a Nodejs app"
+    }
+  }
+}
