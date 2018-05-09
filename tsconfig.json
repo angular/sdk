@@ -24,7 +24,7 @@
     "strictNullChecks": true,
     "target": "es2016",
     "lib": [
-      "es2017"
+      "es2018"
     ],
     "baseUrl": "",
     "typeRoots": [
