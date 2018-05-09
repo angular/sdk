@@ -138,6 +138,7 @@ describe('Workspace', () => {
       },
     },
   };
+
   const appProject = {
     ...workspaceJson.projects['app'],
     // Tools should not be returned when getting a project.
@@ -250,7 +251,11 @@ describe('Workspace', () => {
   });
 
   it('gets default project when there is a single one', (done) => {
-    const customWorkspaceJson = { ...workspaceJson, defaultProject: undefined };
+    const customWorkspaceJson: WorkspaceSchema = {
+      ...workspaceJson,
+      defaultProject: undefined,
+      projects: { app: {...workspaceJson.projects.app}},
+    };
     const workspace = new Workspace(root, host);
     workspace.loadWorkspaceFromJson(customWorkspaceJson).pipe(
       tap((ws) => expect(ws.getDefaultProjectName()).toEqual('app')),
@@ -267,8 +272,9 @@ describe('Workspace', () => {
 
   it('gets project by path', (done) => {
     const workspace = new Workspace(root, host);
+    const appRoot = normalize(workspaceJson.projects.app.root);
     workspace.loadWorkspaceFromJson(workspaceJson).pipe(
-      tap((ws) => expect(ws.getProjectByPath(ws.root)).toEqual('app')),
+      tap((ws) => expect(ws.getProjectByPath(appRoot)).toEqual('app')),
     ).subscribe(undefined, done.fail, done);
   });
 
@@ -276,7 +282,7 @@ describe('Workspace', () => {
     const app = workspaceJson.projects['app'];
     const anotherAppRoot = join(normalize(app.root), 'folder');
     const customWorkspaceJson = { ...workspaceJson, projects: {
-      'app': app,
+      ...workspaceJson.projects,
       'another-app': { ...app, root: anotherAppRoot},
     } };
     const workspace = new Workspace(root, host);
