@@ -14,18 +14,29 @@ import { makeTransform } from './make_transform';
 
 export function registerLocaleData(
   shouldTransform: (fileName: string) => boolean,
-  getEntryModule: () => { path: string, className: string } | null,
+  getEntryModules: () => { path: string, className: string }[] | null,
   locale: string,
 ): ts.TransformerFactory<ts.SourceFile> {
 
   const standardTransform: StandardTransform = function (sourceFile: ts.SourceFile) {
+
     const ops: TransformOperation[] = [];
 
-    const entryModule = getEntryModule();
+    const entryModules = getEntryModules();
 
-    if (!shouldTransform(sourceFile.fileName) || !entryModule || !locale) {
+    if (!shouldTransform(sourceFile.fileName) || !entryModules || !locale) {
       return ops;
     }
+
+    return entryModules.reduce((ops, entryModule) => {
+      return ops.concat(standardTransformHelper(sourceFile, entryModule));
+    }, ops);
+  };
+
+  const standardTransformHelper = function (
+    sourceFile: ts.SourceFile,
+    entryModule: { path: string, className: string }) {
+    const ops: TransformOperation[] = [];
 
     // Find all identifiers using the entry module class name.
     const entryModuleIdentifiers = collectDeepNodes<ts.Identifier>(sourceFile,
