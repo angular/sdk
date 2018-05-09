@@ -45,7 +45,7 @@ describe('@ngtools/webpack transformers', () => {
 
       const transformer = registerLocaleData(
         () => true,
-        () => ({ path: '/project/src/app/app.module', className: 'AppModule' }),
+        () => ([{ path: '/project/src/app/app.module', className: 'AppModule' }]),
         'fr',
       );
       const result = transformTypescript(input, [transformer]);
