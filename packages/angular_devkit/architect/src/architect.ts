@@ -78,6 +78,7 @@ export interface BuilderConfiguration<OptionsT = {}> {
 
 export interface TargetSpecifier<OptionsT = {}> {
   project: string;
+  projectFilter?: experimental.workspace.projectFilter;
   target: string;
   configuration?: string;
   overrides?: Partial<OptionsT>;
