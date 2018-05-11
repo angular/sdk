@@ -16,10 +16,11 @@ import { Path, getSystemPath, normalize, resolve } from '@angular-devkit/core';
 import { Observable } from 'rxjs';
 import * as webpack from 'webpack';
 import * as WebpackDevServer from 'webpack-dev-server';
+import { LoggingCb, defaultLoggingCb } from '../webpack';
 import { WebpackDevServerBuilderSchema } from './schema';
 
 
-export class DevServerBuilder implements Builder<WebpackDevServerBuilderSchema> {
+export class WebpackDevServerBuilder implements Builder<WebpackDevServerBuilderSchema> {
 
   constructor(public context: BuilderContext) { }
 
@@ -39,13 +40,16 @@ export class DevServerBuilder implements Builder<WebpackDevServerBuilderSchema> 
   public runWebpackDevServer(
     webpackConfig: webpack.Configuration,
     devServerCfg?: WebpackDevServer.Configuration,
+    loggingCb: LoggingCb = defaultLoggingCb,
   ): Observable<BuildEvent> {
     return new Observable(obs => {
       const devServerConfig = devServerCfg || webpackConfig.devServer || {};
       devServerConfig.host = devServerConfig.host || 'localhost';
       devServerConfig.port = devServerConfig.port || 8080;
 
-      const statsConfig = devServerConfig.stats || webpackConfig.stats;
+      if (devServerConfig.stats) {
+        webpackConfig.stats = devServerConfig.stats;
+      }
       // Disable stats reporting by the devserver, we have our own logger.
       devServerConfig.stats = false;
 
@@ -53,12 +57,13 @@ export class DevServerBuilder implements Builder<WebpackDevServerBuilderSchema> 
       const server = new WebpackDevServer(webpackCompiler, devServerConfig);
 
       webpackCompiler.hooks.done.tap('build-webpack', (stats: webpack.Stats) => {
-        this.context.logger.info(stats.toString(statsConfig));
+        // Log stats.
+        loggingCb(stats, webpackConfig, this.context.logger);
 
         obs.next({ success: !stats.hasErrors() });
       });
 
-      server.listen(
+      const httpServer = server.listen(
         devServerConfig.port,
         devServerConfig.host,
         (err) => {
@@ -68,6 +73,17 @@ export class DevServerBuilder implements Builder<WebpackDevServerBuilderSchema> 
         },
       );
 
+      // Node 8 has a keepAliveTimeout bug which doesn't respect active connections.
+      // Connections will end after ~5 seconds (arbitrary), often not letting the full download
+      // of large pieces of content, such as a vendor javascript file.  This results in browsers
+      // throwing a "net::ERR_CONTENT_LENGTH_MISMATCH" error.
+      // https://github.com/angular/angular-cli/issues/7197
+      // https://github.com/nodejs/node/issues/13391
+      // https://github.com/nodejs/node/commit/2cb6f2b281eb96a7abe16d58af6ebc9ce23d2e96
+      if (/^v8.\d.\d+$/.test(process.version)) {
+        httpServer.keepAliveTimeout = 30000; // 30 seconds
+      }
+
       // Teardown logic. Close the server when unsubscribed from.
       return () => server.close();
     });
@@ -75,4 +91,4 @@ export class DevServerBuilder implements Builder<WebpackDevServerBuilderSchema> 
 }
 
 
-export default DevServerBuilder;
+export default WebpackDevServerBuilder;

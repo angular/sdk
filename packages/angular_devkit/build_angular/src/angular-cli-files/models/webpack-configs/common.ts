@@ -255,6 +255,10 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
       publicPath: buildOptions.deployUrl,
       filename: `[name]${hashFormat.chunk}.js`,
     },
+    watch: buildOptions.watch,
+    watchOptions: {
+      poll: buildOptions.poll
+    },
     performance: {
       hints: false,
     },

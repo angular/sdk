@@ -11,12 +11,20 @@ import {
   BuilderConfiguration,
   BuilderContext,
 } from '@angular-devkit/architect';
-import { Path, getSystemPath, normalize, resolve } from '@angular-devkit/core';
+import { Path, getSystemPath, logging, normalize, resolve } from '@angular-devkit/core';
 import { Observable } from 'rxjs';
 import * as webpack from 'webpack';
 import { WebpackBuilderSchema } from './schema';
 
-export class BrowserBuilder implements Builder<WebpackBuilderSchema> {
+
+export interface LoggingCb {
+  (stats: webpack.Stats, config: webpack.Configuration, logger: logging.Logger): void;
+}
+
+export const defaultLoggingCb: LoggingCb = (stats, config, logger) =>
+  logger.info(stats.toString(config.stats));
+
+export class WebpackBuilder implements Builder<WebpackBuilderSchema> {
 
   constructor(public context: BuilderContext) { }
 
@@ -33,7 +41,9 @@ export class BrowserBuilder implements Builder<WebpackBuilderSchema> {
     return require(webpackConfigPath) as webpack.Configuration;
   }
 
-  public runWebpack(config: webpack.Configuration): Observable<BuildEvent> {
+  public runWebpack(
+    config: webpack.Configuration, loggingCb = defaultLoggingCb,
+  ): Observable<BuildEvent> {
     return new Observable(obs => {
       const webpackCompiler = webpack(config);
 
@@ -42,15 +52,12 @@ export class BrowserBuilder implements Builder<WebpackBuilderSchema> {
           return obs.error(err);
         }
 
-        this.context.logger.info(stats.toString(config.stats));
+        // Log stats.
+        loggingCb(stats, config, this.context.logger);
 
-        if (config.watch) {
-          obs.next({ success: !stats.hasErrors() });
+        obs.next({ success: !stats.hasErrors() });
 
-          // Never complete on watch mode.
-          return;
-        } else {
-          obs.next({ success: !stats.hasErrors() });
+        if (!config.watch) {
           obs.complete();
         }
       };
@@ -76,4 +83,4 @@ export class BrowserBuilder implements Builder<WebpackBuilderSchema> {
   }
 }
 
-export default BrowserBuilder;
+export default WebpackBuilder;
