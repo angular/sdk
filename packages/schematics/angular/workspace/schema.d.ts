@@ -35,4 +35,8 @@ export interface Schema {
      * The version of the Angular CLI to use.
      */
     version?: string;
+    /**
+     * Specifies the editor used, for specific configuration.
+     */
+    editor?: ('vscode');
 }

@@ -67,4 +67,8 @@ export interface Schema {
    * Skip creating spec files.
    */
   skipTests?: boolean;
+  /**
+   * Specifies the editor used, for specific configuration.
+   */
+  editor?: ('vscode');
 }
