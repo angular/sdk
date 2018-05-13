@@ -232,7 +232,38 @@
         "$ref": "#/definitions/budget"
       },
       "default": []
+    },
+    "defines": {
+      "type": "array",
+      "description": "defines",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the def"
+          },
+          "value": {
+            "description": "Value of the def for all targets"
+          },
+          "targets": {
+            "type": "object",
+            "properties": {
+              "development": {
+                "description": "Value of the def for development target"
+              },
+              "production": {
+                "description": "Value of the def for production target"
+              }
+            }
+          }
+        }
+      },
+      "default": []
     }
+  },
+  "patternProperties": {
+   	"^_": {}
   },
   "additionalProperties": false,
   "required": [

@@ -22,6 +22,7 @@ export const host = new TestProjectHost(workspaceRoot);
 export const outputPath = normalize('dist');
 export const browserTargetSpec = { project: 'app', target: 'build' };
 export const devServerTargetSpec = { project: 'app', target: 'serve' };
+export const serverTargetSpec = { project: 'app', target: 'server' };
 export const extractI18nTargetSpec = { project: 'app', target: 'extract-i18n' };
 export const karmaTargetSpec = { project: 'app', target: 'test' };
 export const tslintTargetSpec = { project: 'app', target: 'lint' };
