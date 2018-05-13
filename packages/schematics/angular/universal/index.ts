@@ -51,7 +51,7 @@ function getClientProject(
     options.clientProject = workspace['defaultProject'];
   }
 
-  const clientProject = workspace.projects[options.clientProject];
+  const clientProject = workspace.projects[options.clientProject as string];
   if (!clientProject) {
     throw new SchematicsException(`Client app ${options.clientProject} not found.`);
   }
@@ -75,11 +75,11 @@ function getClientArchitect(
 function updateConfigFile(options: UniversalOptions): Rule {
   return (host: Tree) => {
     const workspace = getWorkspace(host);
-    if (!workspace.projects[options.clientProject]) {
+    if (!workspace.projects[options.clientProject as string]) {
       throw new SchematicsException(`Client app ${options.clientProject} not found.`);
     }
 
-    const clientProject = workspace.projects[options.clientProject];
+    const clientProject = workspace.projects[options.clientProject as string];
     if (!clientProject.architect) {
       throw new Error('Client project architect not found.');
     }
