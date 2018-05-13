@@ -53,7 +53,7 @@ function addDeclarationToNgModule(options: ModuleOptions): Rule {
     );
     const relativeDir = relative(dirname(modulePath), dirname(importModulePath));
     const relativePath = (relativeDir.startsWith('.') ? relativeDir : './' + relativeDir)
-      + '/' + basename(importModulePath);
+      + (relativeDir.length === 0 ? '' : '/') + basename(importModulePath);
     const changes = addImportToModule(source, modulePath,
                                       strings.classify(`${options.name}Module`),
                                       relativePath);
