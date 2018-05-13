@@ -44,7 +44,6 @@ describe('Universal Schematic', () => {
   });
 
 
-
   it('should create a root module file', () => {
     const tree = schematicRunner.runSchematic('universal', defaultOptions, appTree);
     const filePath = '/projects/bar/src/app/app.server.module.ts';
@@ -65,10 +64,10 @@ describe('Universal Schematic', () => {
     const filePath = '/angular.json';
     const contents = tree.readContent(filePath);
     const config = JSON.parse(contents.toString());
-    const defaultProject= config.defaultProject;
+    const defaultProject = config.defaultProject;
     const filePathServer = '/projects/' + defaultProject + '/src/app/app.server.module.ts';
     expect(tree.exists(filePathServer)).toEqual(true);
-    
+
   });
 
   it('should create a tsconfig file', () => {
@@ -96,7 +95,6 @@ describe('Universal Schematic', () => {
     expect(contents).toMatch(/\"@angular\/platform-server\": \"/);
   });
 
- 
 
   it('should update workspace with a server target', () => {
     const tree = schematicRunner.runSchematic('universal', defaultOptions, appTree);

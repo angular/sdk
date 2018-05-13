@@ -122,8 +122,6 @@ const {
 const isLocalCollection = collectionName.startsWith('.') || collectionName.startsWith('/');
 
 
-
-
 /** If the user wants to list schematics, we simply show all the schematic names. */
 if (argv['list-schematics']) {
   // logger.info(engine.listSchematicNames(collection).join('\n'));

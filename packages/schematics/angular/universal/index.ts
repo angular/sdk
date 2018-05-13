@@ -47,9 +47,8 @@ function getClientProject(
 ): experimental.workspace.WorkspaceProject {
   const workspace = getWorkspace(host);
 
-  if(options.clientProject===undefined)
-  {
-    options.clientProject=workspace['defaultProject'];
+  if (options.clientProject === undefined) {
+    options.clientProject = workspace['defaultProject'];
   }
 
   const clientProject = workspace.projects[options.clientProject];
@@ -213,7 +212,7 @@ function getTsConfigOutDir(host: Tree, architect: experimental.workspace.Workspa
 
 export default function (options: UniversalOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
-    
+
     const clientProject = getClientProject(host, options);
     if (clientProject.projectType !== 'application') {
       throw new SchematicsException(`Universal requires a project type of "application".`);
