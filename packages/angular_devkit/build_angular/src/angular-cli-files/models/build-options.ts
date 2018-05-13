@@ -10,7 +10,7 @@
 
 // tslint:disable-next-line:no-implicit-dependencies
 import * as ts from 'typescript';
-import { AssetPatternObject, Budget, ExtraEntryPoint } from '../../browser/schema';
+import { AssetPatternObject, Budget, Define, ExtraEntryPoint } from '../../browser/schema';
 
 export interface BuildOptions {
   optimization: boolean;
@@ -48,6 +48,7 @@ export interface BuildOptions {
   forkTypeChecker: boolean;
 
   main: string;
+  defines: Define[];
   index: string;
   polyfills?: string;
   budgets: Budget[];
