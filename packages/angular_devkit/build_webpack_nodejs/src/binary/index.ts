@@ -93,7 +93,7 @@ export class BinaryBuilder implements Builder<BinaryBuilderOptions> {
     } else {
       return this._startBuild(builderConfig).pipe(
         // should always ensure the process is killed
-        concatMap(() => restart()),
+        mergeMap(() => restart()),
         map(() => ({success: true})),
       );
     }
