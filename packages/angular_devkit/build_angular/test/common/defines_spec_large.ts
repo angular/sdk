@@ -116,7 +116,7 @@ describe('Builder Defines', () => {
         runTargetSpec(host, karmaTargetSpec, testCase.overrides).pipe(
           tap((buildEvent) => expect(buildEvent.success).toBe(true)),
         ).subscribe(undefined, done.fail, done);
-      }, Timeout.Basic);
+      }, Timeout.Standard);
     }
 
 
@@ -156,6 +156,6 @@ describe('Builder Defines', () => {
         }),
         take(1),
       ).subscribe(undefined, done.fail, done);
-    }, Timeout.Basic);
+    }, Timeout.Complex);
   });
 });
