@@ -7,8 +7,10 @@
  */
 import {
   JsonObject,
+  Path,
   basename,
   experimental,
+  join,
   normalize,
   parseJson,
   strings,
@@ -52,6 +54,7 @@ function getClientProject(
   }
 
   const clientProject = workspace.projects[options.clientProject as string];
+
   if (!clientProject) {
     throw new SchematicsException(`Client app ${options.clientProject} not found.`);
   }
@@ -72,7 +75,7 @@ function getClientArchitect(
   return clientArchitect;
 }
 
-function updateConfigFile(options: UniversalOptions): Rule {
+function updateConfigFile(options: UniversalOptions, tsConfigDirectory: Path): Rule {
   return (host: Tree) => {
     const workspace = getWorkspace(host);
     if (!workspace.projects[options.clientProject as string]) {
@@ -87,7 +90,7 @@ function updateConfigFile(options: UniversalOptions): Rule {
     const builderOptions: JsonObject = {
       outputPath: `dist/${options.clientProject}-server`,
       main: `${clientProject.root}src/main.server.ts`,
-      tsConfig: `${clientProject.root}src/tsconfig.server.json`,
+      tsConfig: join(tsConfigDirectory, `${options.tsconfigFileName}.json`),
     };
     const serverTarget: JsonObject = {
       builder: '@angular-devkit/build-angular:server',
@@ -212,7 +215,6 @@ function getTsConfigOutDir(host: Tree, architect: experimental.workspace.Workspa
 
 export default function (options: UniversalOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
-
     const clientProject = getClientProject(host, options);
     if (clientProject.projectType !== 'application') {
       throw new SchematicsException(`Universal requires a project type of "application".`);
@@ -220,26 +222,39 @@ export default function (options: UniversalOptions): Rule {
     const clientArchitect = getClientArchitect(host, options);
     const outDir = getTsConfigOutDir(host, clientArchitect);
     const tsConfigExtends = basename(clientArchitect.build.options.tsConfig);
+    const rootInSrc = clientProject.root === '';
+    const tsConfigDirectory = join(normalize(clientProject.root), rootInSrc ? 'src' : '');
 
     if (!options.skipInstall) {
       context.addTask(new NodePackageInstallTask());
     }
 
-    const templateSource = apply(url('./files'), [
+    const templateSource = apply(url('./files/src'), [
+      template({
+        ...strings,
+        ...options as object,
+        stripTsExtension: (s: string) => { return s.replace(/\.ts$/, ''); },
+      }),
+      move(join(normalize(clientProject.root), 'src')),
+    ]);
+
+    const rootSource = apply(url('./files/root'), [
       template({
         ...strings,
         ...options as object,
         stripTsExtension: (s: string) => { return s.replace(/\.ts$/, ''); },
         outDir,
         tsConfigExtends,
+        rootInSrc,
       }),
-      move(clientProject.root),
+      move(tsConfigDirectory),
     ]);
 
     return chain([
       mergeWith(templateSource),
+      mergeWith(rootSource),
       addDependencies(),
-      updateConfigFile(options),
+      updateConfigFile(options, tsConfigDirectory),
       wrapBootstrapCall(options),
       addServerTransition(options),
     ])(host, context);

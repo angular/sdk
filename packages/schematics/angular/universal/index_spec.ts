@@ -10,6 +10,7 @@ import * as path from 'path';
 import { Schema as ApplicationOptions } from '../application/schema';
 import { Schema as WorkspaceOptions } from '../workspace/schema';
 import { Schema as UniversalOptions } from './schema';
+import { Schema as emptyClientOptions } from './schema';
 
 describe('Universal Schematic', () => {
   const schematicRunner = new SchematicTestRunner(
@@ -19,6 +20,10 @@ describe('Universal Schematic', () => {
   const defaultOptions: UniversalOptions = {
     clientProject: 'bar',
   };
+  const workspaceUniversalOptions: UniversalOptions = {
+    clientProject: 'workspace',
+  };
+  const emptyClientOptions: emptyClientOptions  = {};
 
   const workspaceOptions: WorkspaceOptions = {
     name: 'workspace',
@@ -36,13 +41,25 @@ describe('Universal Schematic', () => {
     skipPackageJson: false,
   };
 
+  const initialWorkspaceAppOptions: ApplicationOptions = {
+    name: 'workspace',
+    projectRoot: '',
+    inlineStyle: false,
+    inlineTemplate: false,
+    routing: false,
+    style: 'css',
+    skipTests: false,
+    skipPackageJson: false,
+  };
+
   let appTree: UnitTestTree;
 
   beforeEach(() => {
     appTree = schematicRunner.runSchematic('workspace', workspaceOptions);
+    appTree = schematicRunner.runSchematic('application', initialWorkspaceAppOptions, appTree);
     appTree = schematicRunner.runSchematic('application', appOptions, appTree);
-  });
 
+  });
 
   it('should create a root module file', () => {
     const tree = schematicRunner.runSchematic('universal', defaultOptions, appTree);
@@ -59,20 +76,40 @@ describe('Universal Schematic', () => {
   });
 
   it('should run schematics with no clienproject', () => {
-    const emptyClientOptions = {};
+
     const tree = schematicRunner.runSchematic('universal', emptyClientOptions, appTree);
     const filePath = '/angular.json';
     const contents = tree.readContent(filePath);
     const config = JSON.parse(contents.toString());
     const defaultProject = config.defaultProject;
-    const filePathServer = '/projects/' + defaultProject + '/src/app/app.server.module.ts';
+    const filePathServer = '/src/app/app.server.module.ts';
     expect(tree.exists(filePathServer)).toEqual(true);
-
   });
 
-  it('should create a tsconfig file', () => {
+  it('should create a tsconfig file for the workspace project', () => {
+    const tree = schematicRunner.runSchematic('universal', workspaceUniversalOptions, appTree);
+    const filePath = '/src/tsconfig.server.json';
+    expect(tree.exists(filePath)).toEqual(true);
+    const contents = tree.readContent(filePath);
+    expect(JSON.parse(contents)).toEqual({
+      extends: './tsconfig.app.json',
+      compilerOptions: {
+        outDir: '../out-tsc/app-server',
+        baseUrl: '.',
+        module: 'commonjs',
+      },
+      angularCompilerOptions: {
+        entryModule: 'app/app.server.module#AppServerModule',
+      },
+    });
+    const angularConfig = JSON.parse(tree.readContent('angular.json'));
+    expect(angularConfig.projects.workspace.architect.server.options.tsConfig)
+      .toEqual('src/tsconfig.server.json');
+  });
+
+  it('should create a tsconfig file for a generated application', () => {
     const tree = schematicRunner.runSchematic('universal', defaultOptions, appTree);
-    const filePath = '/projects/bar/src/tsconfig.server.json';
+    const filePath = '/projects/bar/tsconfig.server.json';
     expect(tree.exists(filePath)).toEqual(true);
     const contents = tree.readContent(filePath);
     expect(JSON.parse(contents)).toEqual({
@@ -83,9 +120,12 @@ describe('Universal Schematic', () => {
         module: 'commonjs',
       },
       angularCompilerOptions: {
-        entryModule: 'app/app.server.module#AppServerModule',
+        entryModule: 'src/app/app.server.module#AppServerModule',
       },
     });
+    const angularConfig = JSON.parse(tree.readContent('angular.json'));
+    expect(angularConfig.projects.bar.architect.server.options.tsConfig)
+      .toEqual('projects/bar/tsconfig.server.json');
   });
 
   it('should add dependency: @angular/platform-server', () => {
@@ -94,7 +134,6 @@ describe('Universal Schematic', () => {
     const contents = tree.readContent(filePath);
     expect(contents).toMatch(/\"@angular\/platform-server\": \"/);
   });
-
 
   it('should update workspace with a server target', () => {
     const tree = schematicRunner.runSchematic('universal', defaultOptions, appTree);
@@ -107,7 +146,7 @@ describe('Universal Schematic', () => {
     const opts = arch.server.options;
     expect(opts.outputPath).toEqual('dist/bar-server');
     expect(opts.main).toEqual('projects/bar/src/main.server.ts');
-    expect(opts.tsConfig).toEqual('projects/bar/src/tsconfig.server.json');
+    expect(opts.tsConfig).toEqual('projects/bar/tsconfig.server.json');
   });
 
   it('should add a server transition to BrowerModule import', () => {
