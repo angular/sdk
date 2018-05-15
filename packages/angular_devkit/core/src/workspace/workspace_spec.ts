@@ -14,15 +14,15 @@ import {
   ProjectNotFoundException,
   Workspace,
   WorkspaceNotYetLoadedException,
+  projectFilter,
 } from './workspace';
 import { WorkspaceProject, WorkspaceSchema, WorkspaceTool } from './workspace-schema';
-
 
 describe('Workspace', () => {
   const host = new NodeJsSyncHost();
   const root = normalize(__dirname);
   // The content of this JSON object should be kept in sync with the path below:
-  // tests/@angular_devkit/workspace/angular-workspace.json
+  // tests/@angular_devkit/core/workspace/angular-workspace.json
   const workspaceJson: WorkspaceSchema = {
     version: 1,
     newProjectRoot: './projects',
@@ -98,8 +98,47 @@ describe('Workspace', () => {
           },
         },
       },
+      lib: {
+        root: 'projects/lib',
+        projectType: 'library',
+        prefix: 'lib',
+        architect: {
+          'build': {
+            'builder': '@angular-devkit/build-ng-packagr:build',
+            'options': {
+              'project': 'projects/lib/ng-package.json',
+            },
+            'configurations': {
+              'production': {
+                'project': 'projects/lib/ng-package.prod.json',
+              },
+            },
+          },
+          test: {
+            'builder': '@angular-devkit/build-angular:karma',
+            'options': {
+              'main': 'projects/lib/src/test.ts',
+              'tsConfig': 'projects/lib/tsconfig.spec.json',
+              'karmaConfig': 'projects/lib/karma.conf.js',
+            },
+          },
+          lint: {
+            'builder': '@angular-devkit/build-angular:tslint',
+            'options': {
+              'tsConfig': [
+                'projects/lib/tsconfig.lint.json',
+                'projects/lib/tsconfig.spec.json',
+              ],
+              'exclude': [
+                '**/node_modules/**',
+              ],
+            },
+          },
+        },
+      },
     },
   };
+
   const appProject = {
     ...workspaceJson.projects['app'],
     // Tools should not be returned when getting a project.
@@ -167,10 +206,26 @@ describe('Workspace', () => {
     ).subscribe(undefined, done.fail, done);
   });
 
-  it('lists project names', (done) => {
+  it('lists all project names', (done) => {
     const workspace = new Workspace(root, host);
     workspace.loadWorkspaceFromJson(workspaceJson).pipe(
-      tap((ws) => expect(ws.listProjectNames()).toEqual(['app'])),
+      tap((ws) => expect(ws.listProjectNames()).toEqual(['app', 'lib'])),
+    ).subscribe(undefined, done.fail, done);
+  });
+
+  it('lists project names filtered by project property value', (done) => {
+    const workspace = new Workspace(root, host);
+    const librariesFilter: projectFilter = (project, name) => project.projectType === 'library';
+    workspace.loadWorkspaceFromJson(workspaceJson).pipe(
+      tap((ws) => expect(ws.listProjectNames(librariesFilter)).toEqual(['lib'])),
+    ).subscribe(undefined, done.fail, done);
+  });
+
+  it('lists filtered project names', (done) => {
+    const workspace = new Workspace(root, host);
+    const nameFilter: projectFilter = (project, name) => name.startsWith('a');
+    workspace.loadWorkspaceFromJson(workspaceJson).pipe(
+      tap((ws) => expect(ws.listProjectNames(nameFilter)).toEqual(['app'])),
     ).subscribe(undefined, done.fail, done);
   });
 
@@ -196,7 +251,11 @@ describe('Workspace', () => {
   });
 
   it('gets default project when there is a single one', (done) => {
-    const customWorkspaceJson = { ...workspaceJson, defaultProject: undefined };
+    const customWorkspaceJson: WorkspaceSchema = {
+      ...workspaceJson,
+      defaultProject: undefined,
+      projects: { app: {...workspaceJson.projects.app}},
+    };
     const workspace = new Workspace(root, host);
     workspace.loadWorkspaceFromJson(customWorkspaceJson).pipe(
       tap((ws) => expect(ws.getDefaultProjectName()).toEqual('app')),
@@ -213,8 +272,9 @@ describe('Workspace', () => {
 
   it('gets project by path', (done) => {
     const workspace = new Workspace(root, host);
+    const appRoot = normalize(workspaceJson.projects.app.root);
     workspace.loadWorkspaceFromJson(workspaceJson).pipe(
-      tap((ws) => expect(ws.getProjectByPath(ws.root)).toEqual('app')),
+      tap((ws) => expect(ws.getProjectByPath(appRoot)).toEqual('app')),
     ).subscribe(undefined, done.fail, done);
   });
 
@@ -222,7 +282,7 @@ describe('Workspace', () => {
     const app = workspaceJson.projects['app'];
     const anotherAppRoot = join(normalize(app.root), 'folder');
     const customWorkspaceJson = { ...workspaceJson, projects: {
-      'app': app,
+      ...workspaceJson.projects,
       'another-app': { ...app, root: anotherAppRoot},
     } };
     const workspace = new Workspace(root, host);

@@ -50,6 +50,8 @@ export class WorkspaceNotYetLoadedException extends BaseException {
 }
 
 
+export type projectFilter = (project: WorkspaceProject, name: string) => boolean;
+
 export class Workspace {
   private readonly _workspaceSchemaPath = join(normalize(__dirname), 'workspace-schema.json');
   private _workspaceSchema: JsonObject;
@@ -111,8 +113,12 @@ export class Workspace {
     return this._workspace.newProjectRoot;
   }
 
-  listProjectNames(): string[] {
-    return Object.keys(this._workspace.projects);
+  listProjectNames(filter?: projectFilter): string[] {
+    const projectNames =  Object.keys(this._workspace.projects);
+
+    return filter ? projectNames.filter((name) =>
+      filter(this._workspace.projects[name], name),
+    ) : projectNames;
   }
 
   getProject(projectName: string): WorkspaceProject {
