@@ -18,17 +18,16 @@ export class VirtualFileSystemDecorator implements InputFileSystem {
     private _webpackCompilerHost: WebpackCompilerHost,
   ) { }
 
-  // We only need to intercept calls to individual files that are present in WebpackCompilerHost.
-  private _readFileSync(path: string): string | null {
-    if (this._webpackCompilerHost.fileExists(path, false)) {
-      return this._webpackCompilerHost.readFile(path) || null;
+  private _readFileSync(path: string): Buffer | null {
+    if (this._webpackCompilerHost.fileExists(path)) {
+      return this._webpackCompilerHost.readFileBuffer(path) || null;
     }
 
     return null;
   }
 
   private _statSync(path: string): Stats | null {
-    if (this._webpackCompilerHost.fileExists(path, false)) {
+    if (this._webpackCompilerHost.fileExists(path)) {
       return this._webpackCompilerHost.stat(path);
     }
 
@@ -52,7 +51,7 @@ export class VirtualFileSystemDecorator implements InputFileSystem {
     this._inputFileSystem.readdir(path, callback);
   }
 
-  readFile(path: string, callback: Callback<string>): void {
+  readFile(path: string, callback: Callback<string | Buffer>): void {
     const result = this._readFileSync(path);
     if (result) {
       callback(null, result);
@@ -79,7 +78,7 @@ export class VirtualFileSystemDecorator implements InputFileSystem {
     return this._inputFileSystem.readdirSync(path);
   }
 
-  readFileSync(path: string): string {
+  readFileSync(path: string): string | Buffer {
     const result = this._readFileSync(path);
 
     return result || this._inputFileSystem.readFileSync(path);

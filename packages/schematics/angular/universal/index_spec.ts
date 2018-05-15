@@ -23,6 +23,7 @@ describe('Universal Schematic', () => {
   const workspaceUniversalOptions: UniversalOptions = {
     clientProject: 'workspace',
   };
+
   const emptyClientOptions: emptyClientOptions  = {};
 
   const workspaceOptions: WorkspaceOptions = {
