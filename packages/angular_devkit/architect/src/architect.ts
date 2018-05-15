@@ -376,7 +376,7 @@ export class Architect {
 // Do it in @angular\cli\models\command-runner parseOptions ???
 function filterCustomOptions(options: any) { // tslint:disable-line:no-any
   let customOptions = options.customOptions;
-  Object.keys(options).map(key => {
+  Object.keys(options).forEach(key => {
     if (key && options.hasOwnProperty(key) && key.startsWith('_') && key.length > 1) {
       const value = options[key];
       delete options[key];
