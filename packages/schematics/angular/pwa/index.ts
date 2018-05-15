@@ -14,9 +14,9 @@ import {
   apply,
   branchAndMerge,
   chain,
-  externalSchematic,
   mergeWith,
   move,
+  schematic,
   template,
   url,
 } from '@angular-devkit/schematics';
@@ -28,7 +28,7 @@ function addServiceWorker(options: PwaOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
     context.logger.debug('Adding service worker...');
 
-    return externalSchematic('@schematics/angular', 'service-worker', options)(host, context);
+    return schematic('service-worker', options)(host, context);
   };
 }
 

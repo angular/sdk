@@ -43,12 +43,12 @@ describe('PWA Schematic', () => {
   };
 
   beforeEach(() => {
-    appTree = schematicRunner.runExternalSchematic('@schematics/angular', 'workspace', workspaceOptions);
-    appTree = schematicRunner.runExternalSchematic('@schematics/angular', 'application', appOptions, appTree);
+    appTree = schematicRunner.runSchematic('workspace', workspaceOptions);
+    appTree = schematicRunner.runSchematic('application', appOptions, appTree);
   });
 
   it('should run the service worker schematic', () => {
-    const tree = schematicRunner.runSchematic('ng-add', defaultOptions, appTree);
+    const tree = schematicRunner.runSchematic('pwa', defaultOptions, appTree);
     const configText = tree.readContent('/angular.json');
     const config = JSON.parse(configText);
     const swFlag = config.projects.bar.architect.build.configurations.production.serviceWorker;
@@ -58,7 +58,7 @@ describe('PWA Schematic', () => {
   it('should create icon files', () => {
     const dimensions = [72, 96, 128, 144, 152, 192, 384, 512];
     const iconPath = '/projects/bar/src/assets/icons/icon-';
-    const tree = schematicRunner.runSchematic('ng-add', defaultOptions, appTree);
+    const tree = schematicRunner.runSchematic('pwa', defaultOptions, appTree);
     dimensions.forEach(d => {
       const path = `${iconPath}${d}x${d}.png`;
       expect(tree.exists(path)).toEqual(true);
@@ -66,12 +66,12 @@ describe('PWA Schematic', () => {
   });
 
   it('should create a manifest file', () => {
-    const tree = schematicRunner.runSchematic('ng-add', defaultOptions, appTree);
+    const tree = schematicRunner.runSchematic('pwa', defaultOptions, appTree);
     expect(tree.exists('/projects/bar/src/manifest.json')).toEqual(true);
   });
 
   it('should set the name & short_name in the manifest file', () => {
-    const tree = schematicRunner.runSchematic('ng-add', defaultOptions, appTree);
+    const tree = schematicRunner.runSchematic('pwa', defaultOptions, appTree);
     const manifestText = tree.readContent('/projects/bar/src/manifest.json');
     const manifest = JSON.parse(manifestText);
     expect(manifest.name).toEqual(defaultOptions.title);
@@ -80,7 +80,7 @@ describe('PWA Schematic', () => {
 
   it('should set the name & short_name in the manifest file when no title provided', () => {
     const options = {...defaultOptions, title: undefined};
-    const tree = schematicRunner.runSchematic('ng-add', options, appTree);
+    const tree = schematicRunner.runSchematic('pwa', options, appTree);
     const manifestText = tree.readContent('/projects/bar/src/manifest.json');
     const manifest = JSON.parse(manifestText);
     expect(manifest.name).toEqual(defaultOptions.project);
@@ -88,7 +88,7 @@ describe('PWA Schematic', () => {
   });
 
   it('should update the index file', () => {
-    const tree = schematicRunner.runSchematic('ng-add', defaultOptions, appTree);
+    const tree = schematicRunner.runSchematic('pwa', defaultOptions, appTree);
     const content = tree.readContent('projects/bar/src/index.html');
 
     expect(content).toMatch(/<link rel="manifest" href="manifest.json">/);
@@ -96,7 +96,7 @@ describe('PWA Schematic', () => {
   });
 
   it('should update the build and test assets configuration', () => {
-    const tree = schematicRunner.runSchematic('ng-add', defaultOptions, appTree);
+    const tree = schematicRunner.runSchematic('pwa', defaultOptions, appTree);
     const configText = tree.readContent('/angular.json');
     const config = JSON.parse(configText);
     const architect = config.projects.bar.architect;
