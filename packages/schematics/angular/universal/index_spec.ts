@@ -79,10 +79,6 @@ describe('Universal Schematic', () => {
   it('should run schematics with no clienproject', () => {
 
     const tree = schematicRunner.runSchematic('universal', emptyClientOptions, appTree);
-    const filePath = '/angular.json';
-    const contents = tree.readContent(filePath);
-    const config = JSON.parse(contents.toString());
-    const defaultProject = config.defaultProject;
     const filePathServer = '/src/app/app.server.module.ts';
     expect(tree.exists(filePathServer)).toEqual(true);
   });
