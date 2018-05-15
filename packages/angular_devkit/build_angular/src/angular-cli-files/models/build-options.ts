@@ -58,6 +58,8 @@ export interface BuildOptions {
   stylePreprocessorOptions?: { includePaths: string[] };
   lazyModules: string[];
   platform?: 'browser' | 'server';
+
+  customOptions?: CustomBuildOptions;
 }
 
 export interface WebpackTestOptions extends BuildOptions {
@@ -73,3 +75,5 @@ export interface WebpackConfigOptions<T = BuildOptions> {
   tsConfigPath: string;
   supportES2015: boolean;
 }
+
+export type CustomBuildOptions = {[key: string]: string | number | boolean };

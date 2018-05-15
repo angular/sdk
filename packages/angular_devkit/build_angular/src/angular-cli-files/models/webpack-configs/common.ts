@@ -152,6 +152,7 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
   if (optDefines && optDefines.length > 0) {
     const DefinePlugin = require('webpack/lib/DefinePlugin');
     const target = buildOptions.optimization ? 'production' : 'development';
+    const customOptions =  buildOptions.customOptions;
     const defines: {[key: string]: string | number | boolean} = {};
     optDefines.forEach((item) => {
       if (item && item.name){

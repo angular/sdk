@@ -170,10 +170,12 @@
         }
       },
       "default": []
+    },
+    "customOptions": {
+      "type": "object",
+      "description": "Custom target options",
+      "additionalProperties": true
     }
-  },
-  "patternProperties": {
-    "^_": {}
   },
   "additionalProperties": false,
   "required": [

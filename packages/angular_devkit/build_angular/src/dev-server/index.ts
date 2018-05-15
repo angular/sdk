@@ -20,6 +20,7 @@ import { Observable } from 'rxjs';
 import { concatMap, map, tap } from 'rxjs/operators';
 import * as url from 'url';
 import * as webpack from 'webpack';
+import { CustomBuildOptions } from '../angular-cli-files/models/build-options';
 import { getWebpackStatsConfig } from '../angular-cli-files/models/webpack-configs/utils';
 import { checkPort } from '../angular-cli-files/utilities/check-port';
 import {
@@ -62,6 +63,8 @@ export interface DevServerBuilderOptions {
   baseHref?: string;
   progress?: boolean;
   poll?: number;
+
+  customOptions?: CustomBuildOptions;
 }
 
 interface WebpackDevServerConfigurationOptions {
@@ -442,15 +445,9 @@ export class DevServerBuilder implements Builder<DevServerBuilderOptions> {
     const builderConfig = architect.getBuilderConfiguration<BrowserBuilderSchema>(
       browserTargetSpec);
 
-    const customCommandLineOptions: {[key: string]: string | number | boolean} = {};
-    Object.keys(options).map(key => {
-      if (key && key.startsWith('_') && options.hasOwnProperty(key)) {
-        customCommandLineOptions[key] = (<any> options)[key];
-      }
-    });
     // Update the browser options with the same options we support in serve, if defined.
     builderConfig.options = {
-      ...customCommandLineOptions,
+      ...{customOptions: (options.customOptions !== undefined ? {...options.customOptions} : {})},
       ...(options.optimization !== undefined ? { optimization: options.optimization } : {}),
       ...(options.aot !== undefined ? { aot: options.aot } : {}),
       ...(options.sourceMap !== undefined ? { sourceMap: options.sourceMap } : {}),

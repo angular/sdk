@@ -29,7 +29,7 @@ describe('Builder Defines', () => {
       },
       {
         "name": "COMMAND_LINE_OPTION",
-        "value": "buildOptions._customCommandLineOption"
+        "value": "customOptions.customCommandLineOption"
       },
       {
         "name": "CALC_OPTION",
@@ -92,7 +92,7 @@ describe('Builder Defines', () => {
         expect(content).toContain(`commandlineOption = "command line option set"`);
         expect(content).toContain(`calcOption = 4`);
       },
-      overrides: { _customCommandLineOption: 'command line option set'},
+      overrides: { customOptions: { customCommandLineOption: 'command line option set'}},
       type: 'development',
     },
     {
@@ -103,7 +103,10 @@ describe('Builder Defines', () => {
         expect(content).not.toContain(`"calcOption = 283745620253"`);
         expect(content).toContain(`"production: 283745620253"`);
       },
-      overrides: {_customCommandLineOption: 'command line option set', optimization: true},
+      overrides: {
+        customOptions: { customCommandLineOption: 'command line option set'},
+        optimization: true,
+      },
       type: 'production',
     },
   ].forEach(testCase => {

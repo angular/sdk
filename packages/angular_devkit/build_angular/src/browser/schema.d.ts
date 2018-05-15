@@ -5,6 +5,9 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
+
+import { CustomBuildOptions } from '../angular-cli-files/models/build-options';
+
 export interface BrowserBuilderSchema {
   /**
    * List of static application assets.
@@ -219,6 +222,8 @@ export interface BrowserBuilderSchema {
   budgets: Budget[];
 
   defines: Define[];
+
+  customOptions: CustomBuildOptions;
 }
 
 export type AssetPattern = string | AssetPatternObject;

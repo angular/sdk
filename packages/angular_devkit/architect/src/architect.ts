@@ -244,6 +244,8 @@ export class Architect {
       ...partialContext,
     };
 
+    filterCustomOptions(builderConfig.options);
+
     let builderDescription: BuilderDescription;
 
     return this.getBuilderDescription(builderConfig).pipe(
@@ -368,5 +370,23 @@ export class Architect {
       map(buffer => virtualFs.fileBufferToString(buffer)),
       map(str => parseJson(str, JsonParseMode.Loose) as {} as JsonObject),
     );
+  }
+}
+
+// Do it in @angular\cli\models\command-runner parseOptions ???
+function filterCustomOptions(options: any) { // tslint:disable-line:no-any
+  let customOptions = options.customOptions;
+  Object.keys(options).map(key => {
+    if (key && options.hasOwnProperty(key) && key.startsWith('_') && key.length > 1) {
+      const value = options[key];
+      delete options[key];
+      if (!customOptions) {
+        customOptions = {};
+      }
+      customOptions[key.substr(1)] = value;
+    }
+  });
+  if (customOptions) {
+    options.customOptions = customOptions;
   }
 }
