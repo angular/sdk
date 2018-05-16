@@ -31,7 +31,7 @@ describe('Webpack Builder basic test', () => {
   });
 
   describe('Angular app', () => {
-    const outputPath = normalize('dist/');
+    const outputPath = normalize('dist/foo');
     const webpackTargetSpec = { project: 'app', target: 'build-webpack' };
 
     beforeEach(done => angularHost.initialize().subscribe(undefined, done.fail, done));
@@ -41,10 +41,37 @@ describe('Webpack Builder basic test', () => {
       runTargetSpec(angularHost, webpackTargetSpec).pipe(
         tap((buildEvent) => expect(buildEvent.success).toBe(true)),
         tap(() => {
+          expect(angularHost.scopedSync().exists(join(outputPath, 'runtime.js'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'runtime.js.map'))).toBe(true);
           expect(angularHost.scopedSync().exists(join(outputPath, 'main.js'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'main.js.map'))).toBe(true);
           expect(angularHost.scopedSync().exists(join(outputPath, 'polyfills.js'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'polyfills.js.map'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'styles.js'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'styles.js.map'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'vendor.js'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'vendor.js.map'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'favicon.ico'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'index.html'))).toBe(true);
         }),
       ).subscribe(undefined, done.fail, done);
     }, 30000);
+
+    it('works with prod config', (done) => {
+      const targetSpec = { ...webpackTargetSpec, configuration: 'production' };
+      runTargetSpec(angularHost, targetSpec).pipe(
+        tap((buildEvent) => expect(buildEvent.success).toBe(true)),
+        tap(() => {
+          expect(angularHost.scopedSync().exists(join(outputPath, 'runtime.js'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'main.js'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'main.js.map'))).toBe(false);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'polyfills.js'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'styles.css'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'vendor.js'))).toBe(false);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'favicon.ico'))).toBe(true);
+          expect(angularHost.scopedSync().exists(join(outputPath, 'index.html'))).toBe(true);
+        }),
+      ).subscribe(undefined, done.fail, done);
+    }, 60000);
   });
 });
