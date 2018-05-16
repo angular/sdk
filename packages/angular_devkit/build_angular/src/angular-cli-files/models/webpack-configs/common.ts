@@ -5,28 +5,26 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-// tslint:disable
-// TODO: cleanup this file, it's copied as is from Angular CLI.
 
-import * as path from 'path';
-import { HashedModuleIdsPlugin } from 'webpack';
 import * as CopyWebpackPlugin from 'copy-webpack-plugin';
-import { getOutputHashFormat } from './utils';
+import * as path from 'path';
+import * as UglifyJSPlugin from 'uglifyjs-webpack-plugin';
+import { Entry, HashedModuleIdsPlugin, Plugin } from 'webpack';
+import { AssetPatternObject } from '../../../browser/schema';
+import {
+  BundleBudgetPlugin,
+  CleanCssWebpackPlugin,
+  ScriptsWebpackPlugin,
+} from '../../plugins/webpack';
+import { findUp } from '../../utilities/find-up';
 import { isDirectory } from '../../utilities/is-directory';
 import { requireProjectModule } from '../../utilities/require-project-module';
 import { WebpackConfigOptions } from '../build-options';
-import { BundleBudgetPlugin } from '../../plugins/bundle-budget';
-import { CleanCssWebpackPlugin } from '../../plugins/cleancss-webpack-plugin';
-import { ScriptsWebpackPlugin } from '../../plugins/scripts-webpack-plugin';
-import { findUp } from '../../utilities/find-up';
-import { AssetPatternObject, ExtraEntryPoint } from '../../../browser/schema';
-import { normalizeExtraEntryPoints } from './utils';
+import { getOutputHashFormat, normalizeExtraEntryPoints } from './utils';
 
 const ProgressPlugin = require('webpack/lib/ProgressPlugin');
 const CircularDependencyPlugin = require('circular-dependency-plugin');
-const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 const StatsPlugin = require('stats-webpack-plugin');
-const SilentError = require('silent-error');
 const resolve = require('resolve');
 
 /**
@@ -41,7 +39,7 @@ const resolve = require('resolve');
  * require('@angular-devkit/build-optimizer')
  */
 
-const g: any = typeof global !== 'undefined' ? global : {};
+const g: any = typeof global !== 'undefined' ? global : {};  // tslint:disable-line:no-any
 export const buildOptimizerLoader: string = g['_DevKitIsLocal']
   ? require.resolve('@angular-devkit/build-optimizer/src/build-optimizer/webpack-loader')
   : '@angular-devkit/build-optimizer/webpack-loader';
@@ -51,11 +49,11 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
 
   const nodeModules = findUp('node_modules', projectRoot);
   if (!nodeModules) {
-    throw new Error('Cannot locate node_modules directory.')
+    throw new Error('Cannot locate node_modules directory.');
   }
 
-  let extraPlugins: any[] = [];
-  let entryPoints: { [key: string]: string[] } = {};
+  const extraPlugins: Plugin[] = [];
+  const entryPoints: Entry = {};
 
   if (buildOptions.main) {
     entryPoints['main'] = [path.resolve(root, buildOptions.main)];
@@ -66,7 +64,7 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
   }
 
   // determine hashing format
-  const hashFormat = getOutputHashFormat(buildOptions.outputHashing as any);
+  const hashFormat = getOutputHashFormat(buildOptions.outputHashing);
 
   // process global scripts
   if (buildOptions.scripts.length > 0) {
@@ -74,7 +72,7 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
       .reduce((prev: { bundleName: string, paths: string[], lazy: boolean }[], curr) => {
         const bundleName = curr.bundleName;
         const resolvedPath = path.resolve(root, curr.input);
-        let existingEntry = prev.find((el) => el.bundleName === bundleName);
+        const existingEntry = prev.find((el) => el.bundleName === bundleName);
         if (existingEntry) {
           if (existingEntry.lazy && !curr.lazy) {
             // All entries have to be lazy for the bundle to be lazy.
@@ -87,9 +85,10 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
           prev.push({
             bundleName,
             paths: [resolvedPath],
-            lazy: curr.lazy
+            lazy: curr.lazy,
           });
         }
+
         return prev;
       }, []);
 
@@ -130,21 +129,14 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
         to: asset.output.replace(/^\//, ''),
         from: {
           glob: asset.glob,
-          dot: true
-        }
+          dot: true,
+        },
       };
     });
 
     const copyWebpackPluginOptions = { ignore: ['.gitkeep', '**/.DS_Store', '**/Thumbs.db'] };
 
-    const copyWebpackPluginInstance = new CopyWebpackPlugin(copyWebpackPluginPatterns,
-      copyWebpackPluginOptions);
-
-    // Save options so we can use them in eject.
-    (copyWebpackPluginInstance as any)['copyWebpackPluginPatterns'] = copyWebpackPluginPatterns;
-    (copyWebpackPluginInstance as any)['copyWebpackPluginOptions'] = copyWebpackPluginOptions;
-
-    extraPlugins.push(copyWebpackPluginInstance);
+    extraPlugins.push(new CopyWebpackPlugin(copyWebpackPluginPatterns, copyWebpackPluginOptions));
   }
 
   if (buildOptions.progress) {
@@ -153,7 +145,7 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
 
   if (buildOptions.showCircularDependencies) {
     extraPlugins.push(new CircularDependencyPlugin({
-      exclude: /[\\\/]node_modules[\\\/]/
+      exclude: /[\\\/]node_modules[\\\/]/,
     }));
   }
 
@@ -173,11 +165,11 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
       use: [
         {
           loader: 'cache-loader',
-          options: { cacheDirectory }
+          options: { cacheDirectory },
         },
         {
           loader: buildOptimizerLoader,
-          options: { sourceMap: buildOptions.sourceMap }
+          options: { sourceMap: buildOptions.sourceMap },
         },
       ],
     };
@@ -227,10 +219,10 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
         // Workaround known uglify-es issue
         // See https://github.com/mishoo/UglifyJS2/issues/2949#issuecomment-368070307
         inline: wco.supportES2015 ? 1 : 3,
-      }
+      },
     }),
     // We also want to avoid mangling on server.
-    ...(buildOptions.platform == 'server' ? { mangle: false } : {})
+    ...(buildOptions.platform == 'server' ? { mangle: false } : {}),
   };
 
   return {
@@ -243,21 +235,21 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
         wco.tsConfig.options.baseUrl || projectRoot,
         'node_modules',
       ],
-      alias
+      alias,
     },
     resolveLoader: {
-      modules: loaderNodeModules
+      modules: loaderNodeModules,
     },
     context: projectRoot,
     entry: entryPoints,
     output: {
-      path: path.resolve(root, buildOptions.outputPath as string),
+      path: path.resolve(root, buildOptions.outputPath),
       publicPath: buildOptions.deployUrl,
       filename: `[name]${hashFormat.chunk}.js`,
     },
     watch: buildOptions.watch,
     watchOptions: {
-      poll: buildOptions.poll
+      poll: buildOptions.poll,
     },
     performance: {
       hints: false,
@@ -270,16 +262,16 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
           loader: 'file-loader',
           options: {
             name: `[name]${hashFormat.file}.[ext]`,
-            limit: 10000
-          }
+            limit: 10000,
+          },
         },
         {
           test: /\.(jpg|png|webp|gif|otf|ttf|woff|woff2|ani)$/,
           loader: 'url-loader',
           options: {
             name: `[name]${hashFormat.file}.[ext]`,
-            limit: 10000
-          }
+            limit: 10000,
+          },
         },
         {
           // Mark files inside `@angular/core` as using SystemJS style dynamic imports.
@@ -291,13 +283,12 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
           test: /\.js$/,
           ...buildOptimizerUseRule,
         },
-      ]
+      ],
     },
     optimization: {
       noEmitOnErrors: true,
       minimizer: [
         new HashedModuleIdsPlugin(),
-        // TODO: check with Mike what this feature needs.
         new BundleBudgetPlugin({ budgets: buildOptions.budgets }),
         new CleanCssWebpackPlugin({
           sourceMap: buildOptions.sourceMap,

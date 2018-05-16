@@ -5,11 +5,9 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-// tslint:disable
-// TODO: cleanup this file, it's copied as is from Angular CLI.
 
-import * as path from 'path';
 import { basename, normalize } from '@angular-devkit/core';
+import * as path from 'path';
 import { ExtraEntryPoint, ExtraEntryPointObject } from '../../../browser/schema';
 
 export const ngAppResolve = (resolvePath: string): string => {
@@ -23,7 +21,7 @@ export interface HashFormat {
   script: string;
 }
 
-export function getOutputHashFormat(option: string, length = 20): HashFormat {
+export function getOutputHashFormat(option?: string, length = 20): HashFormat {
   /* tslint:disable:max-line-length */
   const hashFormats: { [option: string]: HashFormat } = {
     none:    { chunk: '',                       extract: '',                         file: ''                 , script: '' },
@@ -32,6 +30,10 @@ export function getOutputHashFormat(option: string, length = 20): HashFormat {
     all:     { chunk: `.[chunkhash:${length}]`, extract: `.[contenthash:${length}]`, file: `.[hash:${length}]`, script: `.[hash:${length}]`  },
   };
   /* tslint:enable:max-line-length */
+  if (!option) {
+    return hashFormats['none'];
+  }
+
   return hashFormats[option] || hashFormats['none'];
 }
 
@@ -39,7 +41,7 @@ export type NormalizedEntryPoint = ExtraEntryPointObject & { bundleName: string 
 
 export function normalizeExtraEntryPoints(
   extraEntryPoints: ExtraEntryPoint[],
-  defaultBundleName: string
+  defaultBundleName: string,
 ): NormalizedEntryPoint[] {
   return extraEntryPoints.map(entry => {
     let normalizedEntry;
@@ -64,5 +66,5 @@ export function normalizeExtraEntryPoints(
     }
 
     return normalizedEntry;
-  })
+  });
 }
