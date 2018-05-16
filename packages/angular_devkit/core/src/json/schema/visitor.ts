@@ -167,6 +167,13 @@ export function visitJsonSchema(schema: JsonObject, visitor: JsonSchemaVisitor) 
     not: true,
   };
 
+  const arrayKeywords = {
+    items: true,
+    allOf: true,
+    anyOf: true,
+    oneOf: true,
+  };
+
   const propsKeywords = {
     definitions: true,
     properties: true,
@@ -189,7 +196,7 @@ export function visitJsonSchema(schema: JsonObject, visitor: JsonSchemaVisitor) 
       for (const key of Object.keys(schema)) {
         const sch = schema[key];
         if (Array.isArray(sch)) {
-          if (key == 'items') {
+          if (key in arrayKeywords) {
             for (let i = 0; i < sch.length; i++) {
               _traverse(
                 sch[i] as JsonArray,
@@ -200,6 +207,14 @@ export function visitJsonSchema(schema: JsonObject, visitor: JsonSchemaVisitor) 
               );
             }
           }
+        } else if (key in keywords) {
+          _traverse(
+            sch as JsonObject,
+            joinJsonPointer(jsonPtr, key),
+            rootSchema,
+            schema,
+            key,
+          );
         } else if (key in propsKeywords) {
           if (sch && typeof sch == 'object') {
             for (const prop of Object.keys(sch)) {
@@ -212,8 +227,6 @@ export function visitJsonSchema(schema: JsonObject, visitor: JsonSchemaVisitor) 
               );
             }
           }
-        } else if (key in keywords) {
-          _traverse(sch as JsonObject, joinJsonPointer(jsonPtr, key), rootSchema, schema, key);
         }
       }
     }

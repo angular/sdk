@@ -1,3 +1,4 @@
+import { JsonArray } from '@angular-devkit/core';
 /**
  * @license
  * Copyright Google Inc. All Rights Reserved.
@@ -7,22 +8,25 @@
  */
 import * as ajv from 'ajv';
 import * as http from 'http';
-import { Observable, from, of as observableOf } from 'rxjs';
+import { Observable, from, of as observableOf, throwError } from 'rxjs';
+import { reduce } from 'rxjs/internal/operators';
 import { concatMap, map, switchMap, tap } from 'rxjs/operators';
 import { BaseException } from '../../exception/exception';
 import { PartiallyOrderedSet, isObservable } from '../../utils';
 import { JsonObject, JsonValue } from '../interface';
 import {
+  JsonPointer,
   SchemaFormat,
   SchemaFormatter,
   SchemaRegistry,
   SchemaValidator,
   SchemaValidatorError,
-  SchemaValidatorResult,
+  SchemaValidatorResult, SchemaVisitor,
   SmartDefaultProvider,
 } from './interface';
+import { buildJsonPointer, joinJsonPointer, parseJsonPointer } from './pointer';
 import { addUndefinedDefaults } from './transforms';
-import { JsonVisitor, visitJson } from './visitor';
+import { JsonVisitor, visitJson, visitJsonSchema } from './visitor';
 
 
 // This interface should be exported from ajv, but they only export the class and not the type.
@@ -164,40 +168,58 @@ export class CoreSchemaRegistry implements SchemaRegistry {
       return {};
     }
 
+    let schema: JsonObject = {};
+    let context = validate;
+
+    // This is an async validate.
     const refHash = ref.split('#', 2)[1];
     const refUrl = ref.startsWith('#') ? ref : ref.split('#', 1);
 
-    if (!ref.startsWith('#')) {
+    if (!refUrl[0].startsWith('#')) {
       // tslint:disable-next-line:no-any
-      validate = (validate.refVal as any)[(validate.refs as any)[refUrl[0]]];
+      const res = (context.refVal as any)[(context.refs as any)[refUrl[0]]];
+
+      if (typeof res == 'function') {
+        context = res;
+        schema = res.schema;
+      } else {
+        schema = res as JsonObject;
+      }
     }
-    if (validate && refHash) {
+    if (context && refHash) {
       // tslint:disable-next-line:no-any
-      validate = (validate.refVal as any)[(validate.refs as any)['#' + refHash]];
+      const res = (context.refVal as any)[(context.refs as any)[ref]];
+
+      if (typeof res == 'function') {
+        context = res;
+        schema = res.schema;
+      } else if (res) {
+        schema = res as JsonObject;
+      }
     }
 
-    return { context: validate, schema: validate && validate.schema as JsonObject };
+    return { context, schema };
   }
 
-  compile(schema: JsonObject): Observable<SchemaValidator> {
+  private _createValidator(schema: JsonObject): Observable<ajv.ValidateFunction> {
     // Supports both synchronous and asynchronous compilation, by trying the synchronous
     // version first, then if refs are missing this will fails.
     // We also add any refs from external fetched schemas so that those will also be used
     // in synchronous (if available).
-    let validator: Observable<ajv.ValidateFunction>;
     try {
       const maybeFnValidate = this._ajv.compile({
         $async: this._smartDefaultKeyword ? true : undefined,
         ...schema,
       });
-      validator = observableOf(maybeFnValidate);
+
+      return observableOf(maybeFnValidate);
     } catch (e) {
       // Propagate the error.
       if (!(e instanceof (ajv.MissingRefError as {} as Function))) {
-        throw e;
+        return throwError(e);
       }
 
-      validator = new Observable(obs => {
+      return new Observable(obs => {
         this._ajv.compileAsync(schema)
           .then(validate => {
             obs.next(validate);
@@ -207,8 +229,72 @@ export class CoreSchemaRegistry implements SchemaRegistry {
           });
       });
     }
+  }
 
-    return validator
+  private _visitSchema(
+    validate: ajv.ValidateFunction,
+    schema: JsonObject,
+    visitor: SchemaVisitor,
+    rootSchema: JsonObject,
+    pointer: JsonPointer,
+    parentSchema?: JsonObject | JsonArray,
+    parentProperty?: string,
+  ): void {
+    const _internalVisitor = (
+      current: JsonArray | JsonObject,
+      currentPointer: JsonPointer,
+      currentParentSchema?: JsonObject | JsonArray,
+      currentParentProperty?: string,
+    ) => {
+      const resolvedPointer = currentPointer == '/'
+        ? pointer
+        : joinJsonPointer(pointer, ...parseJsonPointer(currentPointer));
+
+      if (
+        current
+        && !Array.isArray(current)
+        && current.hasOwnProperty('$ref')
+        && typeof current['$ref'] == 'string'
+      ) {
+        const resolved = this._resolver(current['$ref'] as string, validate);
+
+        if (!resolved.schema) {
+          return;
+        }
+
+        return this._visitSchema(
+          resolved.context || validate,
+          resolved.schema,
+          visitor,
+          rootSchema,
+          resolvedPointer,
+          parentSchema,
+          parentProperty,
+        );
+      }
+
+      visitor({
+        schema: current,
+        rootSchema,
+        pointer: resolvedPointer,
+        parentSchema: currentParentSchema || parentSchema,
+        parentProperty: currentParentProperty || parentProperty,
+      });
+    };
+
+    visitJsonSchema(schema, _internalVisitor);
+  }
+
+  visitSchema(schema: JsonObject, visitor: SchemaVisitor): Observable<void> {
+    return this._createValidator(schema)
+      .pipe(
+        map(validate => this._visitSchema(validate, schema, visitor, schema, buildJsonPointer([]))),
+        reduce(() => {}),
+      );
+  }
+
+  compile(schema: JsonObject): Observable<SchemaValidator> {
+    return this._createValidator(schema)
       .pipe(
         map(validate => (data: JsonValue): Observable<SchemaValidatorResult> => {
           return observableOf(data).pipe(

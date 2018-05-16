@@ -8,6 +8,7 @@
 // tslint:disable:no-any
 // tslint:disable:non-null-operator
 import { of as observableOf } from 'rxjs';
+import { tap } from 'rxjs/internal/operators';
 import { map, mergeMap } from 'rxjs/operators';
 import { CoreSchemaRegistry } from './registry';
 
@@ -366,5 +367,96 @@ describe('CoreSchemaRegistry', () => {
         }),
       )
       .subscribe(done, done.fail);
+  });
+
+  it('can visit the schema', done => {
+    const registry = new CoreSchemaRegistry();
+    const visits: string[] = [];
+    const schemas: any[] = [];
+
+    const schema = {
+      properties: {
+        bool: { $ref: '#/definitions/example' },
+        arr: {
+          type: 'array',
+          items: {
+            properties: { 'test': { $ref: '#/definitions/test3' } },
+          },
+        },
+        arr2: { $ref: '#/definitions/other' },
+        obj: {
+          properties: {
+            deep: { properties: { arr: { $ref: '#/definitions/test3' } } },
+          },
+        },
+        asyncRef: {
+          $ref: 'http://json.schemastore.org/tslint#/definitions/rule',
+        },
+      },
+      definitions: {
+        example: { type: 'boolean' },
+        other: { type: 'array', items: { type: 'string' } },
+        test3: {
+          type: 'object',
+          properties: {
+            bool: {
+              $ref: '#/definitions/example',
+            },
+          },
+        },
+      },
+    };
+
+    registry
+      .visitSchema(schema, context => {
+        visits.push(context.pointer);
+        schemas.push(context.schema);
+      })
+      .pipe(
+        tap(() => {
+          expect(visits).toEqual([
+            '/',
+            '/properties/bool',
+            '/properties/arr',
+            '/properties/arr/items',
+            '/properties/arr/items/properties/test',
+            '/properties/arr/items/properties/test/properties/bool',
+            '/properties/arr2',
+            '/properties/arr2/items',
+            '/properties/obj',
+            '/properties/obj/properties/deep',
+            '/properties/obj/properties/deep/properties/arr',
+            '/properties/obj/properties/deep/properties/arr/properties/bool',
+            '/properties/asyncRef',
+            '/properties/asyncRef/properties/severity',
+            '/definitions/example',
+            '/definitions/other',
+            '/definitions/other/items',
+            '/definitions/test3',
+            '/definitions/test3/properties/bool',
+          ]);
+          expect(schemas).toEqual(jasmine.arrayContaining([
+            schema,
+            schema.definitions.example,
+            schema.properties.arr,
+            schema.properties.arr.items,
+            schema.definitions.test3,
+            schema.definitions.example,
+            schema.definitions.other,
+            schema.definitions.other.items,
+            schema.properties.obj,
+            schema.properties.obj.properties.deep,
+            schema.definitions.test3,
+            schema.definitions.example,
+            schema.definitions.example,
+            schema.definitions.other,
+            schema.definitions.other.items,
+            schema.definitions.test3,
+            schema.definitions.example,
+            // The rest is from TSLint schema, which we cannot control, so ignore.
+          ]));
+        }),
+      )
+      .subscribe(undefined, done.fail, done);
   });
 });

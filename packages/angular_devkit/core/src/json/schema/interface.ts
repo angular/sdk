@@ -57,6 +57,16 @@ export interface SchemaValidatorResult {
   errors?: SchemaValidatorError[];
 }
 
+export interface SchemaVisitor {
+  (context: {
+    schema: JsonObject | JsonArray,
+    rootSchema: JsonObject,
+    pointer: JsonPointer,
+    parentSchema?: JsonObject | JsonArray,
+    parentProperty?: string,
+  }): void;
+}
+
 export interface SchemaValidator {
   // tslint:disable-next-line:no-any
   (data: any): Observable<SchemaValidatorResult>;
