@@ -69,7 +69,7 @@ function updateJsonFile<T>(host: Tree, path: string, callback: UpdateJsonFn<T>):
   return host;
 }
 
-function updateTsConfig(npmPackageName: string) {
+function updateTsConfig(packageName: string, distRoot: string) {
 
   return (host: Tree) => {
     if (!host.exists('tsconfig.json')) { return host; }
@@ -78,10 +78,17 @@ function updateTsConfig(npmPackageName: string) {
       if (!tsconfig.compilerOptions.paths) {
         tsconfig.compilerOptions.paths = {};
       }
-      if (!tsconfig.compilerOptions.paths[npmPackageName]) {
-        tsconfig.compilerOptions.paths[npmPackageName] = [];
+      if (!tsconfig.compilerOptions.paths[packageName]) {
+        tsconfig.compilerOptions.paths[packageName] = [];
       }
-      tsconfig.compilerOptions.paths[npmPackageName].push(`dist/${npmPackageName}`);
+      tsconfig.compilerOptions.paths[packageName].push(distRoot);
+
+      // deep import & secondary entrypoint support
+      const deepPackagePath = packageName + '/*';
+      if (!tsconfig.compilerOptions.paths[deepPackagePath]) {
+        tsconfig.compilerOptions.paths[deepPackagePath] = [];
+      }
+      tsconfig.compilerOptions.paths[deepPackagePath].push(distRoot + '/*');
     });
   };
 }
@@ -183,7 +190,7 @@ export default function (options: LibraryOptions): Rule {
 
     // If scoped project (i.e. "@foo/bar"), convert projectDir to "foo/bar".
     const packageName = options.name;
-    let scopeName = '';
+    let scopeName = null;
     if (/^@.*\/.*/.test(options.name)) {
       const [scope, name] = options.name.split('/');
       scopeName = scope.replace(/^@/, '');
@@ -192,11 +199,11 @@ export default function (options: LibraryOptions): Rule {
 
     const workspace = getWorkspace(host);
     const newProjectRoot = workspace.newProjectRoot;
-    let projectRoot = `${newProjectRoot}/${strings.dasherize(options.name)}`;
-    if (scopeName) {
-      projectRoot =
-        `${newProjectRoot}/${strings.dasherize(scopeName)}/${strings.dasherize(options.name)}`;
-    }
+
+    const scopeFolder = scopeName ? strings.dasherize(scopeName) + '/' : '';
+    const folderName = `${scopeFolder}${strings.dasherize(options.name)}`;
+    const projectRoot = `${newProjectRoot}/${folderName}`;
+    const distRoot = `dist/${folderName}`;
 
     const sourceDir = `${projectRoot}/src/lib`;
     const relativePathToWorkspaceRoot = projectRoot.split('/').map(x => '..').join('/');
@@ -207,6 +214,7 @@ export default function (options: LibraryOptions): Rule {
         ...options,
         packageName,
         projectRoot,
+        distRoot,
         relativePathToWorkspaceRoot,
         prefix,
       }),
@@ -219,7 +227,7 @@ export default function (options: LibraryOptions): Rule {
       branchAndMerge(mergeWith(templateSource)),
       addAppToWorkspaceFile(options, workspace, projectRoot, packageName),
       options.skipPackageJson ? noop() : addDependenciesToPackageJson(),
-      options.skipTsConfig ? noop() : updateTsConfig(options.name),
+      options.skipTsConfig ? noop() : updateTsConfig(packageName, distRoot),
       schematic('module', {
         name: options.name,
         commonModule: false,
@@ -245,7 +253,9 @@ export default function (options: LibraryOptions): Rule {
         project: options.name,
       }),
       (_tree: Tree, context: SchematicContext) => {
-        context.addTask(new NodePackageInstallTask());
+        if (!options.skipPackageJson) {
+          context.addTask(new NodePackageInstallTask());
+        }
       },
     ])(host, context);
   };
