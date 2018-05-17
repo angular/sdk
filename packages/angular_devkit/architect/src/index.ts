@@ -7,4 +7,3 @@
  */
 
 export * from './architect';
-export * from './builder';

@@ -160,4 +160,26 @@ describe('wrap-enums', () => {
 
     expect(tags.oneLine`${transform(input)}`).toEqual(tags.oneLine`${output}`);
   });
+
+  it('wraps exported enums in IIFE', () => {
+    const input = tags.stripIndent`
+      var ExportEnum;
+      (function (ExportEnum) {
+        ExportEnum[ExportEnum["A"] = 0] = "A";
+        ExportEnum[ExportEnum["B"] = 1] = "B";
+        ExportEnum[ExportEnum["C"] = 2] = "C";
+      })(ExportEnum = exports.ExportEnum || (exports.ExportEnum = {}));
+    `;
+    const output = tags.stripIndent`
+      var ExportEnum = exports.ExportEnum = /*@__PURE__*/ (function (ExportEnum) {
+        ExportEnum[ExportEnum["A"] = 0] = "A";
+        ExportEnum[ExportEnum["B"] = 1] = "B";
+        ExportEnum[ExportEnum["C"] = 2] = "C";
+        return ExportEnum;
+      })(exports.ExportEnum || {});
+    `;
+
+    expect(tags.oneLine`${transform(input)}`).toEqual(tags.oneLine`${output}`);
+  });
+
 });

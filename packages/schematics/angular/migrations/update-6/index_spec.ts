@@ -40,6 +40,12 @@ describe('Migration to v6', () => {
             'favicon.ico',
             { glob: '**/*', input: './assets/', output: './assets/' },
             { glob: 'favicon.ico', input: './', output: './' },
+            {
+              'glob': '**/*.*',
+              'input': '../server/',
+              'output': '../',
+              'allowOutsideOutDir': true,
+            },
           ],
           index: 'index.html',
           main: 'main.ts',
@@ -601,6 +607,23 @@ describe('Migration to v6', () => {
         expect(tslint.options.tsConfig)
           .toEqual(['src/tsconfig.app.json', 'src/tsconfig.spec.json']);
         expect(tslint.options.exclude).toEqual([ '**/node_modules/**' ]);
+      });
+
+      it('should set the budgets configuration', () => {
+        baseConfig.apps[0].budgets = [{
+          type: 'bundle',
+          name: 'main',
+          error: '123kb',
+        }];
+
+        tree.create(oldConfigPath, JSON.stringify(baseConfig, null, 2));
+        tree = schematicRunner.runSchematic('migration-01', defaultOptions, tree);
+        const config = getConfig(tree);
+        const budgets = config.projects.foo.architect.build.configurations.production.budgets;
+        expect(budgets.length).toEqual(1);
+        expect(budgets[0].type).toEqual('bundle');
+        expect(budgets[0].name).toEqual('main');
+        expect(budgets[0].error).toEqual('123kb');
       });
     });
 

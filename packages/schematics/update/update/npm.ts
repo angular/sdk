@@ -7,8 +7,9 @@
  */
 import { logging } from '@angular-devkit/core';
 import { exec } from 'child_process';
+import { readFileSync } from 'fs';
 import { Observable, ReplaySubject, concat, of } from 'rxjs';
-import { concatMap, first, map, toArray } from 'rxjs/operators';
+import { concatMap, filter, first, map, toArray } from 'rxjs/operators';
 import * as url from 'url';
 import { NpmRepositoryPackageJson } from './npm-package-json';
 
@@ -41,6 +42,22 @@ function getNpmConfigOption(option: string) {
   });
 }
 
+function getNpmClientSslOptions(strictSsl?: string, cafile?: string) {
+  const sslOptions: { strict?: boolean, ca?: Buffer } = {};
+
+  if (strictSsl === 'false') {
+    sslOptions.strict = false;
+  } else if (strictSsl === 'true') {
+    sslOptions.strict = true;
+  }
+
+  if (cafile) {
+    sslOptions.ca = readFileSync(cafile);
+  }
+
+  return sslOptions;
+}
+
 /**
  * Get the NPM repository's package.json for a package. This is p
  * @param {string} packageName The package name to fetch.
@@ -54,8 +71,14 @@ export function getNpmPackageJson(
   registryUrl: string | undefined,
   logger: logging.LoggerApi,
 ): Observable<Partial<NpmRepositoryPackageJson>> {
+  const scope = packageName.startsWith('@') ? packageName.split('/')[0] : null;
 
-  return (registryUrl ? of(registryUrl) : getNpmConfigOption('registry')).pipe(
+  return concat(
+    of(registryUrl),
+    scope ? getNpmConfigOption(scope + ':registry') : of(undefined),
+    getNpmConfigOption('registry'),
+  ).pipe(
+    filter(partialUrl => !!partialUrl),
     first(),
     map(partialUrl => {
       if (!partialUrl) {
@@ -85,16 +108,21 @@ export function getNpmPackageJson(
       return concat(
         getNpmConfigOption('proxy'),
         getNpmConfigOption('https-proxy'),
+        getNpmConfigOption('strict-ssl'),
+        getNpmConfigOption('cafile'),
       ).pipe(
         toArray(),
         concatMap(options => {
           const subject = new ReplaySubject<NpmRepositoryPackageJson>(1);
+
+          const sslOptions = getNpmClientSslOptions(options[2], options[3]);
 
           const client = new RegistryClient({
             proxy: {
               http: options[0],
               https: options[1],
             },
+            ssl: sslOptions,
           });
           client.log.level = 'silent';
           const params = {

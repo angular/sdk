@@ -1,3 +1,10 @@
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
 // tslint:disable
 // TODO: cleanup this file, it's copied as is from Angular CLI.
 
@@ -200,11 +207,37 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
     alias = rxPaths(nodeModules);
   } catch (e) { }
 
+  const uglifyOptions = {
+    ecma: wco.supportES2015 ? 6 : 5,
+    warnings: !!buildOptions.verbose,
+    safari10: true,
+    output: {
+      ascii_only: true,
+      comments: false,
+      webkit: true,
+    },
+
+    // On server, we don't want to compress anything.
+    ...(buildOptions.platform == 'server' ? {} : {
+      compress: {
+        pure_getters: buildOptions.buildOptimizer,
+        // PURE comments work best with 3 passes.
+        // See https://github.com/webpack/webpack/issues/2899#issuecomment-317425926.
+        passes: buildOptions.buildOptimizer ? 3 : 1,
+        // Workaround known uglify-es issue
+        // See https://github.com/mishoo/UglifyJS2/issues/2949#issuecomment-368070307
+        inline: wco.supportES2015 ? 1 : 3,
+      }
+    }),
+    // We also want to avoid mangling on server.
+    ...(buildOptions.platform == 'server' ? { mangle: false } : {})
+  };
+
   return {
     mode: buildOptions.optimization ? 'production' : 'development',
     devtool: false,
     resolve: {
-      extensions: ['.ts', '.js'],
+      extensions: ['.ts', '.mjs', '.js'],
       symlinks: !buildOptions.preserveSymlinks,
       modules: [
         wco.tsConfig.options.baseUrl || projectRoot,
@@ -271,25 +304,7 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
           sourceMap: buildOptions.sourceMap,
           parallel: true,
           cache: true,
-          uglifyOptions: {
-            ecma: wco.supportES2015 ? 6 : 5,
-            warnings: buildOptions.verbose,
-            safari10: true,
-            compress: {
-              pure_getters: buildOptions.buildOptimizer,
-              // PURE comments work best with 3 passes.
-              // See https://github.com/webpack/webpack/issues/2899#issuecomment-317425926.
-              passes: buildOptions.buildOptimizer ? 3 : 1,
-              // Workaround known uglify-es issue
-              // See https://github.com/mishoo/UglifyJS2/issues/2949#issuecomment-368070307
-              inline: wco.supportES2015 ? 1 : 3,
-            },
-            output: {
-              ascii_only: true,
-              comments: false,
-              webkit: true,
-            },
-          }
+          uglifyOptions,
         }),
       ],
     },
