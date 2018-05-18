@@ -46,18 +46,6 @@ describe('Spec Schematic', () => {
     appTree = schematicRunner.runSchematic('application', appOptions, appTree);
   });
 
-  function testCreatedSpec(schematic: string, options: any) {
-    let tree = schematicRunner.runSchematic(schematic, options, appTree);
-
-    expect(tree.files.includes(`/projects/bar/src/app/foo/foo.${ schematic }.spec.ts`)).toBeFalsy();
-    expect(tree.files.includes(`/projects/bar/src/app/foo/foo.${ schematic }.ts`)).toBeTruthy();
-
-    tree = schematicRunner.runSchematic('spec', { ...defaultOptions, name: 'foo/foo.' + schematic }, tree);
-
-    expect(tree.files.includes(`/projects/bar/src/app/foo/foo.${ schematic }.spec.ts`)).toBeTruthy();
-    expect(tree.files.includes(`/projects/bar/src/app/foo/foo.${ schematic }.ts`)).toBeTruthy();
-  }
-
   it('should create a spec for module', () => {
     testCreatedSpec('module', {
       name: 'foo',
@@ -66,6 +54,21 @@ describe('Spec Schematic', () => {
       project: 'bar',
     });
   });
+
+  function testCreatedSpec(schematic: string, targetOptions: { [prop: string]: string | boolean }) {
+    const options = { ...defaultOptions, name: 'foo/foo.' + schematic };
+    let tree = schematicRunner.runSchematic(schematic, targetOptions, appTree);
+
+    expect(tree.files.includes(`/projects/bar/src/app/foo/foo.${ schematic }.spec.ts`)).toBeFalsy();
+    expect(tree.files.includes(`/projects/bar/src/app/foo/foo.${ schematic }.ts`)).toBeTruthy();
+
+    tree = schematicRunner.runSchematic('spec', options, tree);
+
+    const files = tree.files;
+
+    expect(files.includes(`/projects/bar/src/app/foo/foo.${ schematic }.spec.ts`)).toBeTruthy();
+    expect(files.includes(`/projects/bar/src/app/foo/foo.${ schematic }.ts`)).toBeTruthy();
+  }
 
   it('should create a spec for component', () => {
     testCreatedSpec('component', {
@@ -120,8 +123,16 @@ describe('Spec Schematic', () => {
   });
 
   it('should throw for not allowed types', () => {
-    expect(() => schematicRunner.runSchematic('spec', { ...defaultOptions, name: 'foo/foo' }, appTree)).toThrow();
-    expect(() => schematicRunner.runSchematic('spec', { ...defaultOptions, name: 'foo/service' }, appTree)).toThrow();
-    expect(() => schematicRunner.runSchematic('spec', { ...defaultOptions, name: 'foo/foo.abc' }, appTree)).toThrow();
+    expect(() => {
+      schematicRunner.runSchematic('spec', { ...defaultOptions, name: 'foo/foo' }, appTree);
+    }).toThrow();
+
+    expect(() => {
+      schematicRunner.runSchematic('spec', { ...defaultOptions, name: 'foo/service' }, appTree);
+    }).toThrow();
+
+    expect(() => {
+      schematicRunner.runSchematic('spec', { ...defaultOptions, name: 'foo/foo.abc' }, appTree);
+    }).toThrow();
   });
 });

@@ -7,15 +7,15 @@
  */
 import { strings } from '@angular-devkit/core';
 import {
+  Rule,
+  SchematicContext,
+  SchematicsException,
+  Tree,
   apply,
   filter,
   mergeWith,
   move,
-  Rule,
-  SchematicContext,
-  SchematicsException,
   template,
-  Tree,
   url,
 } from '@angular-devkit/schematics';
 import { getWorkspace } from '../utility/config';
@@ -39,16 +39,25 @@ export default function (options: PipeOptions): Rule {
 
     const parsedPath = parseName(options.path, options.name);
 
-    let [, name, type] = parsedPath.name.replace(/\.ts$/, '').match(/(.*)\.([^.]+)$/) || [null, null, null];
+    const [, name, type] = parsedPath.name.replace(/\.ts$/, '').match(/(.*)\.([^.]+)$/) || [
+      null,
+      null,
+      null,
+    ];
 
     if (!name || !type) {
       throw new SchematicsException(
-        `The provided name / file should look like name.type (e.g. component-name.component) or name.type.ts (e.g. component-name.component.ts).`
+        'The provided name / file should look like name.type (e.g. component-name.component)'
+        + ' or name.type.ts (e.g. component-name.component.ts).',
       );
     }
 
     if (!supportedTypes.includes(type)) {
-      throw new SchematicsException(`The type "${ type }" is not supported. Please use one of [${ supportedTypes.join(', ') }].`);
+      const ex = `The type "${ type }" is not supported. Please use one of [${
+        supportedTypes.join(', ')
+      }].`;
+
+      throw new SchematicsException(ex);
     }
 
     options.name = name;
