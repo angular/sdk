@@ -83,6 +83,11 @@
       "description": "Create an Angular service.",
       "schema": "./service/schema.json"
     },
+    "spec": {
+      "factory": "./spec",
+      "description": "Create an Angular spec.",
+      "schema": "./spec/schema.json"
+    },
     "universal": {
       "factory": "./universal",
       "description": "Create an Angular universal app.",
