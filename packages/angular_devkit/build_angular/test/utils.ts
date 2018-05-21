@@ -28,3 +28,8 @@ export enum Timeout {
   Complex = Basic * 2,
   Massive = Basic * 4,
 }
+
+// We must debounce on watch mode because file watchers are not very accurate.
+// Changes from just before a process runs can be picked up and cause rebuilds.
+// Cleanup or initialization can cause a few rebuilds, for instance.
+export const rebuildDebounce = 1000;

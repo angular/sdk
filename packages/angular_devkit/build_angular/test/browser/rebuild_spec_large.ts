@@ -9,7 +9,7 @@
 import { TestLogger, runTargetSpec } from '@angular-devkit/architect/testing';
 import { join, normalize, virtualFs } from '@angular-devkit/core';
 import { debounceTime, take, tap } from 'rxjs/operators';
-import { Timeout, browserTargetSpec, host } from '../utils';
+import { Timeout, browserTargetSpec, host, rebuildDebounce } from '../utils';
 import { lazyModuleFiles, lazyModuleImport } from './lazy-module_spec_large';
 
 
@@ -18,7 +18,6 @@ let linuxOnlyIt: typeof it = it;
 if (process.platform.startsWith('win')) {
   linuxOnlyIt = xit;
 }
-
 
 describe('Browser Builder rebuilds', () => {
   const outputPath = normalize('dist');
@@ -80,10 +79,7 @@ describe('Browser Builder rebuilds', () => {
     let buildNumber = 0;
 
     runTargetSpec(host, browserTargetSpec, overrides).pipe(
-      // We must debounce on watch mode because file watchers are not very accurate.
-      // Changes from just before a process runs can be picked up and cause rebuilds.
-      // In this case, cleanup from the test right before this one causes a few rebuilds.
-      debounceTime(1000),
+      debounceTime(rebuildDebounce),
       tap((buildEvent) => expect(buildEvent.success).toBe(true)),
       tap(() => {
         buildNumber += 1;
@@ -128,7 +124,7 @@ describe('Browser Builder rebuilds', () => {
     const overrides = { watch: true };
 
     runTargetSpec(host, browserTargetSpec, overrides).pipe(
-      debounceTime(500),
+      debounceTime(rebuildDebounce),
       tap((buildEvent) => expect(buildEvent.success).toBe(true)),
       tap(() => host.appendToFile('src/app/app.component.css', ':host { color: blue; }')),
       take(2),
@@ -151,7 +147,7 @@ describe('Browser Builder rebuilds', () => {
     let buildNumber = 0;
 
     runTargetSpec(host, browserTargetSpec, overrides, logger).pipe(
-      debounceTime(1000),
+      debounceTime(rebuildDebounce),
       tap((buildEvent) => {
         buildNumber += 1;
         switch (buildNumber) {
@@ -201,7 +197,7 @@ describe('Browser Builder rebuilds', () => {
     const overrides = { watch: true };
 
     runTargetSpec(host, browserTargetSpec, overrides).pipe(
-      debounceTime(1000),
+      debounceTime(rebuildDebounce),
       tap((buildEvent) => expect(buildEvent.success).toBe(true)),
       tap(() => host.writeMultipleFiles({ 'src/type.ts': `export type MyType = string;` })),
       take(2),
@@ -223,7 +219,7 @@ describe('Browser Builder rebuilds', () => {
     let buildNumber = 0;
 
     runTargetSpec(host, browserTargetSpec, overrides, logger).pipe(
-      debounceTime(1000),
+      debounceTime(rebuildDebounce),
       tap((buildEvent) => {
         buildNumber += 1;
         switch (buildNumber) {
@@ -285,7 +281,7 @@ describe('Browser Builder rebuilds', () => {
     let buildNumber = 0;
 
     runTargetSpec(host, browserTargetSpec, overrides).pipe(
-      debounceTime(1000),
+      debounceTime(rebuildDebounce),
       tap((buildEvent) => {
         buildNumber += 1;
         const fileName = './dist/main.js';
