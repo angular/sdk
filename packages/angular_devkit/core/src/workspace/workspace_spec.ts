@@ -203,6 +203,26 @@ describe('Workspace', () => {
     ).subscribe(undefined, done.fail, done);
   });
 
+  fit('gets default project when there is one at workspace root', (done) => {
+    const customWorkspaceJson: WorkspaceSchema = {
+      ...workspaceJson,
+      defaultProject: undefined,
+      projects: {
+        ...workspaceJson.projects,
+        root: {
+          root: '',
+          sourceRoot: 'src',
+          projectType: 'application',
+          prefix: 'root',
+        },
+      },
+    };
+    const workspace = new Workspace(root, host);
+    workspace.loadWorkspaceFromJson(customWorkspaceJson).pipe(
+      tap((ws) => expect(ws.getDefaultProjectName()).toEqual('root')),
+    ).subscribe(undefined, done.fail, done);
+  });
+
   it('gets default project returns null when there is none', (done) => {
     const customWorkspaceJson = { ...workspaceJson, defaultProject: undefined, projects: {} };
     const workspace = new Workspace(root, host);
