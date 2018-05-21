@@ -43,9 +43,7 @@ export class ProtractorBuilder implements Builder<ProtractorBuilderOptions> {
     const options = builderConfig.options;
     const root = this.context.workspace.root;
     const projectRoot = resolve(root, builderConfig.root);
-    // const projectSystemRoot = getSystemPath(projectRoot);
 
-    // TODO: verify using of(null) to kickstart things is a pattern.
     return of(null).pipe(
       concatMap(() => options.devServerTarget ? this._startDevServer(options) : of(null)),
       concatMap(() => options.webdriverUpdate ? this._updateWebdriver(projectRoot) : of(null)),
@@ -70,26 +68,28 @@ export class ProtractorBuilder implements Builder<ProtractorBuilderOptions> {
       concatMap(devServerDescription => architect.validateBuilderOptions(
         builderConfig, devServerDescription)),
       concatMap(() => {
-        // Compute baseUrl from devServerOptions.
-        if (options.devServerTarget && builderConfig.options.publicHost) {
-          let publicHost = builderConfig.options.publicHost;
-          if (!/^\w+:\/\//.test(publicHost)) {
-            publicHost = `${builderConfig.options.ssl
-              ? 'https'
-              : 'http'}://${publicHost}`;
+        if (options.devServerTarget && options.baseUrl === undefined) {
+          // Compute baseUrl from devServerOptions.
+          if (builderConfig.options.publicHost) {
+            let publicHost = builderConfig.options.publicHost;
+            if (!/^\w+:\/\//.test(publicHost)) {
+              publicHost = `${builderConfig.options.ssl
+                ? 'https'
+                : 'http'}://${publicHost}`;
+            }
+            const clientUrl = url.parse(publicHost);
+            baseUrl = url.format(clientUrl);
+          } else {
+            baseUrl = url.format({
+              protocol: builderConfig.options.ssl ? 'https' : 'http',
+              hostname: options.host,
+              port: builderConfig.options.port.toString(),
+            });
           }
-          const clientUrl = url.parse(publicHost);
-          baseUrl = url.format(clientUrl);
-        } else if (options.devServerTarget) {
-          baseUrl = url.format({
-            protocol: builderConfig.options.ssl ? 'https' : 'http',
-            hostname: options.host,
-            port: builderConfig.options.port.toString(),
-          });
-        }
 
-        // Save the computed baseUrl back so that Protractor can use it.
-        options.baseUrl = baseUrl;
+          // Save the computed baseUrl back so that Protractor can use it.
+          options.baseUrl = baseUrl;
+        }
 
         return of(this.context.architect.getBuilder(devServerDescription, this.context));
       }),
