@@ -10,7 +10,7 @@
 
 // tslint:disable-next-line:no-implicit-dependencies
 import * as ts from 'typescript';
-import { AssetPatternObject, Budget, ExtraEntryPoint } from '../../browser/schema';
+import { AssetPatternObject, Budget, ExtraEntryPoint, OutputHashing } from '../../browser/schema';
 
 export interface BuildOptions {
   optimization: boolean;
@@ -32,7 +32,7 @@ export interface BuildOptions {
   extractCss?: boolean;
   bundleDependencies?: 'none' | 'all';
   watch?: boolean;
-  outputHashing?: string;
+  outputHashing?: OutputHashing;
   poll?: number;
   app?: string;
   deleteOutputPath?: boolean;

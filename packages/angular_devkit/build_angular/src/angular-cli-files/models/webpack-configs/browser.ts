@@ -5,61 +5,21 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-// tslint:disable
-// TODO: cleanup this file, it's copied as is from Angular CLI.
 
-import * as path from 'path';
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const SubresourceIntegrityPlugin = require('webpack-subresource-integrity');
 import { LicenseWebpackPlugin } from 'license-webpack-plugin';
-import { generateEntryPoints, packageChunkSort } from '../../utilities/package-chunk-sort';
-import { BaseHrefWebpackPlugin } from '../../lib/base-href-webpack';
-import { IndexHtmlWebpackPlugin } from '../../plugins/index-html-webpack-plugin';
-import { ExtraEntryPoint } from '../../../browser/schema';
-import { BrowserBuilderSchema } from '../../../browser/schema';
+import * as path from 'path';
+import { Plugin } from 'webpack';
+import { IndexHtmlWebpackPlugin } from '../../plugins/webpack';
+import { generateEntryPoints } from '../../utilities/generate-entry-points';
 import { WebpackConfigOptions } from '../build-options';
-import { normalizeExtraEntryPoints } from './utils';
+const SubresourceIntegrityPlugin = require('webpack-subresource-integrity');
 
-/**
-+ * license-webpack-plugin has a peer dependency on webpack-sources, list it in a comment to
-+ * let the dependency validator know it is used.
-+ *
-+ * require('webpack-sources')
-+ */
 
 export function getBrowserConfig(wco: WebpackConfigOptions) {
-  const { root, projectRoot, buildOptions } = wco;
-
-
-  let extraPlugins: any[] = [];
-
-  // Figure out which are the lazy loaded bundle names.
-  const lazyChunkBundleNames = normalizeExtraEntryPoints(
-    // We don't really need a default name because we pre-filtered by lazy only entries.
-    [...buildOptions.styles, ...buildOptions.scripts], 'not-lazy')
-    .filter(entry => entry.lazy)
-    .map(entry => entry.bundleName)
-
-  const generateIndexHtml = false;
-  if (generateIndexHtml) {
-    extraPlugins.push(new HtmlWebpackPlugin({
-      template: path.resolve(root, buildOptions.index),
-      filename: path.resolve(buildOptions.outputPath, buildOptions.index),
-      chunksSortMode: packageChunkSort(buildOptions),
-      excludeChunks: lazyChunkBundleNames,
-      xhtml: true,
-      minify: buildOptions.optimization ? {
-        caseSensitive: true,
-        collapseWhitespace: true,
-        keepClosingSlash: true
-      } : false
-    }));
-    extraPlugins.push(new BaseHrefWebpackPlugin({
-      baseHref: buildOptions.baseHref as string
-    }));
-  }
-
+  const { root, buildOptions } = wco;
+  const extraPlugins: Plugin[] = [];
   let sourcemaps: string | false = false;
+
   if (buildOptions.sourceMap) {
     // See https://webpack.js.org/configuration/devtool/ for sourcemap types.
     if (buildOptions.evalSourceMap && !buildOptions.optimization) {
@@ -73,32 +33,36 @@ export function getBrowserConfig(wco: WebpackConfigOptions) {
 
   if (buildOptions.subresourceIntegrity) {
     extraPlugins.push(new SubresourceIntegrityPlugin({
-      hashFuncNames: ['sha384']
+      hashFuncNames: ['sha384'],
     }));
   }
 
   if (buildOptions.extractLicenses) {
+    /**
+     * license-webpack-plugin has a peer dependency on webpack-sources, so we list it in a comment
+     * to let the dependency validator know it is used.
+     *
+     * require('webpack-sources')
+     */
+
     extraPlugins.push(new LicenseWebpackPlugin({
       pattern: /.*/,
       suppressErrors: true,
       perChunkOutput: false,
-      outputFilename: `3rdpartylicenses.txt`
+      outputFilename: `3rdpartylicenses.txt`,
     }));
   }
-
-  const globalStylesBundleNames = normalizeExtraEntryPoints(buildOptions.styles, 'styles')
-    .map(style => style.bundleName);
 
   return {
     devtool: sourcemaps,
     resolve: {
       mainFields: [
         ...(wco.supportES2015 ? ['es2015'] : []),
-        'browser', 'module', 'main'
-      ]
+        'browser', 'module', 'main',
+      ],
     },
     output: {
-      crossOriginLoading: buildOptions.subresourceIntegrity ? 'anonymous' : false
+      crossOriginLoading: buildOptions.subresourceIntegrity ? 'anonymous' : false,
     },
     optimization: {
       runtimeChunk: 'single',
@@ -122,15 +86,19 @@ export function getBrowserConfig(wco: WebpackConfigOptions) {
             name: 'vendor',
             chunks: 'initial',
             enforce: true,
-            test: (module: any, chunks: Array<{ name: string }>) => {
-              const moduleName = module.nameForCondition ? module.nameForCondition() : '';
-              return /[\\/]node_modules[\\/]/.test(moduleName)
-                && !chunks.some(({ name }) => name === 'polyfills'
-                  || globalStylesBundleNames.includes(name));
+            test: (module: { nameForCondition?: Function }, chunks: Array<{ name: string }>) => {
+              if (!module.nameForCondition) {
+                return false;
+              }
+
+              // Vendor modules are those that have '/node_modules/' in their path and do not
+              // contain chunks from either the polyfills or global styles entry points.
+              return /[\\/]node_modules[\\/]/.test(module.nameForCondition())
+                && !chunks.some(({ name }) => name === 'polyfills' || ['styles'].includes(name));
             },
           },
-        }
-      }
+        },
+      },
     },
     plugins: extraPlugins.concat([
       new IndexHtmlWebpackPlugin({

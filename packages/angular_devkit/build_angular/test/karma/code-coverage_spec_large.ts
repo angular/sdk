@@ -6,10 +6,11 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import { runTargetSpec } from '@angular-devkit/architect/testing';
 import { normalize, virtualFs } from '@angular-devkit/core';
 import { debounceTime, tap } from 'rxjs/operators';
 import { NormalizedKarmaBuilderSchema } from '../../src';
-import { host, karmaTargetSpec, runTargetSpec } from '../utils';
+import { host, karmaTargetSpec } from '../utils';
 
 
 describe('Karma Builder code coverage', () => {

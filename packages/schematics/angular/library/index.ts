@@ -28,21 +28,10 @@ import {
   getWorkspace,
 } from '../utility/config';
 import { latestVersions } from '../utility/latest-versions';
+import { addToPackageJson } from '../utility/package-json';
 import { validateProjectName } from '../utility/validation';
 import { Schema as LibraryOptions } from './schema';
 
-
-type PackageJsonPartialType = {
-  scripts: {
-    [key: string]: string;
-  },
-  dependencies: {
-    [key: string]: string;
-  },
-  devDependencies: {
-    [key: string]: string;
-  },
-};
 
 interface UpdateJsonFn<T> {
   (obj: T): T | void;
@@ -89,45 +78,6 @@ function updateTsConfig(packageName: string, distRoot: string) {
         tsconfig.compilerOptions.paths[deepPackagePath] = [];
       }
       tsconfig.compilerOptions.paths[deepPackagePath].push(distRoot + '/*');
-    });
-  };
-}
-
-function addDependenciesToPackageJson() {
-
-  return (host: Tree) => {
-    if (!host.exists('package.json')) { return host; }
-
-    return updateJsonFile(host, 'package.json', (json: PackageJsonPartialType) => {
-
-
-      if (!json['dependencies']) {
-        json['dependencies'] = {};
-      }
-
-      json.dependencies = {
-        '@angular/common': latestVersions.Angular,
-        '@angular/core': latestVersions.Angular,
-        '@angular/compiler': latestVersions.Angular,
-        // De-structure last keeps existing user dependencies.
-        ...json.dependencies,
-      };
-
-      if (!json['devDependencies']) {
-        json['devDependencies'] = {};
-      }
-
-      json.devDependencies = {
-        '@angular/compiler-cli': latestVersions.Angular,
-        '@angular-devkit/build-ng-packagr': latestVersions.DevkitBuildNgPackagr,
-        '@angular-devkit/build-angular': latestVersions.DevkitBuildNgPackagr,
-        'ng-packagr': '^3.0.0-rc.2',
-        'tsickle': '>=0.25.5',
-        'tslib': '^1.7.1',
-        'typescript': latestVersions.TypeScript,
-        // De-structure last keeps existing user dependencies.
-        ...json.devDependencies,
-      };
     });
   };
 }
@@ -208,6 +158,24 @@ export default function (options: LibraryOptions): Rule {
     const sourceDir = `${projectRoot}/src/lib`;
     const relativePathToWorkspaceRoot = projectRoot.split('/').map(x => '..').join('/');
 
+    // New dependencies.
+    const partialPackageJson = {
+      dependencies: {
+        '@angular/common': latestVersions.Angular,
+        '@angular/core': latestVersions.Angular,
+        '@angular/compiler': latestVersions.Angular,
+      },
+      devDependencies: {
+        '@angular/compiler-cli': latestVersions.Angular,
+        '@angular-devkit/build-ng-packagr': latestVersions.DevkitBuildNgPackagr,
+        '@angular-devkit/build-angular': latestVersions.DevkitBuildNgPackagr,
+        'ng-packagr': '^3.0.0-rc.2',
+        'tsickle': '>=0.25.5',
+        'tslib': '^1.7.1',
+        'typescript': latestVersions.TypeScript,
+      },
+    };
+
     const templateSource = apply(url('./files'), [
       template({
         ...strings,
@@ -226,7 +194,7 @@ export default function (options: LibraryOptions): Rule {
     return chain([
       branchAndMerge(mergeWith(templateSource)),
       addAppToWorkspaceFile(options, workspace, projectRoot, packageName),
-      options.skipPackageJson ? noop() : addDependenciesToPackageJson(),
+      options.skipPackageJson ? noop() : addToPackageJson('package.json', partialPackageJson),
       options.skipTsConfig ? noop() : updateTsConfig(packageName, distRoot),
       schematic('module', {
         name: options.name,

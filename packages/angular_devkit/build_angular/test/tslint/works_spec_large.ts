@@ -6,10 +6,11 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import { TestLogger, runTargetSpec } from '@angular-devkit/architect/testing';
 import { normalize, virtualFs } from '@angular-devkit/core';
 import { tap } from 'rxjs/operators';
 import { TslintBuilderOptions } from '../../src';
-import { TestLogger, host, runTargetSpec, tslintTargetSpec } from '../utils';
+import { host, tslintTargetSpec } from '../utils';
 
 
 describe('Tslint Target', () => {
@@ -163,7 +164,7 @@ describe('Tslint Target', () => {
       typeCheck: true,
     };
 
-    runTargetSpec(host, tslintTargetSpec, overrides).pipe(
-    ).subscribe(undefined, () => done(), done.fail);
+    runTargetSpec(host, tslintTargetSpec, overrides)
+      .subscribe(undefined, () => done(), done.fail);
   }, 30000);
 });

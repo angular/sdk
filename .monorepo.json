@@ -110,6 +110,16 @@
       "hash": "5d33c1706ab096941e491d9faaed8485",
       "snapshotRepo": "angular/angular-devkit-build-angular-builds"
     },
+    "@angular-devkit/build-webpack": {
+      "name": "Build Webpack",
+      "links": [
+        {
+          "label": "README",
+          "url": "https://github.com/angular/devkit/blob/master/packages/angular_devkit/build_webpack/README.md"
+        }
+      ],
+      "version": "0.0.0"
+    },
     "@angular-devkit/core": {
       "name": "Core",
       "links": [

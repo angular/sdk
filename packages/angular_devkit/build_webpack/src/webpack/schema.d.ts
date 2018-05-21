@@ -5,9 +5,9 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-
-export * from './request';
-export * from './test-project-host';
-export * from './test-logger';
-export * from './timeouts';
-export * from './run-target-spec';
+export interface WebpackBuilderSchema {
+  /**
+   * The path to the Webpack configuration file.
+   */
+  webpackConfig: string;
+}

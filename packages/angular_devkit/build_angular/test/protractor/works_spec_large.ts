@@ -6,9 +6,10 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import { runTargetSpec } from '@angular-devkit/architect/testing';
 import { normalize } from '@angular-devkit/core';
 import { retry } from 'rxjs/operators';
-import { host, protractorTargetSpec, runTargetSpec } from '../utils';
+import { host, protractorTargetSpec } from '../utils';
 
 
 // TODO: replace this with an "it()" macro that's reusable globally.
