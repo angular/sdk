@@ -207,6 +207,7 @@ export function getStylesConfig(wco: WebpackConfigOptions) {
         loader: 'less-loader',
         options: {
           sourceMap: cssSourceMap,
+          javascriptEnabled: true,
           ...lessPathOptions,
         }
       }]
