@@ -121,6 +121,11 @@
     "poll": {
       "type": "number",
       "description": "Enable and define the file watching poll time period in milliseconds."
+    },
+    "customOptions": {
+      "type": "object",
+      "description": "Custom target options",
+      "additionalProperties": true
     }
   },
   "additionalProperties": false,

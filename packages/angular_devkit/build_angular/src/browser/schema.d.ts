@@ -5,6 +5,9 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
+
+import { CustomBuildOptions } from '../angular-cli-files/models/build-options';
+
 export interface BrowserBuilderSchema {
   /**
    * List of static application assets.
@@ -217,6 +220,10 @@ export interface BrowserBuilderSchema {
    * Budget thresholds to ensure parts of your application stay within boundaries which you set.
    */
   budgets: Budget[];
+
+  defines: Define[];
+
+  customOptions: CustomBuildOptions;
 }
 
 export type AssetPattern = string | AssetPatternObject;
@@ -236,6 +243,17 @@ export interface AssetPatternObject {
    * Absolute path within the output.
    */
   output: string;
+}
+
+export interface DefineTargets {
+  development?: string | number | boolean;
+  production?: string | number | boolean;
+}
+
+export interface Define {
+  name: string;
+  value?: string | number | boolean;
+  targets?: DefineTargets;
 }
 
 export type ExtraEntryPoint = string | ExtraEntryPointObject;

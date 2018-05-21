@@ -10,7 +10,7 @@
 
 // tslint:disable-next-line:no-implicit-dependencies
 import * as ts from 'typescript';
-import { AssetPatternObject, Budget, ExtraEntryPoint } from '../../browser/schema';
+import { AssetPatternObject, Budget, Define, ExtraEntryPoint } from '../../browser/schema';
 
 export interface BuildOptions {
   optimization: boolean;
@@ -48,6 +48,7 @@ export interface BuildOptions {
   forkTypeChecker: boolean;
 
   main: string;
+  defines: Define[];
   index: string;
   polyfills?: string;
   budgets: Budget[];
@@ -57,6 +58,8 @@ export interface BuildOptions {
   stylePreprocessorOptions?: { includePaths: string[] };
   lazyModules: string[];
   platform?: 'browser' | 'server';
+
+  customOptions?: CustomBuildOptions;
 }
 
 export interface WebpackTestOptions extends BuildOptions {
@@ -72,3 +75,5 @@ export interface WebpackConfigOptions<T = BuildOptions> {
   tsConfigPath: string;
   supportES2015: boolean;
 }
+
+export type CustomBuildOptions = {[key: string]: string | number | boolean };

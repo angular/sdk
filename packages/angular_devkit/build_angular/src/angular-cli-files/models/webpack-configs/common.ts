@@ -147,6 +147,23 @@ export function getCommonConfig(wco: WebpackConfigOptions) {
     extraPlugins.push(copyWebpackPluginInstance);
   }
 
+  //pass buildOptions.defines to DefinePlugin
+  const optDefines = buildOptions.defines;
+  if (optDefines && optDefines.length > 0) {
+    const DefinePlugin = require('webpack/lib/DefinePlugin');
+    const target = buildOptions.optimization ? 'production' : 'development';
+    const customOptions =  buildOptions.customOptions;
+    const defines: {[key: string]: string | number | boolean} = {};
+    optDefines.forEach((item) => {
+      if (item && item.name){
+          let value = item.targets && (item.targets[target] !== undefined) ?
+            item.targets[target] : item.value;
+          defines[item.name] = JSON.stringify((typeof value === 'string') ?
+            eval(value) : value);
+      }
+    });
+    extraPlugins.push(new DefinePlugin(defines));
+  }
   if (buildOptions.progress) {
     extraPlugins.push(new ProgressPlugin({ profile: buildOptions.verbose, colors: true }));
   }
