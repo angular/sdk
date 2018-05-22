@@ -10,6 +10,7 @@ import * as path from 'path';
 import { Schema as ApplicationOptions } from '../application/schema';
 import { Schema as WorkspaceOptions } from '../workspace/schema';
 import { Schema as UniversalOptions } from './schema';
+import { Schema as emptyClientOptions } from './schema';
 
 describe('Universal Schematic', () => {
   const schematicRunner = new SchematicTestRunner(
@@ -22,6 +23,8 @@ describe('Universal Schematic', () => {
   const workspaceUniversalOptions: UniversalOptions = {
     clientProject: 'workspace',
   };
+
+  const emptyClientOptions: emptyClientOptions  = {};
 
   const workspaceOptions: WorkspaceOptions = {
     name: 'workspace',
@@ -56,6 +59,7 @@ describe('Universal Schematic', () => {
     appTree = schematicRunner.runSchematic('workspace', workspaceOptions);
     appTree = schematicRunner.runSchematic('application', initialWorkspaceAppOptions, appTree);
     appTree = schematicRunner.runSchematic('application', appOptions, appTree);
+
   });
 
   it('should create a root module file', () => {
@@ -70,6 +74,13 @@ describe('Universal Schematic', () => {
     expect(tree.exists(filePath)).toEqual(true);
     const contents = tree.readContent(filePath);
     expect(contents).toMatch(/export { AppServerModule } from '\.\/app\/app\.server\.module'/);
+  });
+
+  it('should run schematics with no clienproject', () => {
+
+    const tree = schematicRunner.runSchematic('universal', emptyClientOptions, appTree);
+    const filePathServer = '/src/app/app.server.module.ts';
+    expect(tree.exists(filePathServer)).toEqual(true);
   });
 
   it('should create a tsconfig file for the workspace project', () => {
