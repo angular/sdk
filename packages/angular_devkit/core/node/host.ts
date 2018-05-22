@@ -258,8 +258,12 @@ export class NodeJsSyncHost implements virtualFs.Host<fs.Stats> {
             this.delete(join(path, name)).subscribe();
           }
           try {
+            // console.log('before fs.rmdirSync', getSystemPath(path))
             fs.rmdirSync(getSystemPath(path));
+            // console.log('after fs.rmdirSync', getSystemPath(path))
           } catch (error) {
+            console.log('### caught err', error.message)
+
             return throwError(error);
           }
         } else {

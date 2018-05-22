@@ -13,19 +13,12 @@ import { concatMap } from 'rxjs/operators';
 import { TestProjectHost } from '../utils/test-project-host';
 
 
-const workspaceFile = normalize('.angular.json');
+const workspaceFile = normalize('angular.json');
 const devkitRoot = normalize((global as any)._DevKitRoot); // tslint:disable-line:no-any
 
 export const workspaceRoot = join(devkitRoot,
-  'tests/@angular_devkit/build_angular/hello-world-app/');
+  'tests/@angular_devkit/build_webpack/webpack-app/');
 export const host = new TestProjectHost(workspaceRoot);
-export const outputPath = normalize('dist');
-export const browserTargetSpec = { project: 'app', target: 'build' };
-export const devServerTargetSpec = { project: 'app', target: 'serve' };
-export const extractI18nTargetSpec = { project: 'app', target: 'extract-i18n' };
-export const karmaTargetSpec = { project: 'app', target: 'test' };
-export const tslintTargetSpec = { project: 'app', target: 'lint' };
-export const protractorTargetSpec = { project: 'app-e2e', target: 'e2e' };
 
 export function runTargetSpec(
   host: TestProjectHost,

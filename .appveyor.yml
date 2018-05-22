@@ -9,12 +9,12 @@ install:
   - npm install
   # Appveyor (via chocolatey) cannot use older versions of Chrome:
   # https://github.com/chocolatey/chocolatey-coreteampackages/tree/master/automatic/googlechrome
-  - npm run webdriver-update-appveyor
+  # - npm run webdriver-update-appveyor
 
 test_script:
   - node --version
   - npm --version
-  - npm test
+  # - npm test
   - npm run test-large
 
 build: off

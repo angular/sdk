@@ -6,9 +6,10 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import { request, runTargetSpec } from '@angular-devkit/architect/testing';
 import { from } from 'rxjs';
 import { concatMap, take, tap } from 'rxjs/operators';
-import { devServerTargetSpec, host, request, runTargetSpec } from '../utils';
+import { devServerTargetSpec, host } from '../utils';
 
 
 describe('Dev Server Builder', () => {

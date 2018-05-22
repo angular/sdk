@@ -6,10 +6,15 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import { TestLogger, runTargetSpec } from '@angular-devkit/architect/testing';
 import { join, normalize, virtualFs } from '@angular-devkit/core';
 import { debounceTime, take, tap } from 'rxjs/operators';
-import { TestLogger, Timeout, browserTargetSpec, host, runTargetSpec } from '../utils';
+import { Timeout, browserTargetSpec, host } from '../utils';
 import { lazyModuleFiles, lazyModuleImport } from './lazy-module_spec_large';
+import { createConsoleLogger } from '@angular-devkit/core/node';
+import { of, Observable, timer } from 'rxjs';
+
+
 
 
 // TODO: replace this with an "it()" macro that's reusable globally.
@@ -23,7 +28,10 @@ describe('Browser Builder rebuilds', () => {
   const outputPath = normalize('dist');
 
   beforeEach(done => host.initialize().subscribe(undefined, done.fail, done));
-  afterEach(done => host.restore().subscribe(undefined, done.fail, done));
+  afterEach(done => {
+    console.log('### afterEach')
+    host.restore().subscribe(undefined, done.fail, done);
+  });
 
 
   it('rebuilds on TS file changes', (done) => {
@@ -78,7 +86,7 @@ describe('Browser Builder rebuilds', () => {
 
     let buildNumber = 0;
 
-    runTargetSpec(host, browserTargetSpec, overrides).pipe(
+    runTargetSpec(host, browserTargetSpec, overrides, createConsoleLogger()).pipe(
       // We must debounce on watch mode because file watchers are not very accurate.
       // Changes from just before a process runs can be picked up and cause rebuilds.
       // In this case, cleanup from the test right before this one causes a few rebuilds.
@@ -123,15 +131,23 @@ describe('Browser Builder rebuilds', () => {
     ).subscribe(undefined, done.fail, done);
   }, Timeout.Massive);
 
-  it('rebuilds on CSS changes', (done) => {
+  fit('rebuilds on CSS changes', (done) => {
     const overrides = { watch: true };
 
-    runTargetSpec(host, browserTargetSpec, overrides).pipe(
+    runTargetSpec(host, browserTargetSpec, overrides, createConsoleLogger()).pipe(
       debounceTime(500),
       tap((buildEvent) => expect(buildEvent.success).toBe(true)),
+      tap((buildEvent) => console.log('### build event', buildEvent)),
       tap(() => host.appendToFile('src/app/app.component.css', ':host { color: blue; }')),
       take(2),
-    ).subscribe(undefined, done.fail, done);
+    ).toPromise()
+      .then((val) => {
+        console.log('promise resolved', val);
+        done();
+      }, (err) => {
+        console.log('promise errored', err.message);
+        done.fail();
+      });
   }, Timeout.Massive);
 
   it('type checks on rebuilds', (done) => {

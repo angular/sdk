@@ -6,9 +6,10 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import { runTargetSpec } from '@angular-devkit/architect/testing';
 import { normalize } from '@angular-devkit/core';
 import { tap } from 'rxjs/operators';
-import { host, karmaTargetSpec, runTargetSpec } from '../utils';
+import { host, karmaTargetSpec } from '../utils';
 
 
 describe('Karma Builder file replacements', () => {
