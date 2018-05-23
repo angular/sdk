@@ -9,8 +9,8 @@
 import * as ts from 'typescript';
 import {
     PlatformBootstrapOptions,
+    replaceBootstrap,
     replacePlatformBootstrap,
-    replaceBootstrap
 } from './replace_bootstrap_helpers';
 
 export function replaceNativeScriptBootstrap(
@@ -22,11 +22,11 @@ export function replaceNativeScriptBootstrap(
   const platformOptions: PlatformBootstrapOptions = {
     dynamicPlatformName: 'platformNativeScriptDynamic',
     staticPlatformName: 'platformNativeScript',
-    staticPlatformPath: 'nativescript-angular/platform-static'
+    staticPlatformPath: 'nativescript-angular/platform-static',
   };
 
   const replaceFunctions = [
-    replacePlatformBootstrap
+    replacePlatformBootstrap,
   ];
 
   return replaceBootstrap(
@@ -34,6 +34,6 @@ export function replaceNativeScriptBootstrap(
     getEntryModule,
     getTypeChecker,
     replaceFunctions,
-    platformOptions
+    platformOptions,
   );
 }

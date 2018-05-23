@@ -9,8 +9,8 @@
 import * as ts from 'typescript';
 import {
     PlatformBootstrapOptions,
+    replaceBootstrap,
     replacePlatformBootstrap,
-    replaceBootstrap
 } from './replace_bootstrap_helpers';
 
 export function replaceBrowserBootstrap(
@@ -22,11 +22,11 @@ export function replaceBrowserBootstrap(
   const platformOptions: PlatformBootstrapOptions = {
     dynamicPlatformName: 'platformBrowserDynamic',
     staticPlatformName: 'platformBrowser',
-    staticPlatformPath: '@angular/platform-browser'
+    staticPlatformPath: '@angular/platform-browser',
   };
 
   const replaceFunctions = [
-    replacePlatformBootstrap
+    replacePlatformBootstrap,
   ];
 
   return replaceBootstrap(
@@ -34,6 +34,6 @@ export function replaceBrowserBootstrap(
     getEntryModule,
     getTypeChecker,
     replaceFunctions,
-    platformOptions
+    platformOptions,
   );
 }

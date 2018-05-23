@@ -23,12 +23,18 @@ export interface BootstrapReplaceOptions extends PlatformBootstrapOptions {
   factoryModulePath: string;
 }
 
+export type BootstrapReplaceFunction = (
+  identifiers: ts.Identifier[],
+  sourceFile: ts.SourceFile,
+  platformOptions: PlatformBootstrapOptions)
+    => TransformOperation[];
+
 export function replaceBootstrap(
   shouldTransform: (fileName: string) => boolean,
   getEntryModule: () => { path: string, className: string } | null,
   getTypeChecker: () => ts.TypeChecker,
-  replaceFunctions: ((identifiers: ts.Identifier[], sourceFile: ts.SourceFile, platformOptions: PlatformBootstrapOptions) => TransformOperation[])[],
-  platformOptions: PlatformBootstrapOptions
+  replaceFunctions: BootstrapReplaceFunction[],
+  platformOptions: PlatformBootstrapOptions,
 ): ts.TransformerFactory<ts.SourceFile> {
 
   const standardTransform: StandardTransform = function (sourceFile: ts.SourceFile) {
@@ -54,10 +60,10 @@ export function replaceBootstrap(
       factoryModulePath,
     };
 
-    return replaceFunctions.reduce((ops, fn) => 
+    return replaceFunctions.reduce((ops, fn) =>
       [
         ...ops,
-        ...fn(entryModuleIdentifiers, sourceFile, bootstrapReplaceOptions)
+        ...fn(entryModuleIdentifiers, sourceFile, bootstrapReplaceOptions),
       ], []);
   };
 
@@ -68,7 +74,7 @@ export function replaceBootstrap(
 export function replacePlatformBootstrap(
   identifiers: ts.Identifier[],
   sourceFile: ts.SourceFile,
-  bootstrapOptions: BootstrapReplaceOptions
+  bootstrapOptions: BootstrapReplaceOptions,
 ): TransformOperation[] {
 
   const ops: TransformOperation[] = [];
@@ -115,7 +121,9 @@ export function replacePlatformBootstrap(
       // Replace the entry module import.
       ...insertStarImport(sourceFile, idNgFactory, bootstrapOptions.factoryModulePath),
       new ReplaceNodeOperation(sourceFile, identifier,
-        ts.createPropertyAccess(idNgFactory, ts.createIdentifier(bootstrapOptions.factoryClassName))),
+        ts.createPropertyAccess(
+          idNgFactory,
+          ts.createIdentifier(bootstrapOptions.factoryClassName))),
       // Replace the platformDynamic import.
       ...insertStarImport(sourceFile, idPlatformStatic, bootstrapOptions.staticPlatformPath),
       new ReplaceNodeOperation(sourceFile, dynamicPlatformIdentifier,

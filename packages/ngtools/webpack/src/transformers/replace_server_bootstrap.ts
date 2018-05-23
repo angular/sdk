@@ -5,16 +5,14 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-import { dirname, relative } from 'path';
 import * as ts from 'typescript';
-import { collectDeepNodes } from './ast_helpers';
 import { insertStarImport } from './insert_import';
-import { ReplaceNodeOperation, StandardTransform, TransformOperation } from './interfaces';
-import { makeTransform } from './make_transform';
+import { ReplaceNodeOperation, TransformOperation } from './interfaces';
 import {
+  BootstrapReplaceOptions,
   PlatformBootstrapOptions,
   replaceBootstrap,
-  replacePlatformBootstrap
+  replacePlatformBootstrap,
 } from './replace_bootstrap_helpers';
 
 export function replaceServerBootstrap(
@@ -32,7 +30,7 @@ export function replaceServerBootstrap(
   const replaceFunctions = [
     replacePlatformBootstrap,
     replaceRenderModule,
-    replaceEntryModuleInObject
+    replaceEntryModuleInObject,
   ];
 
   return replaceBootstrap(
@@ -40,7 +38,7 @@ export function replaceServerBootstrap(
     getEntryModule,
     getTypeChecker,
     replaceFunctions,
-    platformOptions
+    platformOptions,
   );
 }
 
@@ -48,7 +46,7 @@ export function replaceServerBootstrap(
 function replaceRenderModule(
   identifiers: ts.Identifier[],
   sourceFile: ts.SourceFile,
-  bootstrapOptions: PlatformBootstrapOptions
+  bootstrapOptions: BootstrapReplaceOptions,
 ): TransformOperation[] {
   const ops: TransformOperation[] = [];
 
@@ -86,7 +84,9 @@ function replaceRenderModule(
       // Replace the entry module import.
       ...insertStarImport(sourceFile, idNgFactory, bootstrapOptions.factoryModulePath),
       new ReplaceNodeOperation(sourceFile, identifier,
-        ts.createPropertyAccess(idNgFactory, ts.createIdentifier(bootstrapOptions.factoryClassName))),
+        ts.createPropertyAccess(
+          idNgFactory,
+          ts.createIdentifier(bootstrapOptions.factoryClassName))),
       // Replace the renderModule import.
       ...insertStarImport(sourceFile, idPlatformServer, bootstrapOptions.staticPlatformPath),
       new ReplaceNodeOperation(sourceFile, renderModuleIdentifier,
@@ -102,7 +102,7 @@ function replaceRenderModule(
 function replaceEntryModuleInObject(
   identifiers: ts.Identifier[],
   sourceFile: ts.SourceFile,
-  bootstrapOptions: PlatformBootstrapOptions
+  bootstrapOptions: BootstrapReplaceOptions,
 ): TransformOperation[] {
   return identifiers
     .filter(({ parent }) => parent && parent.kind === ts.SyntaxKind.PropertyAssignment)
@@ -112,7 +112,9 @@ function replaceEntryModuleInObject(
       ops.push(
         ...insertStarImport(sourceFile, idNgFactory, bootstrapOptions.factoryModulePath),
         new ReplaceNodeOperation(sourceFile, identifier,
-          ts.createPropertyAccess(idNgFactory, ts.createIdentifier(bootstrapOptions.factoryClassName))),
+          ts.createPropertyAccess(
+            idNgFactory,
+            ts.createIdentifier(bootstrapOptions.factoryClassName))),
       );
 
       return ops;
