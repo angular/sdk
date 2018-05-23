@@ -75,7 +75,7 @@
     },
     "servePathDefaultWarning": {
       "type": "boolean",
-      "description": "Show a warning when deploy-url/base-href use unsupported serve path values.",
+      "description": "Show a warning when base-href uses unsupported serve path values.",
       "default": true
     },
     "optimization": {

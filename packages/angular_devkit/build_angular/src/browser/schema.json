@@ -99,10 +99,6 @@
       "type": "string",
       "description": "Base url for the application being built."
     },
-    "deployUrl": {
-      "type": "string",
-      "description": "URL where files will be deployed."
-    },
     "verbose": {
       "type": "boolean",
       "description": "Adds more details to output logging.",
