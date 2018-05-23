@@ -7,10 +7,10 @@
  */
 import { tags } from '@angular-devkit/core';  // tslint:disable-line:no-implicit-dependencies
 import { createTypescriptContext, transformTypescript } from './ast_helpers';
-import { replaceBootstrap } from './replace_bootstrap';
+import { replaceBrowserBootstrap } from './replace_browser_bootstrap';
 
 describe('@ngtools/webpack transformers', () => {
-  describe('replace_bootstrap', () => {
+  describe('replace_browser_bootstrap', () => {
     it('should replace bootstrap', () => {
       const input = tags.stripIndent`
         import { enableProdMode } from '@angular/core';
@@ -42,7 +42,7 @@ describe('@ngtools/webpack transformers', () => {
       // tslint:enable:max-line-length
 
       const { program, compilerHost } = createTypescriptContext(input);
-      const transformer = replaceBootstrap(
+      const transformer = replaceBrowserBootstrap(
         () => true,
         () => ({ path: '/project/src/app/app.module', className: 'AppModule' }),
         () => program.getTypeChecker(),
@@ -83,7 +83,7 @@ describe('@ngtools/webpack transformers', () => {
       // tslint:enable:max-line-length
 
       const { program, compilerHost } = createTypescriptContext(input);
-      const transformer = replaceBootstrap(
+      const transformer = replaceBrowserBootstrap(
         () => true,
         () => ({ path: '/project/src/app/app.module', className: 'AppModule' }),
         () => program.getTypeChecker(),
@@ -109,7 +109,7 @@ describe('@ngtools/webpack transformers', () => {
       `;
 
       const { program, compilerHost } = createTypescriptContext(input);
-      const transformer = replaceBootstrap(
+      const transformer = replaceBrowserBootstrap(
         () => true,
         () => null,
         () => program.getTypeChecker(),

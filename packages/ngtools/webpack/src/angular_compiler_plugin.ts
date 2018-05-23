@@ -43,7 +43,7 @@ import {
   findResources,
   registerLocaleData,
   removeDecorators,
-  replaceBootstrap,
+  replaceBrowserBootstrap,
   replaceResources,
   replaceServerBootstrap,
 } from './transformers';
@@ -768,7 +768,7 @@ export class AngularCompilerPlugin {
 
       if (!this._JitMode) {
         // Replace bootstrap in browser AOT.
-        this._transformers.push(replaceBootstrap(isAppPath, getEntryModule, getTypeChecker));
+        this._transformers.push(replaceBrowserBootstrap(isAppPath, getEntryModule, getTypeChecker));
       }
     } else if (this._platform === PLATFORM.Server) {
       this._transformers.push(exportLazyModuleMap(isMainPath, getLazyRoutes));
