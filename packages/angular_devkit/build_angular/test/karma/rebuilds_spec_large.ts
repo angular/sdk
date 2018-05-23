@@ -6,8 +6,9 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import { runTargetSpec } from '@angular-devkit/architect/testing';
 import { debounceTime, take, tap } from 'rxjs/operators';
-import { host, karmaTargetSpec, runTargetSpec } from '../utils';
+import { host, karmaTargetSpec, rebuildDebounce } from '../utils';
 
 
 // Karma watch mode is currently bugged:
@@ -21,7 +22,7 @@ xdescribe('Karma Builder watch mode', () => {
   it('works', (done) => {
     const overrides = { watch: true };
     runTargetSpec(host, karmaTargetSpec, overrides).pipe(
-      debounceTime(500),
+      debounceTime(rebuildDebounce),
       tap((buildEvent) => expect(buildEvent.success).toBe(true)),
       take(1),
     ).subscribe(undefined, done.fail, done);
@@ -32,7 +33,7 @@ xdescribe('Karma Builder watch mode', () => {
     let buildNumber = 0;
 
     runTargetSpec(host, karmaTargetSpec, overrides).pipe(
-      debounceTime(500),
+      debounceTime(rebuildDebounce),
       tap((buildEvent) => {
         buildNumber += 1;
         switch (buildNumber) {

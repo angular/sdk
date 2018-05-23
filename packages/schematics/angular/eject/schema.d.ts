@@ -6,8 +6,9 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-export * from './request';
-export * from './test-project-host';
-export * from './test-logger';
-export * from './timeouts';
-export * from './run-target-spec';
+export interface Schema {
+  /**
+   * The name of the project to eject.
+   */
+  project: string;
+}

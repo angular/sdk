@@ -6,9 +6,10 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import { runTargetSpec } from '@angular-devkit/architect/testing';
 import { normalize, tags, virtualFs } from '@angular-devkit/core';
 import { concatMap, tap } from 'rxjs/operators';
-import { Timeout, browserTargetSpec, host, runTargetSpec } from '../utils';
+import { Timeout, browserTargetSpec, host } from '../utils';
 
 
 describe('Browser Builder styles', () => {

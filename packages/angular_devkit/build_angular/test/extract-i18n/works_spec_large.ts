@@ -6,9 +6,10 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import { TestLogger, runTargetSpec } from '@angular-devkit/architect/testing';
 import { join, normalize, virtualFs } from '@angular-devkit/core';
 import { tap } from 'rxjs/operators';
-import { TestLogger, extractI18nTargetSpec, host, runTargetSpec } from '../utils';
+import { extractI18nTargetSpec, host } from '../utils';
 
 
 describe('Extract i18n Target', () => {

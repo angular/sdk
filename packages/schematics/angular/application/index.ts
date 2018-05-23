@@ -30,6 +30,7 @@ import {
   getWorkspace,
 } from '../utility/config';
 import { latestVersions } from '../utility/latest-versions';
+import { addToPackageJson } from '../utility/package-json';
 import { validateProjectName } from '../utility/validation';
 import { Schema as ApplicationOptions } from './schema';
 
@@ -57,36 +58,6 @@ import { Schema as ApplicationOptions } from './schema';
 //     + indentStr.slice(0, -2),
 //   );
 // }
-
-function addDependenciesToPackageJson() {
-  return (host: Tree) => {
-    const packageJsonPath = 'package.json';
-
-    if (!host.exists('package.json')) { return host; }
-
-    const source = host.read('package.json');
-    if (!source) { return host; }
-
-    const sourceText = source.toString('utf-8');
-    const json = JSON.parse(sourceText);
-
-    if (!json['devDependencies']) {
-      json['devDependencies'] = {};
-    }
-
-    json.devDependencies = {
-      '@angular/compiler-cli': latestVersions.Angular,
-      '@angular-devkit/build-angular': latestVersions.DevkitBuildAngular,
-      'typescript': latestVersions.TypeScript,
-      // De-structure last keeps existing user dependencies.
-      ...json.devDependencies,
-    };
-
-    host.overwrite(packageJsonPath, JSON.stringify(json, null, 2));
-
-    return host;
-  };
-}
 
 function addAppToWorkspaceFile(options: ApplicationOptions, workspace: WorkspaceSchema): Rule {
   // TODO: use JsonAST
@@ -280,9 +251,18 @@ export default function (options: ApplicationOptions): Rule {
       e2eOptions.projectRoot = 'e2e';
     }
 
+    // New dependencies.
+    const partialPackageJson = {
+      devDependencies: {
+        '@angular/compiler-cli': latestVersions.Angular,
+        '@angular-devkit/build-angular': latestVersions.DevkitBuildAngular,
+        'typescript': latestVersions.TypeScript,
+      },
+    };
+
     return chain([
       addAppToWorkspaceFile(options, workspace),
-      options.skipPackageJson ? noop() : addDependenciesToPackageJson(),
+      options.skipPackageJson ? noop() : addToPackageJson('package.json', partialPackageJson),
       mergeWith(
         apply(url('./files/src'), [
           template({

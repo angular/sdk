@@ -547,3 +547,28 @@ export function getAppFromConfig(config: CliConfig, appIndexOrName: string): App
 
   return config.apps.filter((app) => app.name === appIndexOrName)[0];
 }
+
+export function addBuilderToProject(projectName: string, builderName: string, builder: {}): Rule {
+  return (host: Tree, context: SchematicContext) => {
+
+    const workspace = getWorkspace(host);
+
+    if (!workspace.projects[projectName]) {
+      throw new Error(`Project '${projectName}' does not exist in workspace.`);
+    }
+
+    const project = workspace.projects[projectName];
+
+    if (!project.architect) {
+      project.architect = {};
+    }
+
+    if (project.architect[builderName]) {
+      throw new Error(`Builder '${builderName}' already exists in project.`);
+    }
+
+    project.architect[builderName] = builder;
+
+    host.overwrite(getWorkspacePath(host), JSON.stringify(workspace, null, 2));
+  };
+}

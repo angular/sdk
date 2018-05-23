@@ -6,10 +6,11 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import { runTargetSpec } from '@angular-devkit/architect/testing';
 import { join, normalize } from '@angular-devkit/core';
 import { tap } from 'rxjs/operators';
 import { BrowserBuilderSchema } from '../../src';
-import { Timeout, browserTargetSpec, host, runTargetSpec } from '../utils';
+import { Timeout, browserTargetSpec, host } from '../utils';
 
 
 export const lazyModuleFiles: { [path: string]: string } = {
