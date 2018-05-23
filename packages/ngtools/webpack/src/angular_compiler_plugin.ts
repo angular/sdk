@@ -44,6 +44,7 @@ import {
   registerLocaleData,
   removeDecorators,
   replaceBrowserBootstrap,
+  replaceNativeScriptBootstrap,
   replaceResources,
   replaceServerBootstrap,
 } from './transformers';
@@ -95,6 +96,7 @@ export interface AngularCompilerPluginOptions {
 export enum PLATFORM {
   Browser,
   Server,
+  NativeScript,
 }
 
 export class AngularCompilerPlugin {
@@ -776,6 +778,11 @@ export class AngularCompilerPlugin {
         this._transformers.push(
           exportNgFactory(isMainPath, getEntryModule),
           replaceServerBootstrap(isMainPath, getEntryModule, getTypeChecker));
+      }
+    } else if (this._platform === PLATFORM.NativeScript) {
+      if (!this._JitMode) {
+        this._transformers.push(
+          replaceNativeScriptBootstrap(isAppPath, getEntryModule, getTypeChecker));
       }
     }
   }
