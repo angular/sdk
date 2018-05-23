@@ -12,6 +12,7 @@ export * from './insert_import';
 export * from './elide_imports';
 export * from './replace_browser_bootstrap';
 export * from './replace_server_bootstrap';
+export * from './replace_nativescript_bootstrap';
 export * from './export_ngfactory';
 export * from './export_lazy_module_map';
 export * from './register_locale_data';
