@@ -20,6 +20,7 @@ import {
   WorkspaceTool,
 } from '../../../angular_devkit/core/src/workspace/workspace-schema';
 import { Schema as ComponentOptions } from '../component/schema';
+import { Schema as UniversalOptions } from '../universal/schema';
 import {
   addImportToModule,
   addSymbolToNgModuleMetadata,
@@ -30,6 +31,7 @@ import {
   isImported,
 } from '../utility/ast-utils';
 import { InsertChange } from '../utility/change';
+import { pick } from '../utility/clone';
 import { getWorkspace, getWorkspacePath } from '../utility/config';
 import { getAppModulePath } from '../utility/ng-ast-utils';
 import { Schema as AppShellOptions } from './schema';
@@ -162,19 +164,18 @@ function addUniversalTarget(options: AppShellOptions): Rule {
       }
     }
 
-    // Copy options.
-    const universalOptions = {
-      ...options,
-    };
-
-    // Delete non-universal options.
-    delete universalOptions.universalProject;
-    delete universalOptions.route;
-    delete universalOptions.name;
-    delete universalOptions.outDir;
-    delete universalOptions.root;
-    delete universalOptions.index;
-    delete universalOptions.sourceDir;
+    // Get the universal options from the app shell options.
+    const universalOptions: UniversalOptions = pick(options,
+      'clientProject',
+      'appId',
+      'main',
+      'test',
+      'tsconfigFileName',
+      'testTsconfigFileName',
+      'appDir',
+      'rootModuleFileName',
+      'rootModuleClassName',
+    );
 
     return schematic('universal', universalOptions)(host, context);
   };
