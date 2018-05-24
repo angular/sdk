@@ -22,7 +22,7 @@ describe('@ngtools/webpack transformers', () => {
 
       const transformer = exportNgFactory(
         () => true,
-        () => ({ path: '/project/src/app/app.module', className: 'AppModule' }),
+        () => ([{ path: '/project/src/app/app.module', className: 'AppModule' }]),
       );
       const result = transformTypescript(input, [transformer]);
 
@@ -40,7 +40,7 @@ describe('@ngtools/webpack transformers', () => {
 
       const transformer = exportNgFactory(
         () => true,
-        () => ({ path: '/project/src/app/app.module', className: 'AppModule' }),
+        () => ([{ path: '/project/src/app/app.module', className: 'AppModule' }]),
       );
       const result = transformTypescript(input, [transformer]);
 
@@ -54,7 +54,7 @@ describe('@ngtools/webpack transformers', () => {
 
       const transformer = exportNgFactory(
         () => false,
-        () => ({ path: '/project/src/app/app.module', className: 'AppModule' }),
+        () => ([{ path: '/project/src/app/app.module', className: 'AppModule' }]),
       );
       const result = transformTypescript(input, [transformer]);
 
