@@ -117,6 +117,7 @@
       "check-separator",
       "check-type"
     ],
+    "no-template-call-expression": true,
     "directive-selector": [
       true,
       "attribute",
