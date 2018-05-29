@@ -8,7 +8,7 @@
 // TODO: fix webpack typings.
 // tslint:disable-next-line:no-global-tslint-disable
 // tslint:disable:no-any
-import { dirname, normalize, resolve, virtualFs } from '@angular-devkit/core';
+import { virtualFs } from '@angular-devkit/core';
 import { ChildProcess, ForkOptions, fork } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -89,7 +89,10 @@ export interface AngularCompilerPluginOptions {
   // Use tsconfig to include path globs.
   compilerOptions?: ts.CompilerOptions;
 
-  host?: virtualFs.Host<fs.Stats>;
+  host: virtualFs.Host<fs.Stats>;
+
+  // Allows to keep the decorators in AOT production as an option.
+  keepAotRemoveDecorators?: boolean;
 }
 
 export enum PLATFORM {
@@ -752,7 +755,7 @@ export class AngularCompilerPlugin {
     if (this._JitMode) {
       // Replace resources in JIT.
       this._transformers.push(replaceResources(isAppPath));
-    } else {
+    } else if (this._options.keepAotRemoveDecorators !== true) {
       // Remove unneeded angular decorators.
       this._transformers.push(removeDecorators(isAppPath, getTypeChecker));
     }
@@ -956,13 +959,13 @@ export class AngularCompilerPlugin {
     const resourceImports = findResources(sourceFile)
       .map((resourceReplacement) => resourceReplacement.resourcePaths)
       .reduce((prev, curr) => prev.concat(curr), [])
-      .map((resourcePath) => resolve(dirname(resolvedFileName), normalize(resourcePath)));
+      .map((resourcePath) => path.resolve(path.dirname(resolvedFileName), resourcePath));
 
     // These paths are meant to be used by the loader so we must denormalize them.
     const uniqueDependencies =  new Set([
       ...esImports,
       ...resourceImports,
-      ...this.getResourceDependencies(this._compilerHost.denormalizePath(resolvedFileName)),
+      ...this.getResourceDependencies(resolvedFileName),
     ].map((p) => p && this._compilerHost.denormalizePath(p)));
 
     return [...uniqueDependencies]
