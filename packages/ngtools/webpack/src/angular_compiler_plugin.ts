@@ -43,7 +43,8 @@ import {
   findResources,
   registerLocaleData,
   removeDecorators,
-  replaceBootstrap,
+  replaceBrowserBootstrap,
+  replaceNativeScriptBootstrap,
   replaceResources,
   replaceServerBootstrap,
 } from './transformers';
@@ -95,6 +96,7 @@ export interface AngularCompilerPluginOptions {
 export enum PLATFORM {
   Browser,
   Server,
+  NativeScript,
 }
 
 export class AngularCompilerPlugin {
@@ -768,7 +770,7 @@ export class AngularCompilerPlugin {
 
       if (!this._JitMode) {
         // Replace bootstrap in browser AOT.
-        this._transformers.push(replaceBootstrap(isAppPath, getEntryModule, getTypeChecker));
+        this._transformers.push(replaceBrowserBootstrap(isAppPath, getEntryModule, getTypeChecker));
       }
     } else if (this._platform === PLATFORM.Server) {
       this._transformers.push(exportLazyModuleMap(isMainPath, getLazyRoutes));
@@ -776,6 +778,11 @@ export class AngularCompilerPlugin {
         this._transformers.push(
           exportNgFactory(isMainPath, getEntryModule),
           replaceServerBootstrap(isMainPath, getEntryModule, getTypeChecker));
+      }
+    } else if (this._platform === PLATFORM.NativeScript) {
+      if (!this._JitMode) {
+        this._transformers.push(
+          replaceNativeScriptBootstrap(isAppPath, getEntryModule, getTypeChecker));
       }
     }
   }

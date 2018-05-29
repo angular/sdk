@@ -10,7 +10,7 @@ import { createTypescriptContext, transformTypescript } from './ast_helpers';
 import { exportLazyModuleMap } from './export_lazy_module_map';
 import { exportNgFactory } from './export_ngfactory';
 import { removeDecorators } from './remove_decorators';
-import { replaceBootstrap } from './replace_bootstrap';
+import { replaceBrowserBootstrap } from './replace_browser_bootstrap';
 
 
 describe('@ngtools/webpack transformers', () => {
@@ -73,7 +73,7 @@ describe('@ngtools/webpack transformers', () => {
 
 
       const transformers = [
-        replaceBootstrap(shouldTransform, getEntryModule, getTypeChecker),
+        replaceBrowserBootstrap(shouldTransform, getEntryModule, getTypeChecker),
         exportNgFactory(shouldTransform, getEntryModule),
         exportLazyModuleMap(shouldTransform,
           () => ({
