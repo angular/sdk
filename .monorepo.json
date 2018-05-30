@@ -49,6 +49,17 @@
       "version": "0.7.0-beta.0",
       "hash": "d6dfda9e3e31e8428256608e2d859037"
     },
+    "@angular/cli": {
+      "name": "Angular CLI",
+      "links": [
+        {
+          "label": "README",
+          "url": "https://github.com/angular/devkit/blob/master/packages/angular/cli/README.md"
+        }
+      ],
+      "version": "6.1.0-beta.0",
+      "snapshotRepo": "angular/cli-builds"
+    },
     "@angular/pwa": {
       "name": "Angular PWA Schematics",
       "section": "Schematics",
