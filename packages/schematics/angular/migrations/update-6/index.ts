@@ -387,8 +387,8 @@ function extractProjectsConfig(
       }
 
       const project: JsonObject = {
-        root: '',
-        sourceRoot: 'src',
+        root: join(normalize(appRoot), '..'),
+        sourceRoot: appRoot,
         projectType: 'application',
       };
 
@@ -525,7 +525,7 @@ function extractProjectsConfig(
       }
       const e2eProject: JsonObject = {
         root: project.root,
-        sourceRoot: project.root,
+        sourceRoot: join(project.root as Path, 'e2e'),
         projectType: 'application',
       };
 
