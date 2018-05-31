@@ -92,6 +92,13 @@
       "default": false,
       "alias": "sg"
     },
+    "skipCommit": {
+      "name": "skipCommit",
+      "type": "boolean",
+      "default": false,
+      "alias": "sc",
+      "description": "Skip committing the first commit to git."
+    },
     "commit": {
       "description": "Initial repository commit information.",
       "default": null,
