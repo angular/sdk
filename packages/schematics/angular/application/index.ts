@@ -65,6 +65,9 @@ export default function (options: ApplicationOptions): Rule {
       }
     }
     if (!options.skipGit) {
+      if (options.skipCommit) {
+        options.commit = undefined;
+      }
       context.addTask(
         new RepositoryInitializerTask(
           options.directory,

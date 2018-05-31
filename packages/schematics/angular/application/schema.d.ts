@@ -68,6 +68,10 @@ export interface Schema {
      */
     skipGit?: boolean;
     /**
+     * Skip committing the first commit to git.
+     */
+    skipCommit?: boolean;
+    /**
      * Initial repository commit information.
      */
     commit?: { name: string, email: string, message?: string };
