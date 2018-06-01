@@ -139,39 +139,43 @@ describe('Application Schematic', () => {
   describe(`update package.json`, () => {
     it(`should add build-angular to devDependencies`, () => {
       const tree = schematicRunner.runSchematic('application', defaultOptions, workspaceTree);
+      const pkg = JSON.parse(tree.readContent('package.json'));
 
-      const packageJson = JSON.parse(tree.readContent('package.json'));
-      expect(packageJson.devDependencies['@angular-devkit/build-angular'])
+      expect(pkg.devDependencies['@angular-devkit/build-angular'])
         .toEqual(latestVersions.DevkitBuildAngular);
     });
 
     it('should use the latest known versions in package.json', () => {
       const tree = schematicRunner.runSchematic('application', defaultOptions, workspaceTree);
-      const pkg = JSON.parse(tree.readContent('/package.json'));
+      const pkg = JSON.parse(tree.readContent('package.json'));
+
       expect(pkg.devDependencies['@angular/compiler-cli']).toEqual(latestVersions.Angular);
       expect(pkg.devDependencies['typescript']).toEqual(latestVersions.TypeScript);
     });
 
     it(`should not override existing users dependencies`, () => {
-      const oldPackageJson = workspaceTree.readContent('package.json');
-      workspaceTree.overwrite('package.json', oldPackageJson.replace(
+      const oldPkg = workspaceTree.readContent('package.json');
+      workspaceTree.overwrite('package.json', oldPkg.replace(
         `"typescript": "${latestVersions.TypeScript}"`,
         `"typescript": "~2.5.2"`,
       ));
 
       const tree = schematicRunner.runSchematic('application', defaultOptions, workspaceTree);
-      const packageJson = JSON.parse(tree.readContent('package.json'));
-      expect(packageJson.devDependencies.typescript).toEqual('~2.5.2');
+      const pkg = JSON.parse(tree.readContent('package.json'));
+
+      expect(pkg.devDependencies.typescript).toEqual('~2.5.2');
     });
 
     it(`should not modify the file when --skipPackageJson`, () => {
-      const tree = schematicRunner.runSchematic('application', {
+      const options = {
         name: 'foo',
         skipPackageJson: true,
-      }, workspaceTree);
+      };
 
-      const packageJson = JSON.parse(tree.readContent('package.json'));
-      expect(packageJson.devDependencies['@angular-devkit/build-angular']).toBeUndefined();
+      const tree = schematicRunner.runSchematic('application', options, workspaceTree);
+      const pkg = JSON.parse(tree.readContent('package.json'));
+
+      expect(pkg.devDependencies['@angular-devkit/build-angular']).toBeUndefined();
     });
   });
 

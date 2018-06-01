@@ -10,7 +10,6 @@ import {
   SchematicContext,
   SchematicsException,
   Tree,
-  UpdateRecorder,
   apply,
   chain,
   mergeWith,
@@ -20,16 +19,12 @@ import {
 } from '@angular-devkit/schematics';
 import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks';
 import * as ts from 'typescript';
+import { addDependencies } from '../utility/add-dependencies';
 import { addSymbolToNgModuleMetadata, insertImport, isImported } from '../utility/ast-utils';
 import { InsertChange } from '../utility/change';
-import {
-  getWorkspace,
-  getWorkspacePath,
-} from '../utility/config';
+import { getWorkspace, getWorkspacePath } from '../utility/config';
 import { getAppModulePath } from '../utility/ng-ast-utils';
 import { Schema as ServiceWorkerOptions } from './schema';
-
-const packageJsonPath = '/package.json';
 
 function updateConfigFile(options: ServiceWorkerOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
@@ -63,26 +58,6 @@ function updateConfigFile(options: ServiceWorkerOptions): Rule {
     applyTo.serviceWorker = true;
 
     host.overwrite(workspacePath, JSON.stringify(workspace, null, 2));
-
-    return host;
-  };
-}
-
-function addDependencies(): Rule {
-  return (host: Tree, context: SchematicContext) => {
-    const packageName = '@angular/service-worker';
-    context.logger.debug(`adding dependency (${packageName})`);
-    const buffer = host.read(packageJsonPath);
-    if (buffer === null) {
-      throw new SchematicsException('Could not find package.json');
-    }
-
-    const packageObject = JSON.parse(buffer.toString());
-
-    const ngCoreVersion = packageObject.dependencies['@angular/core'];
-    packageObject.dependencies[packageName] = ngCoreVersion;
-
-    host.overwrite(packageJsonPath, JSON.stringify(packageObject, null, 2));
 
     return host;
   };
@@ -185,7 +160,7 @@ export default function (options: ServiceWorkerOptions): Rule {
     return chain([
       mergeWith(templateSource),
       updateConfigFile(options),
-      addDependencies(),
+      addDependencies(['@angular/service-worker@{{NG_VERSION}}']),
       updateAppModule(options),
     ])(host, context);
   };
