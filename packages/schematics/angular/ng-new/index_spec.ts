@@ -46,4 +46,16 @@ describe('Ng New Schematic', () => {
     const content = tree.readContent('/bar/angular.json');
     expect(content).toMatch(/"prefix": "pre"/);
   });
+
+  it('should set strict options in tsconfig.json', () => {
+    const options = { ...defaultOptions, strict: true };
+    const tree = schematicRunner.runSchematic('ng-new', options);
+    const tsconfig = JSON.parse(tree.readContent('/bar/tsconfig.json'));
+
+    expect(tsconfig.compilerOptions.noImplicitAny).toBe(true);
+    expect(tsconfig.compilerOptions.strictNullChecks).toBe(true);
+    expect(tsconfig.compilerOptions.noImplicitThis).toBe(true);
+    expect(tsconfig.compilerOptions.alwaysStrict).toBe(true);
+    expect(tsconfig.compilerOptions.strictFunctionTypes).toBe(true);
+  });
 });

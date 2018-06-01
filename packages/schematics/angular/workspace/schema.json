@@ -65,6 +65,11 @@
       "type": "string",
       "description": "The version of the Angular CLI to use.",
       "visible": false
+    },
+    "strict": {
+      "type": "boolean",
+      "description": "Configure TypeScript in strict mode.",
+      "default": false
     }
   },
   "required": [
