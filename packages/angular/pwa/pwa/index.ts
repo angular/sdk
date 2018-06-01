@@ -12,7 +12,6 @@ import {
   SchematicsException,
   Tree,
   apply,
-  branchAndMerge,
   chain,
   externalSchematic,
   mergeWith,
@@ -38,18 +37,8 @@ function addServiceWorker(options: PwaOptions): Rule {
 }
 
 function getIndent(text: string): string {
-  let indent = '';
-  let hitNonSpace = false;
-  text.split('')
-    .forEach(char => {
-      if (char === ' ' && !hitNonSpace) {
-        indent += ' ';
-      } else {
-        hitNonSpace = true;
-      }
-    }, 0);
-
-  return indent;
+  // This RegExp is guaranteed to match any string (even if it is a zero-length match).
+  return (/^ */.exec(text) as RegExpExecArray)[0];
 }
 
 function updateIndexFile(options: PwaOptions): Rule {
@@ -70,43 +59,32 @@ function updateIndexFile(options: PwaOptions): Rule {
     const content = buffer.toString();
     const lines = content.split('\n');
     let closingHeadTagLineIndex = -1;
-    let closingHeadTagLine = '';
     let closingBodyTagLineIndex = -1;
-    let closingBodyTagLine = '';
-    lines.forEach((line: string, index: number) => {
-      if (/<\/head>/.test(line) && closingHeadTagLineIndex === -1) {
-        closingHeadTagLine = line;
+    lines.forEach((line, index) => {
+      if (closingHeadTagLineIndex === -1 && /<\/head>/.test(line)) {
         closingHeadTagLineIndex = index;
-      }
-
-      if (/<\/body>/.test(line) && closingBodyTagLineIndex === -1) {
-        closingBodyTagLine = line;
+      } else if (closingBodyTagLineIndex === -1 && /<\/body>/.test(line)) {
         closingBodyTagLineIndex = index;
       }
     });
 
-    const headTagIndent = getIndent(closingHeadTagLine) + '  ';
+    const headIndent = getIndent(lines[closingHeadTagLineIndex]) + '  ';
     const itemsToAddToHead = [
       '<link rel="manifest" href="manifest.json">',
       '<meta name="theme-color" content="#1976d2">',
     ];
 
-    const textToInsertIntoHead = itemsToAddToHead
-      .map(text => headTagIndent + text)
-      .join('\n');
-
-    const bodyTagIndent = getIndent(closingBodyTagLine) + '  ';
-    const itemsToAddToBody
-      = '<noscript>Please enable JavaScript to continue using this application.</noscript>';
-
-    const textToInsertIntoBody = bodyTagIndent + itemsToAddToBody;
+    const bodyIndent = getIndent(lines[closingBodyTagLineIndex]) + '  ';
+    const itemsToAddToBody = [
+      '<noscript>Please enable JavaScript to continue using this application.</noscript>',
+    ];
 
     const updatedIndex = [
       ...lines.slice(0, closingHeadTagLineIndex),
-      textToInsertIntoHead,
+      ...itemsToAddToHead.map(line => headIndent + line),
       ...lines.slice(closingHeadTagLineIndex, closingBodyTagLineIndex),
-      textToInsertIntoBody,
-      ...lines.slice(closingBodyTagLineIndex),
+      ...itemsToAddToBody.map(line => bodyIndent + line),
+      ...lines.slice(closingHeadTagLineIndex),
     ].join('\n');
 
     host.overwrite(path, updatedIndex);
@@ -137,12 +115,9 @@ function addManifestToAssetsConfig(options: PwaOptions) {
     ['build', 'test'].forEach((target) => {
 
       const applyTo = architect[target].options;
+      const assets = applyTo.assets || (applyTo.assets = []);
 
-      if (!applyTo.assets) {
-        applyTo.assets = [assetEntry];
-      } else {
-        applyTo.assets.push(assetEntry);
-      }
+      assets.push(assetEntry);
 
     });
 
@@ -163,27 +138,24 @@ export default function (options: PwaOptions): Rule {
       throw new SchematicsException(`PWA requires a project type of "application".`);
     }
 
-    const assetPath = join(project.root as Path, 'src', 'assets');
     const sourcePath = join(project.root as Path, 'src');
+    const assetsPath = join(sourcePath, 'assets');
 
     options.title = options.title || options.project;
 
-    const templateSource = apply(url('./files/assets'), [
-      template({
-        ...options,
-      }),
-      move(assetPath),
+    const rootTemplateSource = apply(url('./files/root'), [
+      template({ ...options }),
+      move(sourcePath),
+    ]);
+    const assetsTemplateSource = apply(url('./files/assets'), [
+      template({ ...options }),
+      move(assetsPath),
     ]);
 
     return chain([
       addServiceWorker(options),
-      branchAndMerge(chain([
-        mergeWith(templateSource),
-      ])),
-      mergeWith(apply(url('./files/root'), [
-        template({...options}),
-        move(sourcePath),
-      ])),
+      mergeWith(rootTemplateSource),
+      mergeWith(assetsTemplateSource),
       updateIndexFile(options),
       addManifestToAssetsConfig(options),
     ])(host, context);
