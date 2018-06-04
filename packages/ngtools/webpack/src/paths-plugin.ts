@@ -103,10 +103,34 @@ export function resolveWithPaths(
       replacement = prefix + pathMapOptions[0].partial + suffix;
     }
 
-    request.request = path.resolve(compilerOptions.baseUrl || '', replacement);
-    callback(null, request);
+    replacement = path.resolve(compilerOptions.baseUrl || '', replacement);
 
-    return;
+    if (host.fileExists(replacement)) {
+      // Found a definite match
+      request.request = replacement;
+      callback(null, request);
+
+      return;
+    } else {
+      // Could be an extensionless import that TS can resolve?
+      const moduleResolver = ts.resolveModuleName(
+        replacement,
+        request.contextInfo.issuer,
+        compilerOptions,
+        host,
+        cache,
+      );
+
+      const moduleFilePath = moduleResolver.resolvedModule
+                             && moduleResolver.resolvedModule.resolvedFileName;
+
+      if (moduleFilePath) {
+        request.request = moduleFilePath;
+        callback(null, request);
+
+        return;
+      }
+    }
   }
 
   const moduleResolver = ts.resolveModuleName(
