@@ -33,8 +33,7 @@ export function hasErrors(diags: Diagnostics) {
 }
 
 export function gatherDiagnostics(
-  program: ts.Program | Program,
-  jitMode: boolean,
+  program: Program,
   benchmarkLabel: string,
   cancellationToken?: CancellationToken,
 ): Diagnostics {
@@ -52,35 +51,22 @@ export function gatherDiagnostics(
     }
   }
 
-  if (jitMode) {
-    const tsProgram = program as ts.Program;
-    // Check syntactic diagnostics.
-    time(`${benchmarkLabel}.gatherDiagnostics.ts.getSyntacticDiagnostics`);
-    checkDiagnostics(tsProgram.getSyntacticDiagnostics.bind(tsProgram));
-    timeEnd(`${benchmarkLabel}.gatherDiagnostics.ts.getSyntacticDiagnostics`);
+  const angularProgram = program as Program;
 
-    // Check semantic diagnostics.
-    time(`${benchmarkLabel}.gatherDiagnostics.ts.getSemanticDiagnostics`);
-    checkDiagnostics(tsProgram.getSemanticDiagnostics.bind(tsProgram));
-    timeEnd(`${benchmarkLabel}.gatherDiagnostics.ts.getSemanticDiagnostics`);
-  } else {
-    const angularProgram = program as Program;
+  // Check TypeScript syntactic diagnostics.
+  time(`${benchmarkLabel}.gatherDiagnostics.ng.getTsSyntacticDiagnostics`);
+  checkDiagnostics(angularProgram.getTsSyntacticDiagnostics.bind(angularProgram));
+  timeEnd(`${benchmarkLabel}.gatherDiagnostics.ng.getTsSyntacticDiagnostics`);
 
-    // Check TypeScript syntactic diagnostics.
-    time(`${benchmarkLabel}.gatherDiagnostics.ng.getTsSyntacticDiagnostics`);
-    checkDiagnostics(angularProgram.getTsSyntacticDiagnostics.bind(angularProgram));
-    timeEnd(`${benchmarkLabel}.gatherDiagnostics.ng.getTsSyntacticDiagnostics`);
+  // Check TypeScript semantic and Angular structure diagnostics.
+  time(`${benchmarkLabel}.gatherDiagnostics.ng.getTsSemanticDiagnostics`);
+  checkDiagnostics(angularProgram.getTsSemanticDiagnostics.bind(angularProgram));
+  timeEnd(`${benchmarkLabel}.gatherDiagnostics.ng.getTsSemanticDiagnostics`);
 
-    // Check TypeScript semantic and Angular structure diagnostics.
-    time(`${benchmarkLabel}.gatherDiagnostics.ng.getTsSemanticDiagnostics`);
-    checkDiagnostics(angularProgram.getTsSemanticDiagnostics.bind(angularProgram));
-    timeEnd(`${benchmarkLabel}.gatherDiagnostics.ng.getTsSemanticDiagnostics`);
-
-    // Check Angular semantic diagnostics
-    time(`${benchmarkLabel}.gatherDiagnostics.ng.getNgSemanticDiagnostics`);
-    checkDiagnostics(angularProgram.getNgSemanticDiagnostics.bind(angularProgram));
-    timeEnd(`${benchmarkLabel}.gatherDiagnostics.ng.getNgSemanticDiagnostics`);
-  }
+  // Check Angular semantic diagnostics
+  time(`${benchmarkLabel}.gatherDiagnostics.ng.getNgSemanticDiagnostics`);
+  checkDiagnostics(angularProgram.getNgSemanticDiagnostics.bind(angularProgram));
+  timeEnd(`${benchmarkLabel}.gatherDiagnostics.ng.getNgSemanticDiagnostics`);
 
   return allDiagnostics;
 }
