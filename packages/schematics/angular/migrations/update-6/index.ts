@@ -773,6 +773,6 @@ export default function (): Rule {
 
         return host;
       },
-    ])(host, context);
+    ]);
   };
 }
