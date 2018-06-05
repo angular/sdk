@@ -49,7 +49,7 @@ export interface BrowserBuilderSchema {
   /**
    * Replace files with other files in the build.
    */
-  fileReplacements: FileReplacements[];
+  fileReplacements: FileReplacement[];
 
   /**
    * Path where output will be placed.
@@ -262,9 +262,9 @@ export interface ExtraEntryPointObject {
   lazy: boolean;
 }
 
-export declare type FileReplacement = DeprecatedFileReplacment | CurrentFileReplacement;
+export type FileReplacement = DeprecatedFileReplacement | CurrentFileReplacement;
 
-export interface DeprecatedFileReplacment {
+export interface DeprecatedFileReplacement {
   /**
    * The file that should be replaced.
    */

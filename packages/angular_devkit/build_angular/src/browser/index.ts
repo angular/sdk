@@ -35,7 +35,7 @@ import {
   statsWarningsToString,
 } from '../angular-cli-files/utilities/stats';
 import { addFileReplacements, normalizeAssetPatterns } from '../utils';
-import { AssetPatternObject, BrowserBuilderSchema, CurrentFileReplacement } from './schema';
+import { AssetPatternObject, BrowserBuilderSchema, FileReplacement } from './schema';
 const webpackMerge = require('webpack-merge');
 
 
@@ -46,7 +46,7 @@ const webpackMerge = require('webpack-merge');
 // It would really help if it happens during architect.validateBuilderOptions, or similar.
 export interface NormalizedBrowserBuilderSchema extends BrowserBuilderSchema {
   assets: AssetPatternObject[];
-  fileReplacements: CurrentFileReplacement[];
+  fileReplacements: FileReplacement[];
 }
 
 export class BrowserBuilder implements Builder<BrowserBuilderSchema> {

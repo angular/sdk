@@ -11,7 +11,7 @@ import { Observable, forkJoin, of } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import {
   CurrentFileReplacement,
-  DeprecatedFileReplacment,
+  DeprecatedFileReplacement,
   FileReplacement,
 } from '../browser/schema';
 
@@ -36,7 +36,7 @@ export function addFileReplacements(
   // Normalize the legacy format into the current one.
   for (const fileReplacement of fileReplacements) {
     const currentFormat = fileReplacement as CurrentFileReplacement;
-    const maybeOldFormat = fileReplacement as DeprecatedFileReplacment;
+    const maybeOldFormat = fileReplacement as DeprecatedFileReplacement;
 
     if (maybeOldFormat.src && maybeOldFormat.replaceWith) {
       currentFormat.replace = maybeOldFormat.src;
