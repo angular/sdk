@@ -23,6 +23,7 @@ import {
   url,
 } from '@angular-devkit/schematics';
 import { Schema as E2eOptions } from '../e2e/schema';
+import { PATH_TO_PACKAGE_JSON, addDependencies } from '../utility/add-dependencies';
 import {
   WorkspaceProject,
   WorkspaceSchema,
@@ -59,32 +60,21 @@ import { Schema as ApplicationOptions } from './schema';
 // }
 
 function addDependenciesToPackageJson() {
-  return (host: Tree) => {
-    const packageJsonPath = 'package.json';
+  const depsToAdd = [
+    `@angular-devkit/build-angular@${latestVersions.DevkitBuildAngular}`,
+    `@angular/compiler-cli@${latestVersions.Angular}`,
+    `typescript@${latestVersions.TypeScript}`,
+  ];
+  const rule = addDependencies(depsToAdd, true);
 
-    if (!host.exists('package.json')) { return host; }
-
-    const source = host.read('package.json');
-    if (!source) { return host; }
-
-    const sourceText = source.toString('utf-8');
-    const json = JSON.parse(sourceText);
-
-    if (!json['devDependencies']) {
-      json['devDependencies'] = {};
+  return (host: Tree, context: SchematicContext) => {
+    if (!host.exists(PATH_TO_PACKAGE_JSON)) {
+      // The default rule throws if `package.json` does not exist.
+      // Here, we want to be more lenient.
+      return host;
     }
 
-    json.devDependencies = {
-      '@angular/compiler-cli': latestVersions.Angular,
-      '@angular-devkit/build-angular': latestVersions.DevkitBuildAngular,
-      'typescript': latestVersions.TypeScript,
-      // De-structure last keeps existing user dependencies.
-      ...json.devDependencies,
-    };
-
-    host.overwrite(packageJsonPath, JSON.stringify(json, null, 2));
-
-    return host;
+    return rule(host, context);
   };
 }
 
