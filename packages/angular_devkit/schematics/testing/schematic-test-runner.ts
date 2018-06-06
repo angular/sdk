@@ -149,7 +149,9 @@ export class SchematicTestRunner {
   }
 
   callRule(rule: Rule, tree: Tree, parentContext?: Partial<SchematicContext>): Observable<Tree> {
-    const context = this._engine.createContext({} as Schematic<{}, {}>, parentContext);
+    const defaultContext = {} as Schematic<{}, {}>;
+    defaultContext.logger = this._logger;
+    const context = this._engine.createContext(defaultContext, parentContext);
 
     return callRule(rule, observableOf(tree), context);
   }
